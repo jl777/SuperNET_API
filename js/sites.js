@@ -26,16 +26,16 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         SPNAPI.loadSiteAPI(site);
     };
 
-      SPNAPI.pageContent.PAX = function () {
-              var site = "PAX";
-              SPNAPI.loadSiteAPI(site);
-      };
-      
-      SPNAPI.pageContent.Tradebots = function () {
-              var site = "Tradebots";
-              SPNAPI.loadSiteAPI(site);
-      };
-              
+    SPNAPI.pageContent.PAX = function () {
+        var site = "PAX";
+        SPNAPI.loadSiteAPI(site);
+    };
+
+    SPNAPI.pageContent.Tradebots = function () {
+        var site = "Tradebots";
+        SPNAPI.loadSiteAPI(site);
+    };
+
     SPNAPI.pageContent.Wallet = function () {
         var site = "Wallet";
         SPNAPI.loadSiteAPI(site);
@@ -50,8 +50,6 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
 
     };
-
-
 
 
     SPNAPI.loadSite = function (page, callback) {
@@ -102,7 +100,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
             }, []);
 
             SPNAPI.loadApiBox(agent, method_obj);
-
+            $(".hljs").html("JSON response");
 
             $(".api_control").on("keypress change", function () {
 
