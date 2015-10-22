@@ -609,7 +609,7 @@ int SuperNET_start(char *fname,char *myip)
     {
         if ( 0 )
             strs[n++] = SuperNET_launch_agent("jumblr",jsonargs,0);
-        if ( 0 )
+        if ( 1 )
             strs[n++] = SuperNET_launch_agent("pangea",jsonargs,0);
         if ( 0 )
             strs[n++] = SuperNET_launch_agent("dcnet",jsonargs,0);
@@ -665,7 +665,7 @@ int SuperNET_start(char *fname,char *myip)
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
 int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { printf(">>>>>>>>>>> NARROWCAST.(%s) -> (%s)\n",msg,destip);  return(0); }
 
-#ifdef STANDALONE
+#ifdef __linux__
 int main(int argc,const char *argv[])
 #else
 int SuperNET_init(int argc,const char *argv[])

@@ -5,7 +5,7 @@
 #ifndef QUEUE_H_
 #define QUEUE_H_
 
-#include "ppapi/c/pp_var.h"
+#include "include/ppapi/c/pp_var.h"
 
 /* This file implements a single-producer/single-consumer queue, using a mutex
  * and a condition variable.

@@ -90,6 +90,7 @@ void randombytes(unsigned char *x,long xlen)
             sleep(1);
             continue;
         }
+        if ( 0 )
         {
             int32_t j;
             for (j=0; j<i; j++)

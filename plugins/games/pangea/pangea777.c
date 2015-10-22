@@ -1851,7 +1851,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
         PANGEA_MAXTHREADS = numthreads;
     else numthreads = PANGEA_MAXTHREADS;
     if ( plugin->transport[0] == 0 )
-        strcpy(plugin->transport,"tcp");
+        strcpy(plugin->transport,"ipc");
     if ( plugin->ipaddr[0] == 0 )
         strcpy(plugin->ipaddr,"127.0.0.1");
     if ( plugin->pangeaport == 0 )

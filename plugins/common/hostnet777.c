@@ -191,11 +191,13 @@ int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
         }
         for (j=0; j<10; j++)
         {
+            char *nn_err_strerror();
+            int32_t nn_err_errno();
             if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
                 break;
             if ( numerrs++ < 100 )
-                printf("numerrs.%d retry.%d for sock.%d len.%d vs sendlen.%d (%s)\n",numerrs,j,sock,len,sendlen,len<512?ptr:"");
-            msleep(1000);
+                printf("numerrs.%d retry.%d for sock.%d len.%d vs sendlen.%d (%s) (%s)\n",numerrs,j,sock,len,sendlen,len<512?ptr:"",nn_err_strerror(nn_err_errno()));
+            msleep(100);
         }
         //printf("hostnet777_send.%d j.%d len.%d sendlen.%d\n",sock,j,len,sendlen);
     } else printf("hostnet777_send neg socket\n");

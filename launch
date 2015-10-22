@@ -1,4 +1,4 @@
-/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 5104 &
-/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 5105 &
-/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 5106 &
-/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 5107 &
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 7778 &
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 7779 &
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 7780 &
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/tools/httpd.py -C /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo -p 7781 &
