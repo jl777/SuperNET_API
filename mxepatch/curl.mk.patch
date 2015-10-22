@@ -1,0 +1,23 @@
+--- mxe/src/curl.mk	2015-08-15 16:37:55.338765779 +0700
++++ mxe/src/curl.mk.1	2015-08-15 18:57:13.830982520 +0700
+@@ -19,12 +19,14 @@
+ define $(PKG)_BUILD
+     cd '$(1)' && ./configure \
+         $(MXE_CONFIGURE_OPTS) \
+-        --with-gnutls \
+-        --without-ssl \
+-        --with-libidn \
+-        --enable-sspi \
+-        --enable-ipv6 \
+-        --with-libssh2
++        --with-gnutls \
++        --without-ssl \
++        --without-libidn \
++        --disable-sspi \
++        --disable-ipv6 \
++        --without-libssh2 \
++        --disable-ldap \
++        --disable-ldaps
+     $(MAKE) -C '$(1)' -j '$(JOBS)' install $(MXE_DISABLE_DOCS)
+     ln -sf '$(PREFIX)/$(TARGET)/bin/curl-config' '$(PREFIX)/bin/$(TARGET)-curl-config'
+ 

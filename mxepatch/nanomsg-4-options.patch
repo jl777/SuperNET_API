@@ -1,0 +1,15 @@
+--- a/tools/options.c	2015-08-18 22:02:07.302493428 +0700
++++ b/tools/options.c	2015-08-21 00:15:03.794045707 +0700
+@@ -451,12 +451,7 @@
+         case NN_OPT_LIST_APPEND_FMT:
+             data_buf = strlen (argument) + strlen (opt->pointer);
+             data = malloc (data_buf);
+-#if defined NN_HAVE_WINDOWS
+-            data_len = _snprintf_s (data, data_buf, _TRUNCATE, opt->pointer,
+-                argument);
+-#else
+             data_len = snprintf (data, data_buf, opt->pointer, argument);
+-#endif
+             assert (data_len < data_buf);
+             nn_append_string (ctx, opt, data);
+             nn_append_string_to_free (ctx, opt, data);

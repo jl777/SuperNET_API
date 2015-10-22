@@ -1,0 +1,24 @@
+--- a/index.html	2015-08-15 16:37:55.334765779 +0700
++++ b/index.html	2015-08-15 16:58:40.786798074 +0700
+@@ -1913,6 +1893,10 @@
+         <td class="website"><a href="http://www.msweet.org/projects.php?Z3">Mini-XML</a></td>
+     </tr>
+     <tr>
++        <td class="package">nanomsg</td>
++        <td class="website"><a href="http://www.gnu.org/software/bison/">nanomsg</a></td>
++    </tr>
++    <tr>
+         <td class="package">ncurses</td>
+         <td class="website"><a href="https://www.gnu.org/software/ncurses/">Ncurses</a></td>
+     </tr>
+@@ -2065,6 +2065,10 @@
+         <td class="website"><a href="http://icculus.org/physfs/">physfs</a></td>
+     </tr>
+     <tr>
++        <td class="package">picocoin</td>
++        <td class="website"><a href="https://github.com/jgarzik/picocoin/">picocoin</a></td>
++    </tr>
++    <tr>
+         <td class="package">picomodel</td>
+         <td class="website"><a href="http://code.google.com/p/picomodel/">picomodel</a></td>
+     </tr>

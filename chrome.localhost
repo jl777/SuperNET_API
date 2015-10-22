@@ -1,0 +1,4 @@
+open -a "Google Chrome" --args --allow-nacl-socket-api=localhost
+#open -a "Google Chrome" --args --allow-nacl-socket-api=127.0.0.1 --no-sandbox
+#open -a "Google Chrome" --args --allow-nacl-socket-api=commondatastorage.googleapis.com --no-sandbox
+#--allow-nacl-socket-api=localhost

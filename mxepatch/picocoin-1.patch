@@ -1,0 +1,11 @@
+--- a/configure.ac	2015-05-12 07:02:05.000000000 +0700
++++ b/configure.ac	2015-09-07 12:24:48.126635417 +0700
+@@ -68,8 +68,6 @@
+   [AC_MSG_ERROR([Missing required libm])])
+ AC_CHECK_LIB(crypto, MD5_Init, CRYPTO_LIBS=-lcrypto,
+   [AC_MSG_ERROR([Missing required libcrypto])])
+-AC_CHECK_LIB(event_core, event_base_new, EVENT_LIBS=-levent_core,
+-  [AC_MSG_ERROR([Missing required libevent])])
+ AC_CHECK_LIB(jansson, json_loads, JANSSON_LIBS=-ljansson,
+   [AC_MSG_ERROR([Missing required libjansson])])
+ AC_CHECK_LIB(argp, argp_parse, ARGP_LIBS=-lARGP)

@@ -1,0 +1,45 @@
+--- a/src/core/global.c	2015-07-23 01:25:53.000000000 +0700
++++ b/src/core/global.c	2015-08-18 23:09:44.098622310 +0700
+@@ -995,7 +995,7 @@
+         /*  TODO(tailhook) add HAVE_GMTIME_R ifdef  */
+         time(&numtime);
+ #ifdef NN_HAVE_GMTIME_R
+-        gmtime_r (&numtime, &strtime);
++        gmtime_s (&strtime, &numtime);
+ #else
+ #error
+ #endif
+@@ -1036,7 +1036,7 @@
+         /*  TODO(tailhook) add HAVE_GMTIME_R ifdef  */
+         time(&numtime);
+ #ifdef NN_HAVE_GMTIME_R
+-        gmtime_r (&numtime, &strtime);
++        gmtime_s (&strtime, &numtime);
+ #else
+ #error
+ #endif
+@@ -1073,7 +1073,7 @@
+         /*  TODO(tailhook) add HAVE_GMTIME_R ifdef  */
+         time(&numtime);
+ #ifdef NN_HAVE_GMTIME_R
+-        gmtime_r (&numtime, &strtime);
++        gmtime_s (&strtime, &numtime);
+ #else
+ #error
+ #endif
+@@ -1097,15 +1097,9 @@
+             ep = nn_cont (it, struct nn_ep, item);
+ 
+             if (ep->last_errno) {
+-#ifdef NN_HAVE_WINDOWS
+-                len = _snprintf_s (curbuf, buf_left, _TRUNCATE,
+-                    " nanomsg: Endpoint %d [%s] error: %s\n",
+-                    ep->eid, nn_ep_getaddr (ep), nn_strerror (ep->last_errno));
+-#else
+                  len = snprintf (curbuf, buf_left,
+                      " nanomsg: Endpoint %d [%s] error: %s\n",
+                      ep->eid, nn_ep_getaddr (ep), nn_strerror (ep->last_errno));
+-#endif
+                 if (buf_left < len)
+                     break;
+                 curbuf += len;

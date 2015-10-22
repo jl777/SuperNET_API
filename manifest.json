@@ -1,0 +1,34 @@
+{
+  "name": "SuperNET API",
+  "short_name": "SPN API",
+  "version": "44.1.2",
+  "manifest_version": 2,
+  "description": "SuperNET API in pnacl",
+  "offline_enabled": true,
+  "icons": {
+    "128": "icon128.png"
+  },
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  },
+    "sockets": { "udp": { "send": "*" },
+        "tcp": { "connect": "" },
+        "tcpServer": { "listen": "*:*" }
+    },
+    "permissions": [
+                    "unlimitedStorage",
+                    "nativeMessaging",
+                    "dns", "browser", "filesystem", "storage",
+                    "system.storage", "system.display", "system.network",
+                    {
+                    "socket": [
+                               "tcp-listen:*:*",
+                               "tcp-connect",
+                               "resolve-host", 
+                               "udp-bind:*:*", 
+                               "udp-send-to:*:*"
+                               ]
+                    }]
+}

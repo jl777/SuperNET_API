@@ -1,0 +1,11 @@
+--- a/configure.ac	2015-08-16 23:02:38.293604742 +0700
++++ b/configure.ac	2015-08-16 23:03:07.785605507 +0700
+@@ -228,7 +228,7 @@
+         AC_DEFINE([NN_HAVE_WINDOWS])
+         AC_DEFINE([NN_HAVE_MINGW])
+         AC_DEFINE([_WIN32_WINNT],0x0600)
+-        LIBS="$LIBS -lws2_32 -lMswsock"
++        LIBS="$LIBS -lws2_32 -lmswsock"
+     ],
+     [*darwin*],  [AC_DEFINE([NN_HAVE_OSX])],
+     [*freebsd*], [AC_DEFINE([NN_HAVE_FREEBSD])],
