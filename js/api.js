@@ -1,7 +1,7 @@
 var SPNAPI = (function(SPNAPI, $, undefined) {
 
     SPNAPI.methods = {};
-    SPNAPI.pages = ["Settings", "Debug","Wallet","Tradebots","PAX","MGW","Atomic", "Jumblr", "Pangea", "InstantDEX"];
+    SPNAPI.pages = ["Settings", "Debug","Wallet", "Tradebots","PAX","MGW","Atomic", "Jumblr", "Pangea", "InstantDEX"];
     SPNAPI.pageContent = {};
     SPNAPI.page = "welcome";
 
@@ -18,6 +18,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
             var page = $(this).data("page");
             $(".navigation").removeClass("active");
+            $(".hljs").html("JSON response");
             SPNAPI.loadSite(page);
 
         });
@@ -43,13 +44,10 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
         var request = $(".json_submit_url").html();
 
-        console.log('Sure to submit: ' +request);
-
         postCall('SuperNET', request, function(jsonstr)
         {
             $(".debuglogdebuglog").append(jsonstr);
             common.logMessage(jsonstr + '\n');
-
 
             $(".hljs").html(jsonstr);
 

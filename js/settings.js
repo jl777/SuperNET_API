@@ -2,8 +2,6 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
     SPNAPI.settings = {};
 
-
-
     SPNAPI.getCheckBoxDetails = function(agent) {
 
         var extraInfo = '';
@@ -12,28 +10,28 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
             case 'InstantDEX':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
-            break;
+                break;
             case 'Pangea':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
-            break;
+                break;
             case 'Jumblr':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
-            break;
+                break;
             case 'MGW':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
-            break;
+                break;
             case 'Atomic':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
-            break;
-              case 'PAX':
-              extraInfo = 'Extra Info on this '+agent+' Agent';
-              break;
-              case 'Tradebots':
-              extraInfo = 'Extra Info on this '+agent+' Agent';
-              break;
+                break;
+            case 'PAX':
+                extraInfo = 'Extra Info on this '+agent+' Agent';
+                break;
+            case 'Tradebots':
+                extraInfo = 'Extra Info on this '+agent+' Agent';
+                break;
             case 'Wallet':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
-            break;
+                break;
 
         }
 
@@ -100,13 +98,40 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
         });
 
+
         var filename = "/persistent/SuperNET.conf";
-        var access = "r";
+        var access = "w+";
         postCall('fopen', filename, access, function(filename_return, filehandle) {
             filehandle_map[filehandle] = filename_return;
             common.logMessage('File ' + filename_return + ' opened successfully.');
 
+            console.log(filehandle + " and "+filename_return);
         });
+        /*
+
+         var data = "SuperNETconfigurationsdaaaaa TES TEST TEST TEST";
+         postCall('fwrite', 0, data, function(filehandle, bytesWritten) {
+         var filename = filehandle_map[filehandle];
+         common.logMessage('Wrote ' + bytesWritten + ' bytes to file ' + filename +
+         '.');
+         });
+
+
+         var filesize = "";
+         postCall('stat', filename, function(filename, size) {
+         common.logMessage('File ' + filename + ' has size ' + size + '.');
+         filesize = size;
+
+         });
+
+
+         var filehandle = parseInt(filehandle_map, 10);
+         var numBytes = parseInt(filesize, 10);
+         postCall('fread', 0, 0, function(filehandle, data) {
+         var filename = filehandle_map[filehandle];
+         common.logMessage('Read "' + data + '" from file ' + filename + '.');
+         });
+         */
 
         $("#agent_settings").html(rows);
 
@@ -193,9 +218,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
         });
 
-
     };
-
 
     return SPNAPI;
 }(SPNAPI || {}, jQuery));

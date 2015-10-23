@@ -45,16 +45,17 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         {"id":2,"method":"status","tableid":"tableid"}
     ];
 
-SPNAPI.methods.PAX = [
-{"id":1,"method":"peggy","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
-{"id":2,"method":"status","tableid":"tableid"}
-];
+    SPNAPI.methods.PAX = [
+        {"id":1,"method":"peggy","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
+        {"id":2,"method":"status","tableid":"tableid"}
+    ];
 
-SPNAPI.methods.Tradebots = [
-{"id":1,"method":"tradebots","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
-{"id":2,"method":"status","tableid":"tableid"}
-];
-              
+    SPNAPI.methods.Tradebots = [
+        {"id":1,"method":"tradebots","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
+        {"id":2,"method":"status","tableid":"tableid"}
+    ];
+
+
     SPNAPI.methods.Wallet = [
         {"id":1,"method":"wallet","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
         {"id":2,"method":"status","tableid":"tableid"}
@@ -82,7 +83,15 @@ SPNAPI.methods.Tradebots = [
 
             if(index !== "id") {
                 if( index !== "method") {
-                    rows += '<tr><td>' + index + '</td><td><input type="text" class="api_control" class="form-control" name="' + index + '" value="' + value + '" style="width:100%;min-width:200px;"></td></tr>';
+
+                    var required = '';
+                    if(value > '') {
+
+                        required = 'has-success';
+
+                    }
+
+                    rows += '<tr><td>' + index + '</td><td><div class="form-group '+required+'"><input type="text" class="api_control form-control" class="form-control" name="' + index + '" style="width:100%;min-width:200px;"></div></td></tr>';
                     json[index] = value;
                 }
             }
@@ -100,27 +109,5 @@ SPNAPI.methods.Tradebots = [
 
     };
 
-
-
-
-
-
     return SPNAPI;
 }(SPNAPI || {}, jQuery));
-
-
-/*
-var api_request = function(agent)
-{
-    var jsonstr = '';//$$("apirequest").getValues().jsonstr;
-    var base = $$("formA").getValues().base;
-    var rel = $$("formB").getValues().rel;
-    var exchange = $$("formC").getValues().exchange;
-    var price = $$("formD").getValues().price;
-    var volume = $$("formE").getValues().volume;
-    var orderid = $$("formF").getValues().orderid;
-    var method = $$("method").getValues().method;
-    var request = '{"agent":"' + agent + '","method":"' + method + '","base":"' + base + '","rel":"' + rel + '","exchange":"' + exchange + '","price":"' + price + '","volume":"' + volume + '","orderid":"' + orderid + '"' + jsonstr + '}';
-    return(request);
-}
-*/
