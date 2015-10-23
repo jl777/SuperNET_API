@@ -8,10 +8,10 @@
 #ifndef PPAPI_C_PPP_H_
 #define PPAPI_C_PPP_H_
 
-#include "ppapi/c/pp_macros.h"
-#include "ppapi/c/pp_module.h"
-#include "ppapi/c/pp_stdint.h"
-#include "ppapi/c/ppb.h"
+#include "pp_macros.h"
+#include "pp_module.h"
+#include "pp_stdint.h"
+#include "ppb.h"
 
 /**
  * @file
@@ -21,9 +21,9 @@
 
 
 
-#include "ppapi/c/pp_module.h"
-#include "ppapi/c/pp_stdint.h"
-#include "ppapi/c/ppb.h"
+#include "pp_module.h"
+#include "pp_stdint.h"
+#include "ppb.h"
 
 #if __GNUC__ >= 4
 #define PP_EXPORT __attribute__ ((visibility("default")))

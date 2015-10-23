@@ -21,15 +21,15 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pipeline.h"
+#include "../nn.h"
+#include "../pipeline.h"
 
 #include "testutil.h"
 
 #define SOCKET_ADDRESS_A "inproc://a"
 #define SOCKET_ADDRESS_B "inproc://b"
 
-int main ()
+int testprio()
 {
     int rc;
     int push1;
@@ -38,6 +38,7 @@ int main ()
     int pull2;
     int sndprio;
     int rcvprio;
+    printf("test prio\n");
 
     /*  Test send priorities. */
 

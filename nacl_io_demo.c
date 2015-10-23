@@ -19,19 +19,19 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "ppapi/c/pp_errors.h"
-#include "ppapi/c/pp_module.h"
-#include "ppapi/c/ppb.h"
-#include "ppapi/c/ppb_instance.h"
-#include "ppapi/c/ppb_messaging.h"
-#include "ppapi/c/ppb_var.h"
-#include "ppapi/c/ppb_var_array.h"
-#include "ppapi/c/ppb_var_dictionary.h"
-#include "ppapi/c/ppp.h"
-#include "ppapi/c/ppp_instance.h"
-#include "ppapi/c/ppp_messaging.h"
-#include "nacl_io/ioctl.h"
-#include "nacl_io/nacl_io.h"
+#include "include/ppapi/c/pp_errors.h"
+#include "include/ppapi/c/pp_module.h"
+#include "include/ppapi/c/ppb.h"
+#include "include/ppapi/c/ppb_instance.h"
+#include "include/ppapi/c/ppb_messaging.h"
+#include "include/ppapi/c/ppb_var.h"
+#include "include/ppapi/c/ppb_var_array.h"
+#include "include/ppapi/c/ppb_var_dictionary.h"
+#include "include/ppapi/c/ppp.h"
+#include "include/ppapi/c/ppp_instance.h"
+#include "include/ppapi/c/ppp_messaging.h"
+#include "include/nacl_io/ioctl.h"
+#include "include/nacl_io/nacl_io.h"
 
 #include "handlers.h"
 #include "queue.h"
@@ -370,17 +370,17 @@ void *HandleMessageThread(void *user_data)
 #undef mount
 #undef umount
 
-#include "ppapi/c/pp_resource.h"
-#include "ppapi/c/ppb_core.h"
-#include "ppapi/c/ppb_fullscreen.h"
-#include "ppapi/c/ppb_graphics_2d.h"
-#include "ppapi/c/ppb_image_data.h"
-#include "ppapi/c/ppb_input_event.h"
-#include "ppapi/c/ppb_instance.h"
-#include "ppapi/c/ppb_view.h"
+#include "include/ppapi/c/pp_resource.h"
+#include "include/ppapi/c/ppb_core.h"
+#include "include/ppapi/c/ppb_fullscreen.h"
+#include "include/ppapi/c/ppb_graphics_2d.h"
+#include "include/ppapi/c/ppb_image_data.h"
+#include "include/ppapi/c/ppb_input_event.h"
+#include "include/ppapi/c/ppb_instance.h"
+#include "include/ppapi/c/ppb_view.h"
 
-#include "ppapi_simple/ps_event.h"
-#include "ppapi_simple/ps_main.h"
+#include "include/ppapi_simple/ps_event.h"
+#include "include/ppapi_simple/ps_main.h"
 
 PPB_Core* g_pCore;
 PPB_Fullscreen* g_pFullscreen;
@@ -696,7 +696,7 @@ void *SuperNET(void *threads)
 
 static PP_Bool Instance_DidCreate(PP_Instance instance,uint32_t argc,const char* argn[],const char* argv[])
 {
-#ifndef __APPLE__
+#ifdef __PNACL
     static pthread_t g_handle_message_thread;
     //static pthread_t g_echo_thread;
     static pthread_t SuperNET_thread;//,bind_thread;

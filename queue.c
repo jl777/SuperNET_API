@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#include "ppapi/c/pp_var.h"
+#include "include/ppapi/c/pp_var.h"
 
 #define MAX_QUEUE_SIZE 256
 

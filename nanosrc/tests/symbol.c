@@ -20,13 +20,14 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/utils/err.c"
+#include "../utils/err.h"
 
-int main ()
+int testsymbol()
 {
     int i;
     struct nn_symbol_properties sym;
     int value;
+    printf("test symbol\n");
 
     nn_assert (nn_symbol (-1, NULL) == NULL);
     nn_assert (nn_errno () == EINVAL);

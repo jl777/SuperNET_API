@@ -20,14 +20,14 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/pubsub.h"
-#include "../src/inproc.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../pubsub.h"
+#include "../inproc.h"
 
 #include "testutil.h"
-#include "../src/utils/attr.h"
-#include "../src/utils/thread.c"
+#include "../utils/attr.h"
+#include "../utils/thread.h"
 
 /*  Stress test the inproc transport. */
 
@@ -46,12 +46,13 @@ static void routine (NN_UNUSED void *arg)
     test_close (s);
 }
 
-int main ()
+int testinproc_shutdown()
 {
     int sb;
     int i;
     int j;
     struct nn_thread threads [THREAD_COUNT];
+    printf("test inproc shutdown\n");
 
     /*  Stress the shutdown algorithm. */
 

@@ -21,9 +21,9 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pubsub.h"
-#include "../src/reqrep.h"
+#include "../nn.h"
+#include "../pubsub.h"
+#include "../reqrep.h"
 
 #include "testutil.h"
 
@@ -192,8 +192,9 @@ void test_reallocmsg_pubsub ()
     nn_close (pub);
 }
 
-int main ()
+int testzerocopy()
 {
+    printf("test zerocopy\n");
     test_allocmsg_reqrep ();
     test_reallocmsg_reqrep ();
     test_reallocmsg_pubsub ();

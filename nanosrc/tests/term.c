@@ -20,10 +20,10 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 
-#include "../src/utils/thread.c"
+#include "../utils/thread.h"
 #include "testutil.h"
 
 static void worker (NN_UNUSED void *arg)
@@ -47,11 +47,12 @@ static void worker (NN_UNUSED void *arg)
     test_close (s);
 }
 
-int main ()
+int testterm()
 {
     int rc;
     int s;
     struct nn_thread thread;
+    printf("test term\n");
 
     /*  Close the socket with no associated endpoints. */
     s = test_socket (AF_SP, NN_PAIR);
@@ -60,7 +61,7 @@ int main ()
     /*  Test nn_term() before nn_close(). */
     nn_thread_init (&thread, worker, NULL);
     nn_sleep (100);
-    nn_term ();
+    nn_term();
 
     /*  Check that it's not possible to create new sockets after nn_term(). */
     rc = nn_socket (AF_SP, NN_PAIR);
@@ -68,8 +69,8 @@ int main ()
     errno_assert (nn_errno () == ETERM);
 
     /*  Wait till worker thread terminates. */
-    nn_thread_term (&thread);
-
+    nn_thread_term(&thread);
+    printf("nn_thread_term finished\n");
     return 0;
 }
 

@@ -20,10 +20,10 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/pubsub.h"
-#include "../src/ipc.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../pubsub.h"
+#include "../ipc.h"
 
 #include "testutil.h"
 
@@ -31,7 +31,7 @@
 
 #define SOCKET_ADDRESS "ipc://test.ipc"
 
-int main ()
+int testipc()
 {
     int sb;
     int sc;
@@ -40,6 +40,7 @@ int main ()
 
 	size_t size;
 	char * buf;
+    printf("test ipc\n");
 
     /*  Try closing a IPC socket while it not connected. */
     sc = test_socket (AF_SP, NN_PAIR);
@@ -113,6 +114,7 @@ int main ()
     test_recv (sc, "ABC");   
     test_close (sc);
     test_close (s1);
+    printf("finished ipc test\n");
 
     return 0;
 }

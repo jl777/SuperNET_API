@@ -20,23 +20,22 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/tcpmux.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../tcpmux.h"
 
 #include "testutil.h"
 
 /*  Tests TCPMUX transport. */
 
-int sc;
-
-int main ()
+int testtcpmux()
 {
 #if !defined NN_HAVE_WINDOWS
     int rc;
     int sb;
     int sc;
     int i;
+    printf("test tcpmux\n");
 
     /*  First, start tcpmux daemon. */
     rc = nn_tcpmuxd (5555);

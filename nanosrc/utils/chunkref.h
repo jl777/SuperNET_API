@@ -23,7 +23,7 @@
 #ifndef NN_CHUNKREF_INCLUDED
 #define NN_CHUNKREF_INCLUDED
 
-#define NN_CHUNKREF_MAX 32
+#define NN_CHUNKREF_MAX 64
 
 #include "chunk.h"
 #include "int.h"

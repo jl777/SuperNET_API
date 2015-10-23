@@ -20,8 +20,8 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 
 #include "testutil.h"
 
@@ -29,7 +29,7 @@
 
 #define SOCKET_ADDRESS "inproc://a"
 
-int main ()
+int testiovec()
 {
     int rc;
     int sb;
@@ -37,6 +37,7 @@ int main ()
     struct nn_iovec iov [2];
     struct nn_msghdr hdr;
     char buf [6];
+    printf("test iovec\n");
 
     sb = test_socket (AF_SP, NN_PAIR);
     test_bind (sb, SOCKET_ADDRESS);

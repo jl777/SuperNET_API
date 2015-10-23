@@ -8,13 +8,13 @@
 #ifndef PPAPI_C_PPB_MESSAGING_H_
 #define PPAPI_C_PPB_MESSAGING_H_
 
-#include "ppapi/c/pp_bool.h"
-#include "ppapi/c/pp_instance.h"
-#include "ppapi/c/pp_macros.h"
-#include "ppapi/c/pp_resource.h"
-#include "ppapi/c/pp_stdint.h"
-#include "ppapi/c/pp_var.h"
-#include "ppapi/c/ppp_message_handler.h"
+#include "pp_bool.h"
+#include "pp_instance.h"
+#include "pp_macros.h"
+#include "pp_resource.h"
+#include "pp_stdint.h"
+#include "pp_var.h"
+#include "ppp_message_handler.h"
 
 #define PPB_MESSAGING_INTERFACE_1_0 "PPB_Messaging;1.0"
 #define PPB_MESSAGING_INTERFACE_1_2 "PPB_Messaging;1.2"

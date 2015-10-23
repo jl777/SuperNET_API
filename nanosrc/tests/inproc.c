@@ -19,12 +19,12 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/bus.h"
-#include "../src/pair.h"
-#include "../src/pubsub.h"
-#include "../src/reqrep.h"
-#include "../src/inproc.h"
+#include "../nn.h"
+#include "../bus.h"
+#include "../pair.h"
+#include "../pubsub.h"
+#include "../reqrep.h"
+#include "../inproc.h"
 
 #include "testutil.h"
 
@@ -32,7 +32,7 @@
 
 #define SOCKET_ADDRESS "inproc://test"
 
-int main ()
+int testinproc()
 {
     int rc;
     int sb;
@@ -47,6 +47,7 @@ int main ()
     void *control;
     struct nn_cmsghdr *cmsg;
     unsigned char *data;
+    printf("test inproc\n");
 
     /*  Create a simple topology. */
     sc = test_socket (AF_SP, NN_PAIR);

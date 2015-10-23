@@ -8,7 +8,7 @@
 #ifndef PPAPI_C_PP_STDINT_H_
 #define PPAPI_C_PP_STDINT_H_
 
-#include "ppapi/c/pp_macros.h"
+#include "pp_macros.h"
 
 /**
  * @file

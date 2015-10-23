@@ -462,32 +462,37 @@ static void nn_btcp_start_listening (struct nn_btcp *self)
         ((struct sockaddr_in6*) &ss)->sin6_port = htons (port);
         sslen = sizeof (struct sockaddr_in6);
     }
-    else
-        nn_assert (0);
-
-    /*  Start listening for incoming connections. */
+    else nn_assert (0);
+    //  Start listening for incoming connections
+    printf("BTCP start connecting (%s:%d)\n",addr,port);
     rc = nn_usock_start (&self->usock, ss.ss_family, SOCK_STREAM, 0);
-    if (nn_slow (rc < 0)) {
+    if (nn_slow (rc < 0))
+    {
+        printf("BTCP backoff rc.%d\n",rc);
         nn_backoff_start (&self->retry);
         self->state = NN_BTCP_STATE_WAITING;
         return;
     }
-
-    rc = nn_usock_bind (&self->usock, (struct sockaddr*) &ss, (size_t) sslen);
-    if (nn_slow (rc < 0)) {
+    rc = nn_usock_bind(&self->usock,(struct sockaddr *)&ss,(size_t)sslen);
+    if ( nn_slow (rc < 0) )
+    {
+#define nn_errstr() nn_strerror(nn_errno())
+        printf("error binding BTCP rc.%d (%s)\n",rc,nn_errstr());
         nn_usock_stop (&self->usock);
         self->state = NN_BTCP_STATE_CLOSING;
         return;
     }
-
-    rc = nn_usock_listen (&self->usock, NN_BTCP_BACKLOG);
-    if (nn_slow (rc < 0)) {
+    rc = nn_usock_listen(&self->usock, NN_BTCP_BACKLOG);
+    if (nn_slow (rc < 0))
+    {
+        printf("BTCP listen error.%d\n",rc);
         nn_usock_stop (&self->usock);
         self->state = NN_BTCP_STATE_CLOSING;
         return;
     }
     nn_btcp_start_accepting(self);
     self->state = NN_BTCP_STATE_ACTIVE;
+    printf("BTCP start accepting\n");
 }
 
 static void nn_btcp_start_accepting (struct nn_btcp *self)

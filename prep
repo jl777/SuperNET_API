@@ -1,0 +1,5 @@
+make
+make clean
+make -f Makefile.native clean
+mv toolchain ..
+

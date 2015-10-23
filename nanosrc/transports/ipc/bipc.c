@@ -421,6 +421,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 #endif
 
     /*  Start listening for incoming connections. */
+    printf("BIPC start connecting\n");
     rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);

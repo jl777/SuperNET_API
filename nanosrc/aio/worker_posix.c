@@ -128,6 +128,7 @@ int nn_worker_init(struct nn_worker *self)
 
 void nn_worker_term (struct nn_worker *self)
 {
+    printf("nn_worker_term\n");
     /*  Ask worker thread to terminate. */
     nn_mutex_lock (&self->sync);
     nn_queue_push (&self->tasks, &self->stop);
@@ -135,7 +136,8 @@ void nn_worker_term (struct nn_worker *self)
     nn_mutex_unlock (&self->sync);
 
     /*  Wait till worker thread terminates. */
-    nn_thread_term (&self->thread);
+    printf("nn_worker_term calling nn_thread_term\n");
+    nn_thread_term(&self->thread);
 
     /*  Clean up. */
     nn_timerset_term (&self->timerset);

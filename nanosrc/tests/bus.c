@@ -20,20 +20,21 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/bus.h"
+#include "../nn.h"
+#include "../bus.h"
 #include "testutil.h"
 
 #define SOCKET_ADDRESS_A "inproc://a"
 #define SOCKET_ADDRESS_B "inproc://b"
 
-int main ()
+int testbus()
 {
     int rc;
     int bus1;
     int bus2;
     int bus3;
     char buf [3];
+    printf("test bus\n");
 
     /*  Create a simple bus topology consisting of 3 nodes. */
     bus1 = test_socket (AF_SP, NN_BUS);

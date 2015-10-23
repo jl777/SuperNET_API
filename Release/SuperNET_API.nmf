@@ -1,0 +1,12 @@
+{
+  "program": {
+    "portable": {
+      "pnacl-translate": {
+        "url": "SuperNET_API.pexe"
+      },
+      "pnacl-debug": {
+        "url": "SuperNET_API_unstripped.bc"
+      }
+    }
+  }
+}

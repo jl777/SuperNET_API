@@ -20,18 +20,19 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 #include "testutil.h"
 
 /*  Test the NN_DOMAIN and NN_PROTOCOL socket options. */
 
-int main ()
+int testdomain()
 {
     int rc;
     int s;
     int op;
     size_t opsz;
+    printf("test domain\n");
 
     s = test_socket (AF_SP, NN_PAIR);
 

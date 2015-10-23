@@ -20,16 +20,16 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/pubsub.h"
-#include "../src/pipeline.h"
-#include "../src/tcp.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../pubsub.h"
+#include "../pipeline.h"
+#include "../tcp.h"
 
 #include "testutil.h"
-#include "../src/utils/attr.h"
-#include "../src/utils/thread.c"
-#include "../src/utils/atomic.c"
+#include "../utils/attr.h"
+#include "../utils/thread.h"
+#include "../utils/atomic.h"
 
 /*  Stress test the TCP transport. */
 
@@ -37,9 +37,9 @@
 #define TEST2_THREAD_COUNT 10
 #define MESSAGES_PER_THREAD 10
 #define TEST_LOOPS 10
-#define SOCKET_ADDRESS "tcp://127.0.0.1:5557"
+#define SOCKET_ADDRESS "tcp://127.0.0.1:5467"
 
-struct nn_atomic active;
+static struct nn_atomic active;
 
 static void routine (NN_UNUSED void *arg)
 {
@@ -72,12 +72,13 @@ static void routine2 (NN_UNUSED void *arg)
     nn_atomic_dec(&active, 1);
 }
 
-int main ()
+int testtcp_shutdown()
 {
     int sb;
     int i;
     int j;
     struct nn_thread threads [THREAD_COUNT];
+    printf("test tcp shutdown\n");
 
     /*  Stress the shutdown algorithm. */
 

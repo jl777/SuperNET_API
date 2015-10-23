@@ -566,11 +566,68 @@ char *SuperNET_launch_agent(char *name,char *jsonargs,int32_t *readyflagp)
     return(str);
 }
 
+void nanotests()
+{
+    int32_t errs = 0;
+    int testcmsg(); int testhash(); int testpoll(); int testprio();
+    int testseparation(); int testshutdown(); int testemfile(); int testiovec();
+    int testsymbol(); int testtimeo(); int testtrie(); int testzerocopy(); int testterm();
+    int testlist(); int testmsg(); int testdomain(); int testblock();
+    int testdevice(); int testipc(); int testinproc(); int testinproc_shutdown();
+    int testipc_shutdown(); int testipc_stress(); int testtcp(); int testtcp_shutdown();
+    int testtcpmux(); int testws(); int testpair(); int testbus();
+    int testpipeline(); int testpubsub(); int testreqrep(); int testsurvey();
+ 
+    int i;
+    for (i=0; i<0; i++)
+    {
+        testhash();
+        testtrie();
+        testlist();
+        testsymbol();
+        testiovec();
+        testblock();
+        testemfile();
+        testzerocopy();
+        testinproc();
+        testinproc_shutdown();
+        testtimeo();
+        testdomain();
+        testprio();
+        testshutdown();
+        testbus();
+        testpipeline();
+        testpubsub();
+        testpair();
+        testsurvey();
+        testws();
+        testpoll();
+        testmsg();
+        testcmsg();
+        testseparation();
+    }
+    for (i=0; i<1; i++)
+        testipc();
+ testtcp();
+   printf("finished loop\n"), getchar();
+   testdevice();
+    testreqrep();
+ testtcpmux();
+    getchar();
+    testipc_shutdown(); testipc_stress();  testtcp_shutdown();
+    testterm();
+
+    printf("nanotests num errs.%d\n",errs);
+
+    getchar();
+}
+
 int SuperNET_start(char *fname,char *myip)
 {
     void SuperNET_loop(void *_args);
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     FILE *fp; char *strs[16],*jsonargs=0,ipaddr[256]; cJSON *json; int32_t i,n = 0; uint64_t allocsize;
+    //nanotests();
     randombytes((void *)&i,sizeof(i));
     portable_OS_init();
     parse_ipaddr(ipaddr,myip);
@@ -609,19 +666,19 @@ int SuperNET_start(char *fname,char *myip)
     {
         if ( 0 )
             strs[n++] = SuperNET_launch_agent("jumblr",jsonargs,0);
-        if ( 1 )
+        if ( 0 )
             strs[n++] = SuperNET_launch_agent("pangea",jsonargs,0);
         if ( 0 )
             strs[n++] = SuperNET_launch_agent("dcnet",jsonargs,0);
         if ( SUPERNET.gatewayid < 0 )
         {
-            if ( 1 )
+            if ( 0 )
                 strs[n++] = SuperNET_launch_agent("prices",jsonargs,&PRICES.readyflag);
-            if ( 1 )
+            if ( 0 )
                 strs[n++] = SuperNET_launch_agent("teleport",jsonargs,&TELEPORT.readyflag);
             if ( 0 )
                 strs[n++] = SuperNET_launch_agent("cashier",jsonargs,&CASHIER.readyflag);
-            if ( 1 )
+            if ( 0 )
                 strs[n++] = SuperNET_launch_agent("InstantDEX",jsonargs,&INSTANTDEX.readyflag);
             if ( SUPERNET.peggy != 0 )
             {

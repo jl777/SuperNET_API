@@ -27,9 +27,9 @@
 #if defined NN_USE_POLL
 #include "poller_poll.c"
 #elif defined NN_USE_EPOLL
-xxx #include "poller_epoll.c"
+#include "poller_epoll.c"
 #elif defined NN_USE_KQUEUE
-xxx #include "poller_kqueue.c"
+#include "poller_kqueue.c"
 #endif
 
 #endif

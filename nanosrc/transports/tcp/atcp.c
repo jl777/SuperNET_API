@@ -158,7 +158,8 @@ static void nn_atcp_handler (struct nn_fsm *self, int src, int type,
         case NN_FSM_ACTION:
             switch (type) {
             case NN_FSM_START:
-                nn_usock_accept (&atcp->usock, atcp->listener);
+                nn_usock_accept(&atcp->usock, atcp->listener);
+                    printf("accepted\n");
                 atcp->state = NN_ATCP_STATE_ACCEPTING;
                 return;
             default:
@@ -174,137 +175,109 @@ static void nn_atcp_handler (struct nn_fsm *self, int src, int type,
 /*  Waiting for incoming connection.                                          */
 /******************************************************************************/
     case NN_ATCP_STATE_ACCEPTING:
-        switch (src) {
-
+        switch ( src )
+        {
         case NN_ATCP_SRC_USOCK:
-            switch (type) {
+            switch ( type )
+            {
             case NN_USOCK_ACCEPTED:
                 nn_epbase_clear_error (atcp->epbase);
-
-                /*  Set the relevant socket options. */
-                sz = sizeof (val);
-                nn_epbase_getopt (atcp->epbase, NN_SOL_SOCKET, NN_SNDBUF,
-                    &val, &sz);
-                nn_assert (sz == sizeof (val));
-                nn_usock_setsockopt (&atcp->usock, SOL_SOCKET, SO_SNDBUF,
-                    &val, sizeof (val));
-                sz = sizeof (val);
-                nn_epbase_getopt (atcp->epbase, NN_SOL_SOCKET, NN_RCVBUF,
-                    &val, &sz);
-                nn_assert (sz == sizeof (val));
-                nn_usock_setsockopt (&atcp->usock, SOL_SOCKET, SO_RCVBUF,
-                    &val, sizeof (val));
-
-                /*  Return ownership of the listening socket to the parent. */
-                nn_usock_swap_owner (atcp->listener, &atcp->listener_owner);
+                //  Set the relevant socket options
+                sz = sizeof(val);
+                nn_epbase_getopt (atcp->epbase,NN_SOL_SOCKET,NN_SNDBUF,&val,&sz);
+                nn_assert (sz == sizeof(val));
+                nn_usock_setsockopt (&atcp->usock,SOL_SOCKET,SO_SNDBUF,&val,sizeof(val));
+                sz = sizeof(val);
+                nn_epbase_getopt(atcp->epbase,NN_SOL_SOCKET,NN_RCVBUF,&val,&sz);
+                nn_assert (sz == sizeof(val));
+                nn_usock_setsockopt(&atcp->usock,SOL_SOCKET,SO_RCVBUF,&val,sizeof(val));
+                //  Return ownership of the listening socket to the parent
+                nn_usock_swap_owner(atcp->listener,&atcp->listener_owner);
                 atcp->listener = NULL;
                 atcp->listener_owner.src = -1;
                 atcp->listener_owner.fsm = NULL;
-                nn_fsm_raise (&atcp->fsm, &atcp->accepted, NN_ATCP_ACCEPTED);
-
-                /*  Start the stcp state machine. */
-                nn_usock_activate (&atcp->usock);
-                nn_stcp_start (&atcp->stcp, &atcp->usock);
+                nn_fsm_raise(&atcp->fsm, &atcp->accepted,NN_ATCP_ACCEPTED);
+                //  Start the stcp state machine
+                nn_usock_activate(&atcp->usock);
+                nn_stcp_start(&atcp->stcp, &atcp->usock);
+                    printf("start accepting socket\n");
                 atcp->state = NN_ATCP_STATE_ACTIVE;
-
-                nn_epbase_stat_increment (atcp->epbase,
-                    NN_STAT_ACCEPTED_CONNECTIONS, 1);
-
+                nn_epbase_stat_increment(atcp->epbase,NN_STAT_ACCEPTED_CONNECTIONS,1);
                 return;
-
-            default:
-                nn_fsm_bad_action (atcp->state, src, type);
+            default: nn_fsm_bad_action(atcp->state,src,type);
             }
-
         case NN_ATCP_SRC_LISTENER:
-            switch (type) {
-
+            switch ( type )
+            {
             case NN_USOCK_ACCEPT_ERROR:
-                nn_epbase_set_error (atcp->epbase,nn_usock_geterrno(atcp->listener),__FILE__,__LINE__);
-                nn_epbase_stat_increment (atcp->epbase,
-                    NN_STAT_ACCEPT_ERRORS, 1);
-                nn_usock_accept (&atcp->usock, atcp->listener);
+                nn_epbase_set_error(atcp->epbase,nn_usock_geterrno(atcp->listener),__FILE__,__LINE__);
+                nn_epbase_stat_increment(atcp->epbase,NN_STAT_ACCEPT_ERRORS,1);
+                nn_usock_accept(&atcp->usock, atcp->listener);
                 return;
-
-            default:
-                nn_fsm_bad_action (atcp->state, src, type);
+            default: nn_fsm_bad_action (atcp->state, src, type);
             }
-
-        default:
-            nn_fsm_bad_source (atcp->state, src, type);
+        default: nn_fsm_bad_source (atcp->state, src, type);
         }
-
 /******************************************************************************/
 /*  ACTIVE state.                                                             */
 /******************************************************************************/
     case NN_ATCP_STATE_ACTIVE:
-        switch (src) {
-
+        switch ( src )
+        {
         case NN_ATCP_SRC_STCP:
-            switch (type) {
+            switch ( type )
+            {
             case NN_STCP_ERROR:
-                nn_stcp_stop (&atcp->stcp);
+                nn_stcp_stop(&atcp->stcp);
                 atcp->state = NN_ATCP_STATE_STOPPING_STCP;
-                nn_epbase_stat_increment (atcp->epbase,
-                    NN_STAT_BROKEN_CONNECTIONS, 1);
+                nn_epbase_stat_increment(atcp->epbase,NN_STAT_BROKEN_CONNECTIONS,1);
                 return;
-            default:
-                nn_fsm_bad_action (atcp->state, src, type);
+            default: nn_fsm_bad_action (atcp->state, src, type);
             }
-
-        default:
-            nn_fsm_bad_source (atcp->state, src, type);
+        default: nn_fsm_bad_source (atcp->state, src, type);
         }
-
 /******************************************************************************/
 /*  STOPPING_STCP state.                                                      */
 /******************************************************************************/
     case NN_ATCP_STATE_STOPPING_STCP:
-        switch (src) {
-
+        switch ( src )
+        {
         case NN_ATCP_SRC_STCP:
-            switch (type) {
+            switch ( type )
+            {
             case NN_USOCK_SHUTDOWN:
                 return;
             case NN_STCP_STOPPED:
-                nn_usock_stop (&atcp->usock);
+                nn_usock_stop(&atcp->usock);
                 atcp->state = NN_ATCP_STATE_STOPPING_USOCK;
                 return;
-            default:
-                nn_fsm_bad_action (atcp->state, src, type);
+            default: nn_fsm_bad_action(atcp->state,src,type);
             }
-
-        default:
-            nn_fsm_bad_source (atcp->state, src, type);
+        default: nn_fsm_bad_source (atcp->state, src, type);
         }
-
 /******************************************************************************/
 /*  STOPPING_USOCK state.                                                      */
 /******************************************************************************/
     case NN_ATCP_STATE_STOPPING_USOCK:
-        switch (src) {
-
+        switch ( src )
+        {
         case NN_ATCP_SRC_USOCK:
-            switch (type) {
+            switch ( type )
+            {
             case NN_USOCK_SHUTDOWN:
                 return;
             case NN_USOCK_STOPPED:
-                nn_fsm_raise (&atcp->fsm, &atcp->done, NN_ATCP_ERROR);
+                nn_fsm_raise(&atcp->fsm,&atcp->done,NN_ATCP_ERROR);
                 atcp->state = NN_ATCP_STATE_DONE;
                 return;
-            default:
-                nn_fsm_bad_action (atcp->state, src, type);
+            default: nn_fsm_bad_action (atcp->state, src, type);
             }
-
-        default:
-            nn_fsm_bad_source (atcp->state, src, type);
+        default: nn_fsm_bad_source (atcp->state, src, type);
         }
-
 /******************************************************************************/
 /*  Invalid state.                                                            */
 /******************************************************************************/
-    default:
-        nn_fsm_bad_state (atcp->state, src, type);
+    default: nn_fsm_bad_state (atcp->state, src, type);
     }
 }
 

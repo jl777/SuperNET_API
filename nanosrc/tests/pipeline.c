@@ -21,18 +21,19 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pipeline.h"
+#include "../nn.h"
+#include "../pipeline.h"
 #include "testutil.h"
 
 #define SOCKET_ADDRESS "inproc://a"
 
-int main ()
+int testpipeline()
 {
     int push1;
     int push2;
     int pull1;
     int pull2;
+    printf("test pipeline\n");
 
     /*  Test fan-out. */
 

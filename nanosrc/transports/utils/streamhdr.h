@@ -57,7 +57,7 @@ struct nn_streamhdr {
     struct nn_pipebase *pipebase;
 
     /*  Protocol header. */
-    uint8_t protohdr [8];
+    uint8_t protohdr[8];
 
     /*  Event fired when the state machine ends. */
     struct nn_fsm_event done;

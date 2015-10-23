@@ -394,6 +394,7 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
     size_t sz;
 
     /*  Try to start the underlying socket. */
+    printf("CIPC start connecting\n");
     rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);

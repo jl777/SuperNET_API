@@ -20,16 +20,17 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/protocols/pubsub/trie.c"
-#include "../src/utils/alloc.c"
-#include "../src/utils/err.c"
+#include "../protocols/pubsub/trie.h"
+#include "../utils/alloc.h"
+#include "../utils/err.h"
 
 #include <stdio.h>
 
-int main ()
+int testtrie()
 {
     int rc;
     struct nn_trie trie;
+    printf("test trie\n");
 
     /*  Try matching with an empty trie. */
     nn_trie_init (&trie);

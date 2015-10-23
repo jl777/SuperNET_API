@@ -661,10 +661,10 @@ struct hostnet777_client *hostnet777_client(bits256 privkey,bits256 pubkey,char 
     endbuf[strlen(endbuf)-4] = 0;
     port = atoi(&srvendpoint[strlen(endbuf)]);
     sprintf(endbuf2,"%s%u",endbuf,port + 1 + slot);
-    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,10,1);
+    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,10,100);
     printf("NN_PUSH %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+1+slot);
     sprintf(endbuf2,"%s%u",endbuf,port);
-    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,1);
+    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,100);
     printf("SUB %d from (%s) port.%d\n",ptr->subsock,endbuf2,port);
     nn_setsockopt(ptr->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
     //sprintf(endbuf2,"%s%u",endbuf,port);
@@ -708,7 +708,7 @@ struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey
     if ( (ep->port= port) == 0 )
         ep->port = port = 8000 + (rand() % 1000);
     if ( transport == 0 || transport[0] == 0 )
-        transport = "tcp";
+        transport = TEST_TRANSPORT;
     if ( ipaddr == 0 || ipaddr[0] == 0 )
         ipaddr = "127.0.0.1";
     strcpy(ep->transport,transport), strcpy(ep->ipaddr,ipaddr);
@@ -718,9 +718,11 @@ struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey
     srv->H.pubkey = srv->clients[0].pubkey = srvpubkey;
     srv->H.nxt64bits = srv->clients[0].nxt64bits = acct777_nxt64bits(srvpubkey);
     sprintf(ep->endpoint,"%s://%s:%u",transport,ipaddr,port);
+    if ( strcmp(transport,"tcpmux") == 0 )
+        strcat(ep->endpoint,"/pangea");
     //sprintf(buf,"%s://127.0.0.1:%u",transport,port);
     strcpy(buf,ep->endpoint);
-    srv->pubsock = nn_createsocket(buf,1,"NN_PUB",NN_PUB,port,10,1);
+    srv->pubsock = nn_createsocket(buf,1,"NN_PUB",NN_PUB,port,10,100);
     printf("PUB.%d to (%s) pangeaport.%d\n",srv->pubsock,ep->endpoint,port);
     srv->num = 1;
     return(srv);
@@ -850,7 +852,7 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                     if ( dp->button >= dp->N )
                                         dp->button = 0;
                                     exit(1);
-                                    printf("deprecatd\n");
+                                    printf("deprecated\n");
                                     //sp->balances[pangea_slot(dp->button)]--, dp->balances[(pangea_slot(dp->button) + 1) % dp->N] -= 2;
                                 }
                                 else if ( strcmp(cmdstr,"encode") == 0 )

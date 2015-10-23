@@ -5,11 +5,11 @@
 #ifndef LIBRARIES_NACL_IO_NACL_IO_H_
 #define LIBRARIES_NACL_IO_NACL_IO_H_
 
-#include <ppapi/c/pp_instance.h>
-#include <ppapi/c/ppb.h>
+#include "../ppapi/c/pp_instance.h"
+#include "../ppapi/c/ppb.h"
 
-#include "nacl_io/ostypes.h"
-#include "sdk_util/macros.h"
+#include "ostypes.h"
+#include "../sdk_util/macros.h"
 
 EXTERN_C_BEGIN
 

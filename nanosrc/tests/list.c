@@ -20,10 +20,10 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/utils/cont.h"
+#include "../utils/cont.h"
 
-#include "../src/utils/err.c"
-#include "../src/utils/list.c"
+#include "../utils/err.h"
+#include "../utils/list.h"
 
 static struct nn_list_item sentinel;
 
@@ -37,12 +37,13 @@ struct item {
 static struct item that = {1, NN_LIST_ITEM_INITIALIZER};
 static struct item other = {2, NN_LIST_ITEM_INITIALIZER};
 
-int main ()
+int testlist()
 {
     int rc;
     struct nn_list list;
     struct nn_list_item *list_item;
     struct item *item;
+    printf("test list\n");
 
     /*  List item life cycle. */
 

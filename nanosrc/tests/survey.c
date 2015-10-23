@@ -21,14 +21,14 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/survey.h"
+#include "../nn.h"
+#include "../survey.h"
 
 #include "testutil.h"
 
 #define SOCKET_ADDRESS "inproc://test"
 
-int main ()
+int testsurvey()
 {
     int rc;
     int surveyor;
@@ -37,6 +37,7 @@ int main ()
     int respondent3;
     int deadline;
     char buf [7];
+    printf("test survey\n");
 
     /*  Test a simple survey with three respondents. */
     surveyor = test_socket (AF_SP, NN_SURVEYOR);

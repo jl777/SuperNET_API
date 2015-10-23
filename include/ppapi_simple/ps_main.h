@@ -5,8 +5,8 @@
 #ifndef PPAPI_SIMPLE_PS_MAIN_H_
 #define PPAPI_SIMPLE_PS_MAIN_H_
 
-#include "ppapi_simple/ps.h"
-#include "ppapi_simple/ps_event.h"
+#include "ps.h"
+#include "ps_event.h"
 
 EXTERN_C_BEGIN
 

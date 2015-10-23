@@ -21,15 +21,15 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/bus.h"
-#include "../src/pair.h"
-#include "../src/pipeline.h"
-#include "../src/inproc.h"
+#include "../nn.h"
+#include "../bus.h"
+#include "../pair.h"
+#include "../pipeline.h"
+#include "../inproc.h"
 
 #include "testutil.h"
-#include "../src/utils/attr.h"
-#include "../src/utils/thread.c"
+#include "../utils/attr.h"
+#include "../utils/thread.h"
 
 #define SOCKET_ADDRESS_A "inproc://a"
 #define SOCKET_ADDRESS_B "inproc://b"
@@ -96,7 +96,7 @@ void device3 (NN_UNUSED void *arg)
     test_close (deve);
 }
 
-int main ()
+int testdevice()
 {
     int rc;
     int enda;
@@ -110,24 +110,29 @@ int main ()
     struct nn_thread thread3;
     char buf [3];
     int timeo;
+    printf("test device\n");
 
     /*  Test the bi-directional device. */
 
     /*  Start the device. */
+    printf("start thread\n");
     nn_thread_init (&thread1, device1, NULL);
 
     /*  Create two sockets to connect to the device. */
+    printf("create NN_PAIR\n");
     enda = test_socket (AF_SP, NN_PAIR);
+    printf("connect to enda.%d\n",enda);
     test_connect (enda, SOCKET_ADDRESS_A);
+    printf("connect to endb\n");
     endb = test_socket (AF_SP, NN_PAIR);
     test_connect (endb, SOCKET_ADDRESS_B);
-
+    printf("send messages (%d %d)\n",enda,endb);
     /*  Pass a pair of messages between endpoints. */
     test_send (enda, "ABC");
     test_recv (endb, "ABC");
     test_send (endb, "ABC");
     test_recv (enda, "ABC");
-
+    printf("close %d/%d\n",endb,enda);
     /*  Clean up. */
     test_close (endb);
     test_close (enda);
@@ -163,27 +168,28 @@ int main ()
     test_connect (ende2, SOCKET_ADDRESS_E);
 
     /*  BUS is unreliable so wait a bit for connections to be established. */
-    nn_sleep (100);
+    nn_sleep (1000);
 
     /*  Pass a message to the bus. */
     test_send (ende1, "KLM");
     test_recv (ende2, "KLM");
 
-    /*  Make sure that the message doesn't arrive at the socket it was
-        originally sent to. */
+    //  Make sure that the message doesn't arrive at the socket it was originally sent to
     timeo = 100;
     rc = nn_setsockopt (ende1, NN_SOL_SOCKET, NN_RCVTIMEO,
        &timeo, sizeof (timeo));
     errno_assert (rc == 0);
     rc = nn_recv (ende1, buf, sizeof (buf), 0);
     errno_assert (rc < 0 && nn_errno () == EAGAIN);
-
+    printf("closes\n");
     /*  Clean up. */
     test_close (ende2);
     test_close (ende1);
 
     /*  Shut down the devices. */
+    printf("nn_term\n");
     nn_term ();
+    printf("nn_thread_terms\n");
     nn_thread_term (&thread1);
     nn_thread_term (&thread2);
     nn_thread_term (&thread3);

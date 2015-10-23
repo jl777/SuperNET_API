@@ -21,23 +21,24 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/ws.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../ws.h"
 
-#include "../src/utils/int.h"
+#include "../utils/int.h"
 
 #include "testutil.h"
 
 /*  Basic tests for WebSocket transport. */
 
-int main ()
+int testws()
 {
     int rc;
     int sb;
     int sc;
     //int opt;
     //size_t sz;
+    printf("test ws\n");
 
     /*  Try closing bound but unconnected socket. */
     sb = test_socket (AF_SP, NN_PAIR);

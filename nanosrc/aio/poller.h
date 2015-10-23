@@ -23,7 +23,7 @@
 #ifndef NN_POLLER_INCLUDED
 #define NN_POLLER_INCLUDED
 
-#define NN_USE_POLL
+#include "../nn_config.h"
 
 #if !defined NN_HAVE_WINDOWS
 
@@ -34,9 +34,9 @@
 #if defined NN_USE_POLL
 #include "poller_poll.h"
 #elif defined NN_USE_EPOLL
-xxx #include "poller_epoll.h"
+#include "poller_epoll.h"
 #elif defined NN_USE_KQUEUE
-xx #include "poller_kqueue.h"
+#include "poller_kqueue.h"
 #endif
 
 int nn_poller_init (struct nn_poller *self);

@@ -20,16 +20,16 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/inproc.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../inproc.h"
 
 #include "testutil.h"
-#include "../src/utils/attr.h"
-#include "../src/utils/thread.c"
+#include "../utils/attr.h"
+#include "../utils/thread.h"
 
 #if defined NN_HAVE_WINDOWS
-#include "../src/utils/win.h"
+#include "../utils/win.h"
 #else
 #include <sys/select.h>
 #endif
@@ -38,7 +38,7 @@
 
 #define SOCKET_ADDRESS "inproc://a"
 
-int sc;
+static int sc;
 
 void routine1 (NN_UNUSED void *arg)
 {
@@ -119,14 +119,14 @@ int getevents (int s, int events, int timeout)
     return revents;
 }
 
-int main ()
+int testpoll()
 {
     int rc;
     int sb;
     char buf [3];
     struct nn_thread thread;
     struct nn_pollfd pfd [2];
-
+    printf("test poll\n");
     /* Test nn_poll() function. */
     sb = test_socket (AF_SP, NN_PAIR);
     test_bind (sb, SOCKET_ADDRESS);

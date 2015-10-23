@@ -31,12 +31,8 @@ extern "C" {
 #include <errno.h>
 #include <stddef.h>
 
-    
-#ifdef __PNACL
-void PostMessage(const char* format, ...);
-#else
-#define PostMessage(...) 
-#endif
+#include "nn_config.h"
+
     
 /*  Handle DSO symbol visibility                                             */
 #if defined NN_NO_EXPORTS

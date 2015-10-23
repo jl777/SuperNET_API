@@ -179,9 +179,9 @@ void cards777_layer(bits256 *layered,bits256 *xoverz,bits256 *incards,int32_t nu
                 layered[nonz] = fmul_donna(z_x,incards[nonz]);
 
             }
-            printf("{%llx -> %llx}.%d ",(long long)incards[nonz].txid,(long long)layered[nonz].txid,nonz);
+            //printf("{%llx -> %llx}.%d ",(long long)incards[nonz].txid,(long long)layered[nonz].txid,nonz);
         }
-        printf("card.%d\n",i);
+        //printf("card.%d\n",i);
     }
 }
 

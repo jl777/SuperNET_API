@@ -20,17 +20,18 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/tcp.h"
-#include "../src/reqrep.h"
+#include "../nn.h"
+#include "../tcp.h"
+#include "../reqrep.h"
 
 #include "testutil.h"
 
-int main ()
+int testshutdown()
 {
     int s;
     int rc;
     int eid;
+    printf("test shutdown\n");
 
     /*  Run endpoint shutdown and socket shutdown in parallel. */
     s = test_socket (AF_SP, NN_REQ);

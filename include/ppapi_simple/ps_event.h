@@ -5,11 +5,11 @@
 #ifndef PPAPI_SIMPLE_PS_EVENT_H_
 #define PPAPI_SIMPLE_PS_EVENT_H_
 
-#include "ppapi/c/pp_bool.h"
-#include "ppapi/c/pp_resource.h"
-#include "ppapi/c/pp_var.h"
+#include "../ppapi/c/pp_bool.h"
+#include "../ppapi/c/pp_resource.h"
+#include "../ppapi/c/pp_var.h"
 
-#include "sdk_util/macros.h"
+#include "../sdk_util/macros.h"
 
 EXTERN_C_BEGIN
 

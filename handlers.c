@@ -19,8 +19,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
-#include "nacl_io/osdirent.h"
-#include "nacl_io/osinttypes.h"
+#include "include/nacl_io/osdirent.h"
+#include "include/nacl_io/osinttypes.h"
 
 #include "nacl_io_demo.h"
 

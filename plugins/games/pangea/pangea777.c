@@ -1203,7 +1203,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
             if ( (tp= THREADS[i]) != 0 )
             {
                 hn = &tp->hn;
-                //printf("pangea idle player.%d\n",hn->client->H.slot);
+            //printf("pangea idle player.%d\n",hn->client->H.slot);
                 if ( hn->client->H.done == 0 )
                 {
                     n++;
@@ -1851,11 +1851,11 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
         PANGEA_MAXTHREADS = numthreads;
     else numthreads = PANGEA_MAXTHREADS;
     if ( plugin->transport[0] == 0 )
-        strcpy(plugin->transport,"ipc");
+        strcpy(plugin->transport,TEST_TRANSPORT);
     if ( plugin->ipaddr[0] == 0 )
         strcpy(plugin->ipaddr,"127.0.0.1");
     if ( plugin->pangeaport == 0 )
-        plugin->pangeaport = 7899;
+        plugin->pangeaport = 12343;
     PostMessage("pangea numthreads.%d\n",numthreads);
     if ( (clients= calloc(numthreads,sizeof(*clients))) == 0 )
     {

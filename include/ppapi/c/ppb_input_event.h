@@ -8,15 +8,15 @@
 #ifndef PPAPI_C_PPB_INPUT_EVENT_H_
 #define PPAPI_C_PPB_INPUT_EVENT_H_
 
-#include "ppapi/c/pp_bool.h"
-#include "ppapi/c/pp_instance.h"
-#include "ppapi/c/pp_macros.h"
-#include "ppapi/c/pp_point.h"
-#include "ppapi/c/pp_resource.h"
-#include "ppapi/c/pp_stdint.h"
-#include "ppapi/c/pp_time.h"
-#include "ppapi/c/pp_touch_point.h"
-#include "ppapi/c/pp_var.h"
+#include "pp_bool.h"
+#include "pp_instance.h"
+#include "pp_macros.h"
+#include "pp_point.h"
+#include "pp_resource.h"
+#include "pp_stdint.h"
+#include "pp_time.h"
+#include "pp_touch_point.h"
+#include "pp_var.h"
 
 #define PPB_INPUT_EVENT_INTERFACE_1_0 "PPB_InputEvent;1.0"
 #define PPB_INPUT_EVENT_INTERFACE PPB_INPUT_EVENT_INTERFACE_1_0

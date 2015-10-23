@@ -20,19 +20,19 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 
 #include "testutil.h"
 
 #include <string.h>
 
 #define SOCKET_ADDRESS "inproc://a"
-#define SOCKET_ADDRESS_TCP "tcp://127.0.0.1:5557"
+#define SOCKET_ADDRESS_TCP "tcp://127.0.0.1:9456"
 
-char longdata[1 << 20];
+char longdata[(1 << 5)+1];
 
-int main ()
+int testmsg()
 {
     int rc;
     int sb;
@@ -41,73 +41,77 @@ int main ()
     int i;
     struct nn_iovec iov;
     struct nn_msghdr hdr;
-
-    sb = test_socket (AF_SP, NN_PAIR);
-    test_bind (sb, SOCKET_ADDRESS);
-    sc = test_socket (AF_SP, NN_PAIR);
-    test_connect (sc, SOCKET_ADDRESS);
-
-    buf1 = nn_allocmsg (256, 0);
-    alloc_assert (buf1);
-    for (i = 0; i != 256; ++i)
-        buf1 [i] = (unsigned char) i;
-    rc = nn_send (sc, &buf1, NN_MSG, 0);
-    errno_assert (rc >= 0);
-    nn_assert (rc == 256);
-
-    buf2 = NULL;
-    rc = nn_recv (sb, &buf2, NN_MSG, 0);
-    errno_assert (rc >= 0);
-    nn_assert (rc == 256);
-    nn_assert (buf2);
-    for (i = 0; i != 256; ++i)
-        nn_assert (buf2 [i] == (unsigned char) i);
-    rc = nn_freemsg (buf2);
-    errno_assert (rc == 0);
-
-    buf1 = nn_allocmsg (256, 0);
-    alloc_assert (buf1);
-    for (i = 0; i != 256; ++i)
-        buf1 [i] = (unsigned char) i;
-    iov.iov_base = &buf1;
-    iov.iov_len = NN_MSG;
-    memset (&hdr, 0, sizeof (hdr));
-    hdr.msg_iov = &iov;
-    hdr.msg_iovlen = 1;
-    rc = nn_sendmsg (sc, &hdr, 0);
-    errno_assert (rc >= 0);
-    nn_assert (rc == 256);
-
-    buf2 = NULL;
-    iov.iov_base = &buf2;
-    iov.iov_len = NN_MSG;
-    memset (&hdr, 0, sizeof (hdr));
-    hdr.msg_iov = &iov;
-    hdr.msg_iovlen = 1;
-    rc = nn_recvmsg (sb, &hdr, 0);
-    errno_assert (rc >= 0);
-    nn_assert (rc == 256);
-    nn_assert (buf2);
-    for (i = 0; i != 256; ++i)
-        nn_assert (buf2 [i] == (unsigned char) i);
-    rc = nn_freemsg (buf2);
-    errno_assert (rc == 0);
-
-    test_close (sc);
-    test_close (sb);
-
+    printf("test msg\n");
+    if ( 0 )
+    {
+        sb = test_socket (AF_SP, NN_PAIR);
+        test_bind (sb, SOCKET_ADDRESS);
+        sc = test_socket (AF_SP, NN_PAIR);
+        test_connect (sc, SOCKET_ADDRESS);
+        
+        buf1 = nn_allocmsg (256, 0);
+        alloc_assert (buf1);
+        for (i = 0; i != 256; ++i)
+            buf1 [i] = (unsigned char) i;
+        rc = nn_send (sc, &buf1, NN_MSG, 0);
+        errno_assert (rc >= 0);
+        nn_assert (rc == 256);
+        
+        buf2 = NULL;
+        rc = nn_recv (sb, &buf2, NN_MSG, 0);
+        errno_assert (rc >= 0);
+        nn_assert (rc == 256);
+        nn_assert (buf2);
+        for (i = 0; i != 256; ++i)
+            nn_assert (buf2 [i] == (unsigned char) i);
+        rc = nn_freemsg (buf2);
+        errno_assert (rc == 0);
+        
+        buf1 = nn_allocmsg (256, 0);
+        alloc_assert (buf1);
+        for (i = 0; i != 256; ++i)
+            buf1 [i] = (unsigned char) i;
+        iov.iov_base = &buf1;
+        iov.iov_len = NN_MSG;
+        memset (&hdr, 0, sizeof (hdr));
+        hdr.msg_iov = &iov;
+        hdr.msg_iovlen = 1;
+        rc = nn_sendmsg (sc, &hdr, 0);
+        errno_assert (rc >= 0);
+        nn_assert (rc == 256);
+        
+        buf2 = NULL;
+        iov.iov_base = &buf2;
+        iov.iov_len = NN_MSG;
+        memset (&hdr, 0, sizeof (hdr));
+        hdr.msg_iov = &iov;
+        hdr.msg_iovlen = 1;
+        rc = nn_recvmsg (sb, &hdr, 0);
+        errno_assert (rc >= 0);
+        nn_assert (rc == 256);
+        nn_assert (buf2);
+        for (i = 0; i != 256; ++i)
+            nn_assert (buf2 [i] == (unsigned char) i);
+        rc = nn_freemsg (buf2);
+        errno_assert (rc == 0);
+        
+        test_close (sc);
+        test_close (sb);
+    }
     /*  Test receiving of large message  */
-
-    sb = test_socket (AF_SP, NN_PAIR);
-    test_bind (sb, SOCKET_ADDRESS_TCP);
-    sc = test_socket (AF_SP, NN_PAIR);
-    test_connect (sc, SOCKET_ADDRESS_TCP);
+    sb = test_socket(AF_SP, NN_PAIR);
+    printf("test_bind.(%s)\n",SOCKET_ADDRESS_TCP);
+    test_bind(sb,SOCKET_ADDRESS_TCP);
+    sc = test_socket(AF_SP,NN_PAIR);
+    printf("test_connect.(%s)\n",SOCKET_ADDRESS_TCP);
+    test_connect(sc,SOCKET_ADDRESS_TCP);
 
     for (i = 0; i < (int) sizeof (longdata); ++i)
         longdata[i] = '0' + (i % 10);
-    longdata [sizeof (longdata) - 1] = 0;
-    test_send (sb, longdata);
-
+    longdata [sizeof(longdata) - 1] = 0;
+    printf("send longdata.%d\n",(int32_t)sizeof(longdata));
+    test_send(sb,longdata);
+    printf("recv longdata.%d\n",(int32_t)sizeof(longdata));
     rc = nn_recv (sc, &buf2, NN_MSG, 0);
     errno_assert (rc >= 0);
     nn_assert (rc == sizeof (longdata) - 1);
@@ -119,7 +123,7 @@ int main ()
 
     test_close (sc);
     test_close (sb);
-
+    printf("testmsg completed\n");
     return 0;
 }
 

@@ -58,13 +58,10 @@
 
 /*  Private functions. */
 static struct nn_optset *nn_sock_optset (struct nn_sock *self, int id);
-static int nn_sock_setopt_inner (struct nn_sock *self, int level,
-    int option, const void *optval, size_t optvallen);
+static int nn_sock_setopt_inner (struct nn_sock *self, int level,int option, const void *optval, size_t optvallen);
 static void nn_sock_onleave (struct nn_ctx *self);
-static void nn_sock_handler (struct nn_fsm *self, int src, int type,
-    void *srcptr);
-static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,
-    void *srcptr);
+static void nn_sock_handler (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
 static void nn_sock_action_zombify (struct nn_sock *self);
 
 int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t fd)
@@ -493,7 +490,7 @@ int nn_sock_add_ep(struct nn_sock *self,struct nn_transport *transport,int32_t b
         eid = self->eid++; // Increase the endpoint ID for the next endpoint
         nn_list_insert(&self->eps,&ep->item,nn_list_end(&self->eps)); // Add to the list of active endpoints
         nn_ctx_leave (&self->ctx);
-    } else PostMessage("self->sock.(%s) %d already has (%s)\n",self->socket_name,self->sockbase->sock,addr);
+    } else printf("self->sock.(%s) [%s] already has (%s)\n",self->socket_name,self->sockbase->sock->socket_name,addr);
     return(ep->eid);
 }
 
@@ -515,78 +512,78 @@ int32_t nn_sock_rm_ep(struct nn_sock *self,int32_t eid)
     return 0;
 }
 
-int nn_sock_send(struct nn_sock *self, struct nn_msg *msg, int flags)
+int32_t nn_sock_send(struct nn_sock *self,struct nn_msg *msg,int32_t flags)
 {
-    int rc;
-    uint64_t deadline;
-    uint64_t now;
-    int timeout;
-
-    /*  Some sockets types cannot be used for sending messages. */
-    if (nn_slow (self->socktype->flags & NN_SOCKTYPE_FLAG_NOSEND))
+    int32_t rc,timeout; uint64_t deadline,now;
+    //  Some sockets types cannot be used for sending messages
+    if ( nn_slow(self->socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
+    {
+        printf("nn_sock_send: cant send to usock.%s\n",self->socket_name);
         return -ENOTSUP;
-
+    }
     nn_ctx_enter (&self->ctx);
-
-    /*  Compute the deadline for SNDTIMEO timer. */
-    if (self->sndtimeo < 0) {
+    //  Compute the deadline for SNDTIMEO timer
+    if ( self->sndtimeo < 0 )
+    {
         deadline = -1;
         timeout = -1;
     }
-    else {
-        deadline = nn_clock_now (&self->clock) + self->sndtimeo;
+    else
+    {
+        deadline = nn_clock_now(&self->clock) + self->sndtimeo;
         timeout = self->sndtimeo;
     }
-
-    while (1) {
-
-        /*  If nn_term() was already called, return ETERM. */
-        if (nn_slow (self->state == NN_SOCK_STATE_ZOMBIE)) {
+    //printf("nn_sock_send\n");
+    while ( 1 )
+    {
+        //printf("while loop2.[%s]\n",self->sockbase->sock->socket_name);
+        //printf("sockbase send len.%d/%d/%d\n",(int32_t)nn_chunk_size(&msg->sphdr),(int32_t)nn_chunk_size(&msg->hdrs),(int32_t)nn_chunk_size(&msg->body));
+        //  If nn_term() was already called, return ETERM
+        if ( nn_slow(self->state == NN_SOCK_STATE_ZOMBIE) )
+        {
+            printf("nn_sock_send: zombie return\n");
             nn_ctx_leave (&self->ctx);
             return -ETERM;
         }
-
-        /*  Try to send the message in a non-blocking way. */
-        rc = self->sockbase->vfptr->send (self->sockbase, msg);
-        if (nn_fast (rc == 0)) {
+        //  Try to send the message in a non-blocking way
+        rc = self->sockbase->vfptr->send(self->sockbase,msg);
+        //printf("sockbase send rc.(%d)\n",rc);
+        //printf("nonblock rc.%d\n",rc);
+        if ( nn_fast(rc == 0) )
+        {
             nn_ctx_leave (&self->ctx);
             return 0;
         }
         nn_assert (rc < 0);
-
-        /*  Any unexpected error is forwarded to the caller. */
-        if (nn_slow (rc != -EAGAIN)) {
+        // Any unexpected error is forwarded to the caller
+        if ( nn_slow(rc != -EAGAIN) )
+        {
             nn_ctx_leave (&self->ctx);
             return rc;
         }
-
-        /*  If the message cannot be sent at the moment and the send call
-            is non-blocking, return immediately. */
-        if (nn_fast (flags & NN_DONTWAIT)) {
+        //  If the message cannot be sent at the moment and the send call is non-blocking, return immediately
+        if ( nn_fast(flags & NN_DONTWAIT) )
+        {
             nn_ctx_leave (&self->ctx);
             return -EAGAIN;
         }
-
-        /*  With blocking send, wait while there are new pipes available
-            for sending. */
+        //  With blocking send, wait while there are new pipes available for sending.
         nn_ctx_leave (&self->ctx);
-        rc = nn_efd_wait (&self->sndfd, timeout);
-        if (nn_slow (rc == -ETIMEDOUT))
+        rc = nn_efd_wait(&self->sndfd,timeout);
+        if ( nn_slow(rc == -ETIMEDOUT))
             return -EAGAIN;
-        if (nn_slow (rc == -EINTR))
+        if ( nn_slow(rc == -EINTR))
             return -EINTR;
         errnum_assert (rc == 0, rc);
         nn_ctx_enter (&self->ctx);
-        /*
-         *  Double check if pipes are still available for sending
-         */
-        if (!nn_efd_wait (&self->sndfd, 0)) {
+        // Double check if pipes are still available for sending
+        if ( !nn_efd_wait (&self->sndfd, 0) )
+        {
             self->flags |= NN_SOCK_FLAG_OUT;
         }
-
-        /*  If needed, re-compute the timeout to reflect the time that have
-            already elapsed. */
-        if (self->sndtimeo >= 0) {
+        //  If needed, re-compute the timeout to reflect the time that have already elapsed
+        if ( self->sndtimeo >= 0 )
+        {
             now = nn_clock_now (&self->clock);
             timeout = (int) (now > deadline ? 0 : deadline - now);
         }
@@ -626,6 +623,7 @@ int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
 
         /*  Try to receive the message in a non-blocking way. */
         rc = self->sockbase->vfptr->recv (self->sockbase, msg);
+        //printf("Sockbase recv rc.%d\n",rc);
         if (nn_fast (rc == 0)) {
             nn_ctx_leave (&self->ctx);
             return 0;

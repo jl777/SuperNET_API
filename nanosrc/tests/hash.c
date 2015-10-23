@@ -20,17 +20,18 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/utils/err.c"
-#include "../src/utils/list.c"
-#include "../src/utils/hash.c"
-#include "../src/utils/alloc.c"
+#include "../utils/err.h"
+#include "../utils/list.h"
+#include "../utils/hash.h"
+#include "../utils/alloc.h"
 
-int main ()
+int testhash()
 {
     struct nn_hash hash;
     uint32_t k;
     struct nn_hash_item *item;
     struct nn_hash_item *item5000 = NULL;
+    printf("test hash\n");
 
     nn_hash_init (&hash);
 

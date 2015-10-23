@@ -20,19 +20,19 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 
 #include "testutil.h"
-#include "../src/utils/attr.h"
-#include "../src/utils/thread.c"
+#include "../utils/attr.h"
+#include "../utils/thread.h"
 
 /*  This test checks whether blocking on send/recv works as expected. */
 
 #define SOCKET_ADDRESS "inproc://a"
 
-int sc;
-int sb;
+static int sc;
+static int sb;
 
 void worker (NN_UNUSED void *arg)
 {
@@ -48,9 +48,10 @@ void worker (NN_UNUSED void *arg)
     test_send (sc, "ABC");
 }
 
-int main ()
+int testblock()
 {
     struct nn_thread thread;
+    printf("test block\n");
 
     sb = test_socket (AF_SP, NN_PAIR);
     test_bind (sb, SOCKET_ADDRESS);
@@ -66,7 +67,7 @@ int main ()
 
     test_close (sc);
     test_close (sb);
-
+    printf("finished block test\n");
     return 0;
 }
 

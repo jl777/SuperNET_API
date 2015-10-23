@@ -5,8 +5,8 @@
 #ifndef PPAPI_SIMPLE_PS_H_
 #define PPAPI_SIMPLE_PS_H_
 
-#include "ppapi/c/pp_instance.h"
-#include "sdk_util/macros.h"
+#include "../ppapi/c/pp_instance.h"
+#include "../sdk_util/macros.h"
 
 EXTERN_C_BEGIN
 

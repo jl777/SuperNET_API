@@ -20,10 +20,10 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
-#include "../src/pubsub.h"
-#include "../src/tcp.h"
+#include "../nn.h"
+#include "../pair.h"
+#include "../pubsub.h"
+#include "../tcp.h"
 
 #include "testutil.h"
 
@@ -31,9 +31,9 @@
 
 #define SOCKET_ADDRESS "tcp://127.0.0.1:5555"
 
-int sc;
+static int sc;
 
-int main ()
+int testtcp()
 {
     int rc;
     int sb;
@@ -41,7 +41,8 @@ int main ()
     int opt;
     size_t sz;
     int s1, s2;
-    void * dummy_buf;
+    void * dummy_buf=0;
+    printf("test tcp\n");
 
     /*  Try closing bound but unconnected socket. */
     sb = test_socket (AF_SP, NN_PAIR);

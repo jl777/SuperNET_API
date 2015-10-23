@@ -190,8 +190,7 @@ struct nn_pipebase {
 };
 
 /*  Initialise the pipe.  */
-void nn_pipebase_init (struct nn_pipebase *self,
-    const struct nn_pipebase_vfptr *vfptr, struct nn_epbase *epbase);
+void nn_pipebase_init (struct nn_pipebase *self,const struct nn_pipebase_vfptr *vfptr, struct nn_epbase *epbase);
 
 /*  Terminate the pipe. */
 void nn_pipebase_term (struct nn_pipebase *self);
@@ -209,8 +208,7 @@ void nn_pipebase_received (struct nn_pipebase *self);
 void nn_pipebase_sent (struct nn_pipebase *self);
 
 /*  Retrieve value of a socket option. */
-void nn_pipebase_getopt (struct nn_pipebase *self, int level, int option,
-    void *optval, size_t *optvallen);
+void nn_pipebase_getopt (struct nn_pipebase *self, int level, int option,void *optval, size_t *optvallen);
 
 /*  Returns 1 is the specified socket type is a valid peer for this socket,
     or 0 otherwise. */

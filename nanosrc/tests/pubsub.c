@@ -20,14 +20,14 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pubsub.h"
+#include "../nn.h"
+#include "../pubsub.h"
 
 #include "testutil.h"
 
 #define SOCKET_ADDRESS "inproc://a"
 
-int main ()
+int testpubsub()
 {
     int rc;
     int pub1;
@@ -36,6 +36,7 @@ int main ()
     int sub2;
     char buf [8];
     size_t sz;
+    printf("test pubsub\n");
 
     pub1 = test_socket (AF_SP, NN_PUB);
     test_bind (pub1, SOCKET_ADDRESS);

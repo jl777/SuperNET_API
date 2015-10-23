@@ -8,14 +8,14 @@
 #ifndef PPAPI_C_PPP_INSTANCE_H_
 #define PPAPI_C_PPP_INSTANCE_H_
 
-#include "ppapi/c/pp_bool.h"
-#include "ppapi/c/pp_instance.h"
-#include "ppapi/c/pp_macros.h"
-#include "ppapi/c/pp_point.h"
-#include "ppapi/c/pp_rect.h"
-#include "ppapi/c/pp_resource.h"
-#include "ppapi/c/pp_size.h"
-#include "ppapi/c/pp_stdint.h"
+#include "pp_bool.h"
+#include "pp_instance.h"
+#include "pp_macros.h"
+#include "pp_point.h"
+#include "pp_rect.h"
+#include "pp_resource.h"
+#include "pp_size.h"
+#include "pp_stdint.h"
 
 #define PPP_INSTANCE_INTERFACE_1_0 "PPP_Instance;1.0"
 #define PPP_INSTANCE_INTERFACE_1_1 "PPP_Instance;1.1"

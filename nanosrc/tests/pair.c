@@ -20,17 +20,18 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 
 #include "testutil.h"
 
 #define SOCKET_ADDRESS "inproc://a"
 
-int main ()
+int testpair()
 {
     int sb;
     int sc;
+    printf("test pair\n");
 
     sb = test_socket (AF_SP, NN_PAIR);
     test_bind (sb, SOCKET_ADDRESS);

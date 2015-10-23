@@ -20,14 +20,14 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/reqrep.h"
+#include "../nn.h"
+#include "../reqrep.h"
 
 #include "testutil.h"
 
 #define SOCKET_ADDRESS "inproc://test"
 
-int main ()
+int testreqrep()
 {
     int rc;
     int rep1;
@@ -37,6 +37,7 @@ int main ()
     int resend_ivl;
     char buf [7];
     int timeo;
+    printf("test reqrep\n");
 
     /*  Test req/rep with full socket types. */
     rep1 = test_socket (AF_SP, NN_REP);

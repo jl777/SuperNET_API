@@ -8,9 +8,9 @@
 #ifndef PPAPI_C_PP_VAR_H_
 #define PPAPI_C_PP_VAR_H_
 
-#include "ppapi/c/pp_bool.h"
-#include "ppapi/c/pp_macros.h"
-#include "ppapi/c/pp_stdint.h"
+#include "pp_bool.h"
+#include "pp_macros.h"
+#include "pp_stdint.h"
 
 /**
  * @file

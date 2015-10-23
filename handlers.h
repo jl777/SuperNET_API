@@ -5,7 +5,7 @@
 #ifndef HANDLERS_H_
 #define HANDLERS_H_
 
-#include "ppapi/c/pp_var.h"
+#include "include/ppapi/c/pp_var.h"
 
 typedef int (*HandleFunc)(struct PP_Var params,
                           struct PP_Var* out_var,

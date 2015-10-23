@@ -20,15 +20,15 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/tcp.h"
-#include "../src/reqrep.h"
+#include "../nn.h"
+#include "../tcp.h"
+#include "../reqrep.h"
 
 #include "testutil.h"
 
 #define SOCKET_ADDRESS "tcp://127.0.0.1:5555"
 
-int main ()
+int testcmsg()
 {
     int rc;
     int rep;
@@ -40,7 +40,7 @@ int main ()
     struct nn_cmsghdr *cmsg;
     unsigned char *data;
     void *buf;
-    
+    printf("test cmsg\n");
     rep = test_socket (AF_SP_RAW, NN_REP);
     test_bind (rep, SOCKET_ADDRESS);
     req = test_socket (AF_SP, NN_REQ);

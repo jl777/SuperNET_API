@@ -20,7 +20,7 @@
     IN THE SOFTWARE.
 */
 
-#define NN_USE_POLL
+#include "../nn_config.h"
 
 #include <poll.h>
 

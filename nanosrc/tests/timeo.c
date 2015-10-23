@@ -20,13 +20,13 @@
     IN THE SOFTWARE.
 */
 
-#include "../src/nn.h"
-#include "../src/pair.h"
+#include "../nn.h"
+#include "../pair.h"
 
 #include "testutil.h"
-#include "../src/utils/stopwatch.c"
+#include "../utils/stopwatch.h"
 
-int main ()
+int testtimeo()
 {
     int rc;
     int s;
@@ -34,6 +34,7 @@ int main ()
     char buf [3];
     struct nn_stopwatch stopwatch;
     uint64_t elapsed;
+    printf("test timeo\n");
 
     s = test_socket (AF_SP, NN_PAIR);
 

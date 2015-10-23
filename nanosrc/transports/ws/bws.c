@@ -372,6 +372,7 @@ static void nn_bws_start_listening (struct nn_bws *self)
         nn_assert (0);
 
     /*  Start listening for incoming connections. */
+    printf("BWS start connecting\n");
     rc = nn_usock_start (&self->usock, ss.ss_family, SOCK_STREAM, 0);
     /*  TODO: EMFILE error can happen here. We can wait a bit and re-try. */
     errnum_assert (rc == 0, -rc);
