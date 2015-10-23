@@ -17,7 +17,7 @@
 #ifndef crypto777_portable777_h
 #define crypto777_portable777_h
 
-#define TEST_TRANSPORT "ws"
+#define TEST_TRANSPORT "ipc"
 
 #include <stdint.h>
 #include <pthread.h>

@@ -666,7 +666,7 @@ int SuperNET_start(char *fname,char *myip)
     {
         if ( 0 )
             strs[n++] = SuperNET_launch_agent("jumblr",jsonargs,0);
-        if ( 0 )
+        if ( 1 )
             strs[n++] = SuperNET_launch_agent("pangea",jsonargs,0);
         if ( 0 )
             strs[n++] = SuperNET_launch_agent("dcnet",jsonargs,0);

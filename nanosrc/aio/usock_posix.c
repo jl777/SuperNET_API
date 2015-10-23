@@ -393,17 +393,17 @@ void nn_usock_send(struct nn_usock *self,const struct nn_iovec *iov,int32_t iovc
     nn_assert (iovcnt <= NN_USOCK_MAX_IOVCNT);
     self->out.hdr.msg_iov = self->out.iov;
     out = 0;
-    //printf("%d iov: ",iovcnt);
+    printf("%d iov: ",iovcnt);
     for (i=0; i<iovcnt; i++)
     {
         if (iov [i].iov_len == 0)
             continue;
         self->out.iov [out].iov_base = iov[i].iov_base;
         self->out.iov [out].iov_len = iov[i].iov_len;
-        //printf("%d, ",(int32_t)iov[i].iov_len);
+        printf("%d, ",(int32_t)iov[i].iov_len);
         out++;
     }
-    //printf("nn_usock_send sock.%d\n",self->s);
+    printf("nn_usock_send sock.%d\n",self->s);
     self->out.hdr.msg_iovlen = out;
     rc = nn_usock_send_raw (self, &self->out.hdr); // Try to send the data immediately
     if ( nn_fast(rc == 0) ) // Success
@@ -434,7 +434,7 @@ void nn_usock_recv(struct nn_usock *self,void *buf,size_t len,int32_t *fd)
         nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ERROR);
         return;
     }
-    //printf("sock.%d nn_usock_recv.[%d %d %d %d] rc.%d nbytes.%d\n",self->s,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],rc,(int32_t)nbytes);
+    printf("sock.%d nn_usock_recv.[%d %d %d %d] rc.%d nbytes.%d\n",self->s,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],rc,(int32_t)nbytes);
     if ( nn_fast(nbytes == len) ) // Success
     {
         nn_fsm_raise(&self->fsm,&self->event_received,NN_USOCK_RECEIVED);
@@ -723,7 +723,7 @@ static void nn_usock_handler (struct nn_fsm *self, int src, int type,
             case NN_WORKER_FD_IN:
                 sz = usock->in.len;
                 rc = nn_usock_recv_raw(usock,usock->in.buf,&sz);
-                //printf("NN_USOCK_STATE_ACTIVE FD_IN[%d] (%d %d %d %d)\n",rc,usock->in.buf[0],usock->in.buf[1],usock->in.buf[2],usock->in.buf[3]);
+                printf("NN_USOCK_STATE_ACTIVE FD_IN[%d] (%d %d %d %d)\n",rc,usock->in.buf[0],usock->in.buf[1],usock->in.buf[2],usock->in.buf[3]);
                 if (nn_fast (rc == 0)) {
                     usock->in.len -= sz;
                     usock->in.buf += sz;
@@ -1037,7 +1037,7 @@ static int32_t nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
         if ( sz > length )
             sz = length;
         memcpy(buf,self->in.batch + self->in.batch_pos,sz);
-        //printf("nn_usock_recv_raw.[%d %d %d %d] sz.%d length.%d\n",((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],(int32_t)sz,(int32_t)length);
+        printf("nn_usock_recv_raw.[%d %d %d %d] sz.%d length.%d\n",((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],(int32_t)sz,(int32_t)length);
         self->in.batch_pos += sz;
         buf = ((char *)buf) + sz;
         length -= sz;
