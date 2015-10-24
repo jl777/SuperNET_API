@@ -1920,7 +1920,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     {
         item = cJSON_CreateObject();
         walletitem = cJSON_CreateObject();
-        if ( plugin->notabot != numthreads )
+        if ( i != 0 && plugin->notabot != numthreads )
         {
             if ( i != plugin->notabot )
                 jaddnum(walletitem,"isbot",1);
