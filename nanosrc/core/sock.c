@@ -486,7 +486,7 @@ int nn_sock_add_ep(struct nn_sock *self,struct nn_transport *transport,int32_t b
             return rc;
         }
         nn_ep_start(ep);
-        //PostMessage("ep sock.(%s) started %s://(%s) bind.%d\n",self->socket_name,transport->name,addr,bind);
+        printf("ep sock.(%s) started %s://(%s) bind.%d\n",self->socket_name,transport->name,addr,bind);
         eid = self->eid++; // Increase the endpoint ID for the next endpoint
         nn_list_insert(&self->eps,&ep->item,nn_list_end(&self->eps)); // Add to the list of active endpoints
         nn_ctx_leave (&self->ctx);

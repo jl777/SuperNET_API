@@ -164,23 +164,21 @@ struct nn_global {
     char appname[64];
 };
 
-/*  Singleton object containing the global state of the library. */
+// Singleton object containing the global state of the library
 static struct nn_global SELF = {0};
 
-/*  Context creation- and termination-related private functions. */
+// Context creation- and termination-related private functions
 void nn_global_init(void);
 static void nn_global_term(void);
 
-/*  Transport-related private functions. */
+// Transport-related private functions
 static void nn_global_add_transport(struct nn_transport *transport);
 static void nn_global_add_socktype(struct nn_socktype *socktype);
 
-/*  Private function that unifies nn_bind and nn_connect functionality.
-    It returns the ID of the newly created endpoint. */
+// Private function that unifies nn_bind and nn_connect functionality. It returns the ID of the newly created endpoint
 static int nn_global_create_ep(int32_t s,const char *addr,int32_t bind);
 
-/*  Private socket creator which doesn't initialize global state and
-    does no locking by itself */
+// Private socket creator which doesn't initialize global state and does no locking by itself
 static int nn_global_create_socket(int32_t domain,int32_t protocol);
 
 /*  FSM callbacks  */

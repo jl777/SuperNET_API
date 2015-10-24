@@ -25,7 +25,7 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-#define DEFAULT_SUPERNET_CONF "{\"peggy\":0,\"secret\":\"randvals\",\"pangeatest\":\"9\",\"notabot\":-1}"
+#define DEFAULT_SUPERNET_CONF "{\"peggy\":0,\"secret\":\"randvals\",\"pangeatest\":\"9\",\"notabot\":0}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
@@ -568,7 +568,12 @@ char *SuperNET_launch_agent(char *name,char *jsonargs,int32_t *readyflagp)
 
 void nanotests()
 {
-    int32_t errs = 0;
+    int32_t i,seed,errs = 0;
+    randombytes((void *)&seed,sizeof(seed));
+    srand(seed);
+    for (i=0; i<10; i++)
+        printf("%u ",rand());
+    printf("rands\n");
     int testcmsg(); int testhash(); int testpoll(); int testprio();
     int testseparation(); int testshutdown(); int testemfile(); int testiovec();
     int testsymbol(); int testtimeo(); int testtrie(); int testzerocopy(); int testterm();
@@ -577,8 +582,6 @@ void nanotests()
     int testipc_shutdown(); int testipc_stress(); int testtcp(); int testtcp_shutdown();
     int testtcpmux(); int testws(); int testpair(); int testbus();
     int testpipeline(); int testpubsub(); int testreqrep(); int testsurvey();
- 
-    int i;
     for (i=0; i<0; i++)
     {
         testhash();
@@ -608,16 +611,21 @@ void nanotests()
     }
     for (i=0; i<1; i++)
         testipc();
- testtcp();
-   printf("finished loop\n"), getchar();
-   testdevice();
+    printf("finished nanotest loop\n"), getchar();
     testreqrep();
+testtcp();
+    testdevice();
  testtcpmux();
-    getchar();
     testipc_shutdown(); testipc_stress();  testtcp_shutdown();
     testterm();
 
     printf("nanotests num errs.%d\n",errs);
+    char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
+    if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+    {
+        fprintf(stderr,"busdata.(%s)\n",str);
+        free(str);
+    }
 
     getchar();
 }

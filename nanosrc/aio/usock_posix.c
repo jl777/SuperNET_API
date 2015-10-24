@@ -75,74 +75,64 @@ static void nn_usock_init_from_fd (struct nn_usock *self,int32_t s);
 static int nn_usock_send_raw (struct nn_usock *self,struct msghdr *hdr);
 static int nn_usock_recv_raw (struct nn_usock *self,void *buf,size_t *len);
 static int nn_usock_geterr (struct nn_usock *self);
-static void nn_usock_handler (struct nn_fsm *self,int32_t src,int32_t type,
-    void *srcptr);
+static void nn_usock_handler (struct nn_fsm *self,int32_t src,int32_t type,void *srcptr);
 static void nn_usock_shutdown (struct nn_fsm *self,int32_t src,int32_t type,void *srcptr);
 
 void nn_usock_init(struct nn_usock *self,int32_t src,struct nn_fsm *owner)
 {
-    /*  Initalise the state machine. */
-    nn_fsm_init (&self->fsm, nn_usock_handler, nn_usock_shutdown, src, self, owner);
+    // Initalise the state machine
+    nn_fsm_init(&self->fsm, nn_usock_handler,nn_usock_shutdown,src,self,owner);
     self->state = NN_USOCK_STATE_IDLE;
-    /*  Choose a worker thread to handle this socket. */
-    self->worker = nn_fsm_choose_worker (&self->fsm);
-    /*  Actual file descriptor will be generated during 'start' step. */
+    // Choose a worker thread to handle this socket
+    self->worker = nn_fsm_choose_worker(&self->fsm);
+    // Actual file descriptor will be generated during 'start' step
     self->s = -1;
     self->errnum = 0;
-
     self->in.buf = NULL;
     self->in.len = 0;
     self->in.batch = NULL;
     self->in.batch_len = 0;
     self->in.batch_pos = 0;
     self->in.pfd = NULL;
-
-    memset (&self->out.hdr, 0, sizeof (struct msghdr));
-
-    /*  Initialise tasks for the worker thread. */
-    nn_worker_fd_init (&self->wfd, NN_USOCK_SRC_FD, &self->fsm);
-    nn_worker_task_init (&self->task_connecting, NN_USOCK_SRC_TASK_CONNECTING,&self->fsm);
-    nn_worker_task_init (&self->task_connected, NN_USOCK_SRC_TASK_CONNECTED,&self->fsm);
-    nn_worker_task_init (&self->task_accept, NN_USOCK_SRC_TASK_ACCEPT,&self->fsm);
-    nn_worker_task_init (&self->task_send, NN_USOCK_SRC_TASK_SEND, &self->fsm);
-    nn_worker_task_init (&self->task_recv, NN_USOCK_SRC_TASK_RECV, &self->fsm);
-    nn_worker_task_init (&self->task_stop, NN_USOCK_SRC_TASK_STOP, &self->fsm);
-
-    /*  Intialise events raised by usock. */
-    nn_fsm_event_init (&self->event_established);
-    nn_fsm_event_init (&self->event_sent);
-    nn_fsm_event_init (&self->event_received);
-    nn_fsm_event_init (&self->event_error);
-
-    /*  accepting is not going on at the moment. */
+    memset(&self->out.hdr,0,sizeof(struct msghdr));
+    // Initialise tasks for the worker thread
+    nn_worker_fd_init(&self->wfd,NN_USOCK_SRC_FD,&self->fsm);
+    nn_worker_task_init(&self->task_connecting,NN_USOCK_SRC_TASK_CONNECTING,&self->fsm);
+    nn_worker_task_init(&self->task_connected,NN_USOCK_SRC_TASK_CONNECTED,&self->fsm);
+    nn_worker_task_init(&self->task_accept,NN_USOCK_SRC_TASK_ACCEPT,&self->fsm);
+    nn_worker_task_init(&self->task_send,NN_USOCK_SRC_TASK_SEND,&self->fsm);
+    nn_worker_task_init(&self->task_recv,NN_USOCK_SRC_TASK_RECV,&self->fsm);
+    nn_worker_task_init(&self->task_stop,NN_USOCK_SRC_TASK_STOP,&self->fsm);
+    // Intialise events raised by usock
+    nn_fsm_event_init(&self->event_established);
+    nn_fsm_event_init(&self->event_sent);
+    nn_fsm_event_init(&self->event_received);
+    nn_fsm_event_init(&self->event_error);
+    // accepting is not going on at the moment
     self->asock = NULL;
 }
 
-void nn_usock_term (struct nn_usock *self)
+void nn_usock_term(struct nn_usock *self)
 {
-    nn_assert_state (self, NN_USOCK_STATE_IDLE);
-
-    if (self->in.batch)
-        nn_free (self->in.batch);
-
-    nn_fsm_event_term (&self->event_error);
-    nn_fsm_event_term (&self->event_received);
-    nn_fsm_event_term (&self->event_sent);
-    nn_fsm_event_term (&self->event_established);
-
-    nn_worker_cancel (self->worker, &self->task_recv);
-
-    nn_worker_task_term (&self->task_stop);
-    nn_worker_task_term (&self->task_recv);
-    nn_worker_task_term (&self->task_send);
-    nn_worker_task_term (&self->task_accept);
-    nn_worker_task_term (&self->task_connected);
-    nn_worker_task_term (&self->task_connecting);
-    nn_worker_fd_term (&self->wfd);
-    nn_fsm_term (&self->fsm);
+    nn_assert_state(self,NN_USOCK_STATE_IDLE);
+    if ( self->in.batch )
+        nn_free(self->in.batch);
+    nn_fsm_event_term(&self->event_error);
+    nn_fsm_event_term(&self->event_received);
+    nn_fsm_event_term(&self->event_sent);
+    nn_fsm_event_term(&self->event_established);
+    nn_worker_cancel(self->worker,&self->task_recv);
+    nn_worker_task_term(&self->task_stop);
+    nn_worker_task_term(&self->task_recv);
+    nn_worker_task_term(&self->task_send);
+    nn_worker_task_term(&self->task_accept);
+    nn_worker_task_term(&self->task_connected);
+    nn_worker_task_term(&self->task_connecting);
+    nn_worker_fd_term(&self->wfd);
+    nn_fsm_term(&self->fsm);
 }
 
-int nn_usock_isidle (struct nn_usock *self) { return nn_fsm_isidle(&self->fsm); }
+int32_t nn_usock_isidle(struct nn_usock *self) { return nn_fsm_isidle(&self->fsm); }
 
 int32_t nn_usock_start(struct nn_usock *self,int32_t domain,int32_t type,int32_t protocol)
 {
@@ -151,33 +141,29 @@ int32_t nn_usock_start(struct nn_usock *self,int32_t domain,int32_t type,int32_t
 #ifdef SOCK_CLOEXEC
     type |= SOCK_CLOEXEC;
 #endif
-    s = socket (domain, type, protocol); // Open the underlying socket
-    //printf("start usock.%d\n",s);
+    s = socket(domain,type,protocol); // Open the underlying socket
+    printf("start usock.%d\n",s);
     if (nn_slow (s < 0))
        return -errno;
     nn_usock_init_from_fd(self,s);
-    nn_fsm_start (&self->fsm); // Start the state machine
+    nn_fsm_start(&self->fsm); // Start the state machine
     return 0;
 }
 
-void nn_usock_start_fd (struct nn_usock *self, int fd)
+void nn_usock_start_fd(struct nn_usock *self,int32_t fd)
 {
-    nn_usock_init_from_fd (self, fd);
-    nn_fsm_start (&self->fsm);
-    nn_fsm_action (&self->fsm, NN_USOCK_ACTION_STARTED);
+    nn_usock_init_from_fd(self,fd);
+    nn_fsm_start(&self->fsm);
+    nn_fsm_action(&self->fsm,NN_USOCK_ACTION_STARTED);
 }
 
 static void nn_usock_init_from_fd (struct nn_usock *self, int s)
 {
     int32_t rc,opt;
     nn_assert (self->state == NN_USOCK_STATE_IDLE || NN_USOCK_STATE_BEING_ACCEPTED);
-    /*  Store the file descriptor. */
     nn_assert (self->s == -1);
-    self->s = s;
-    /* Setting FD_CLOEXEC option immediately after socket creation is the
-        second best option after using SOCK_CLOEXEC. There is a race condition
-        here (if process is forked between socket creation and setting
-        the option) but the problem is pretty unlikely to happen. */
+    self->s = s; // Store the file descriptor
+    // Setting FD_CLOEXEC option immediately after socket creation is the second best option after using SOCK_CLOEXEC. There is a race condition here (if process is forked between socket creation and setting the option) but the problem is pretty unlikely to happen
 #if defined FD_CLOEXEC
     rc = fcntl (self->s, F_SETFD, FD_CLOEXEC);
 #if defined __APPLE__
@@ -189,7 +175,7 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
     // If applicable, prevent SIGPIPE signal when writing to the connection already closed by the peer
 #ifdef SO_NOSIGPIPE
     opt = 1;
-    rc = setsockopt (self->s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
+    rc = setsockopt(self->s,SOL_SOCKET,SO_NOSIGPIPE,&opt,sizeof(opt));
 #if defined __APPLE__
     errno_assert (rc == 0 || errno == EINVAL);
 #else
@@ -197,191 +183,146 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
 #endif
 #endif
     // Switch the socket to the non-blocking mode. All underlying sockets are always used in the callbackhronous mode
-    opt = fcntl (self->s, F_GETFL, 0);
-    if (opt == -1)
+    opt = fcntl(self->s,F_GETFL,0);
+    if ( opt == -1 )
         opt = 0;
-    if (!(opt & O_NONBLOCK)) {
-        rc = fcntl (self->s, F_SETFL, opt | O_NONBLOCK);
+    if ( !(opt & O_NONBLOCK) )
+    {
+        rc = fcntl(self->s,F_SETFL,opt | O_NONBLOCK);
 #if defined __APPLE__
-        errno_assert (rc != -1 || errno == EINVAL);
+        errno_assert(rc != -1 || errno == EINVAL);
 #else
-        errno_assert (rc != -1);
+        errno_assert(rc != -1);
 #endif
     }
 }
 
-void nn_usock_stop (struct nn_usock *self)
+void nn_usock_stop(struct nn_usock *self) { nn_fsm_stop(&self->fsm); }
+
+void nn_usock_async_stop(struct nn_usock *self)
 {
-    nn_fsm_stop (&self->fsm);
+    nn_worker_execute(self->worker,&self->task_stop);
+    nn_fsm_raise(&self->fsm,&self->event_error,NN_USOCK_SHUTDOWN);
 }
 
-void nn_usock_async_stop (struct nn_usock *self)
+void nn_usock_swap_owner(struct nn_usock *self,struct nn_fsm_owner *owner)
 {
-    nn_worker_execute (self->worker, &self->task_stop);
-    nn_fsm_raise (&self->fsm, &self->event_error, NN_USOCK_SHUTDOWN);
+    nn_fsm_swap_owner(&self->fsm,owner);
 }
 
-void nn_usock_swap_owner (struct nn_usock *self, struct nn_fsm_owner *owner)
+int32_t nn_usock_setsockopt (struct nn_usock *self,int32_t level,int32_t optname,const void *optval,size_t optlen)
 {
-    nn_fsm_swap_owner (&self->fsm, owner);
-}
-
-int nn_usock_setsockopt (struct nn_usock *self, int level, int optname,
-    const void *optval, size_t optlen)
-{
-    int rc;
-
-    /*  The socket can be modified only before it's active. */
-    nn_assert (self->state == NN_USOCK_STATE_STARTING || self->state == NN_USOCK_STATE_ACCEPTED);
-
-    /*  EINVAL errors are ignored on OSX platform. The reason for that is buggy
-        OSX behaviour where setsockopt returns EINVAL if the peer have already
-        disconnected. Thus, nn_usock_setsockopt() can succeed on OSX even though
-        the option value was invalid, but the peer have already closed the
-        connection. This behaviour should be relatively harmless. */
-    rc = setsockopt (self->s, level, optname, optval, (socklen_t) optlen);
+    int32_t rc;
+    // The socket can be modified only before it's active
+    nn_assert(self->state == NN_USOCK_STATE_STARTING || self->state == NN_USOCK_STATE_ACCEPTED);
+    // EINVAL errors are ignored on OSX platform. The reason for that is buggy OSX behaviour where setsockopt returns EINVAL if the peer have already disconnected. Thus, nn_usock_setsockopt() can succeed on OSX even though the option value was invalid, but the peer have already closed the connection. This behaviour should be relatively harmless.
+    rc = setsockopt(self->s,level,optname,optval,(socklen_t)optlen);
 #if defined __APPLE__
-    if (nn_slow (rc != 0 && errno != EINVAL))
+    if ( nn_slow(rc != 0 && errno != EINVAL) )
         return -errno;
 #else
-    if (nn_slow (rc != 0))
+    if ( nn_slow(rc != 0) )
         return -errno;
 #endif
-
     return 0;
 }
 
-int nn_usock_bind (struct nn_usock *self, const struct sockaddr *addr,
-    size_t addrlen)
+int32_t nn_usock_bind(struct nn_usock *self,const struct sockaddr *addr,size_t addrlen)
 {
-    int rc;
-    int opt;
-
-    /*  The socket can be bound only before it's connected. */
-    nn_assert_state (self, NN_USOCK_STATE_STARTING);
-
-    /*  Allow re-using the address. */
+    int32_t rc,opt;
+    // The socket can be bound only before it's connected
+    nn_assert_state(self,NN_USOCK_STATE_STARTING);
     opt = 1;
-    rc = setsockopt (self->s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
-    errno_assert (rc == 0);
-
-    rc = bind (self->s, addr, (socklen_t) addrlen);
-    if (nn_slow (rc != 0))
+    rc = setsockopt(self->s,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt)); // Allow re-using the address
+    errno_assert(rc == 0);
+    rc = bind(self->s, addr,(socklen_t)addrlen);
+    if ( nn_slow(rc != 0) )
         return -errno;
-
     return 0;
 }
 
-int nn_usock_listen (struct nn_usock *self, int backlog)
+int32_t nn_usock_listen(struct nn_usock *self,int32_t backlog)
 {
-    int rc;
-
-    /*  You can start listening only before the socket is connected. */
-    nn_assert_state (self, NN_USOCK_STATE_STARTING);
-
-    /*  Start listening for incoming connections. */
-    rc = listen (self->s, backlog);
-    if (nn_slow (rc != 0))
+    int32_t rc;
+    //  You can start listening only before the socket is connected
+    nn_assert_state(self,NN_USOCK_STATE_STARTING);
+    // Start listening for incoming connections
+    rc = listen(self->s, backlog);
+    if ( nn_slow(rc != 0))
         return -errno;
-
-    /*  Notify the state machine. */
-    nn_fsm_action (&self->fsm, NN_USOCK_ACTION_LISTEN);
-
+    //  Notify the state machine
+    nn_fsm_action(&self->fsm,NN_USOCK_ACTION_LISTEN);
     return 0;
 }
 
-void nn_usock_accept (struct nn_usock *self, struct nn_usock *listener)
+void nn_usock_accept(struct nn_usock *self,struct nn_usock *listener)
 {
-    int s;
-
-    /*  Start the actual accepting. */
-    if (nn_fsm_isidle(&self->fsm)) {
-        nn_fsm_start (&self->fsm);
-        nn_fsm_action (&self->fsm, NN_USOCK_ACTION_BEING_ACCEPTED);
+    int32_t s;
+    //  Start the actual accepting
+    if ( nn_fsm_isidle(&self->fsm) )
+    {
+        nn_fsm_start(&self->fsm);
+        nn_fsm_action(&self->fsm,NN_USOCK_ACTION_BEING_ACCEPTED);
     }
-    nn_fsm_action (&listener->fsm, NN_USOCK_ACTION_ACCEPT);
-
-    /*  Try to accept new connection in synchronous manner. */
+    nn_fsm_action(&listener->fsm,NN_USOCK_ACTION_ACCEPT);
+    //  Try to accept new connection in synchronous manner
 #if NN_HAVE_ACCEPT4
-    s = accept4 (listener->s, NULL, NULL, SOCK_CLOEXEC);
+    s = accept4(listener->s,NULL,NULL,SOCK_CLOEXEC);
 #else
-    s = accept (listener->s, NULL, NULL);
+    s = accept(listener->s,NULL,NULL);
 #endif
-
-    /*  Immediate success. */
-    if (nn_fast (s >= 0)) {
-        /*  Disassociate the listener socket from the accepted
-            socket. Is useful if we restart accepting on ACCEPT_ERROR  */
+    if ( nn_fast(s >= 0) ) // Immediate success
+    {
+        // Disassociate the listener socket from the accepted socket. Is useful if we restart accepting on ACCEPT_ERROR
         listener->asock = NULL;
         self->asock = NULL;
-
-        nn_usock_init_from_fd (self, s);
-        nn_fsm_action (&listener->fsm, NN_USOCK_ACTION_DONE);
-        nn_fsm_action (&self->fsm, NN_USOCK_ACTION_DONE);
+        nn_usock_init_from_fd(self,s);
+        nn_fsm_action(&listener->fsm,NN_USOCK_ACTION_DONE);
+        nn_fsm_action(&self->fsm,NN_USOCK_ACTION_DONE);
         return;
     }
-
-    /*  Detect a failure. Note that in ECONNABORTED case we simply ignore
-        the error and wait for next connection in asynchronous manner. */
+    // Detect a failure. Note that in ECONNABORTED case we simply ignore the error and wait for next connection in asynchronous manner
     errno_assert (errno == EAGAIN || errno == EWOULDBLOCK ||
         errno == ECONNABORTED || errno == ENFILE || errno == EMFILE ||
         errno == ENOBUFS || errno == ENOMEM);
-
-    /*  Pair the two sockets.  They are already paired in case
-        previous attempt failed on ACCEPT_ERROR  */
-    nn_assert (!self->asock || self->asock == listener);
+    // Pair the two sockets. They are already paired in case previous attempt failed on ACCEPT_ERROR
+    nn_assert(!self->asock || self->asock == listener);
     self->asock = listener;
-    nn_assert (!listener->asock || listener->asock == self);
+    nn_assert(!listener->asock || listener->asock == self);
     listener->asock = self;
-
-    /*  Some errors are just ok to ignore for now.  We also stop repeating
-        any errors until next IN_FD event so that we are not in a tight loop
-        and allow processing other events in the meantime  */
-    if (nn_slow (errno != EAGAIN && errno != EWOULDBLOCK
-        && errno != ECONNABORTED && errno != listener->errnum))
+    // Some errors are just ok to ignore for now.  We also stop repeating any errors until next IN_FD event so that we are not in a tight loop and allow processing other events in the meantime
+    if ( nn_slow(errno != EAGAIN && errno != EWOULDBLOCK && errno != ECONNABORTED && errno != listener->errnum))
     {
         listener->errnum = errno;
         listener->state = NN_USOCK_STATE_ACCEPTING_ERROR;
-        nn_fsm_raise (&listener->fsm,
-            &listener->event_error, NN_USOCK_ACCEPT_ERROR);
+        nn_fsm_raise(&listener->fsm,&listener->event_error,NN_USOCK_ACCEPT_ERROR);
         return;
     }
-
-    /*  Ask the worker thread to wait for the new connection. */
+    // Ask the worker thread to wait for the new connection
     nn_worker_execute (listener->worker, &listener->task_accept);
 }
 
-void nn_usock_activate (struct nn_usock *self)
+void nn_usock_activate(struct nn_usock *self) { nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ACTIVATE); }
+
+void nn_usock_connect(struct nn_usock *self,const struct sockaddr *addr,size_t addrlen)
 {
-    nn_fsm_action (&self->fsm, NN_USOCK_ACTION_ACTIVATE);
-}
-
-void nn_usock_connect (struct nn_usock *self, const struct sockaddr *addr,
-    size_t addrlen)
-{
-    int rc;
-
-    /*  Notify the state machine that we've started connecting. */
-    nn_fsm_action (&self->fsm, NN_USOCK_ACTION_CONNECT);
-
-    /* Do the connect itself. */
-    rc = connect (self->s, addr, (socklen_t) addrlen);
-
-    /* Immediate success. */
-    if (nn_fast (rc == 0)) {
-        nn_fsm_action (&self->fsm, NN_USOCK_ACTION_DONE);
+    int32_t rc;
+    printf("Uconnect to usock.%d\n",self->s);
+    //  Notify the state machine that we've started connecting
+    nn_fsm_action (&self->fsm,NN_USOCK_ACTION_CONNECT);
+    rc = connect (self->s,addr,(socklen_t)addrlen); // Do the connect itself
+    if ( nn_fast(rc == 0) ) // Immediate success
+    {
+        nn_fsm_action (&self->fsm,NN_USOCK_ACTION_DONE);
         return;
     }
-
-    /*  Immediate error. */
-    if (nn_slow (errno != EINPROGRESS)) {
+    if ( nn_slow(errno != EINPROGRESS) ) // Immediate error
+    {
         self->errnum = errno;
-        nn_fsm_action (&self->fsm, NN_USOCK_ACTION_ERROR);
+        nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ERROR);
         return;
     }
-
-    /*  Start asynchronous connect. */
-    nn_worker_execute (self->worker, &self->task_connecting);
+    nn_worker_execute (self->worker, &self->task_connecting); // Start asynchronous connect
 }
 
 void nn_usock_send(struct nn_usock *self,const struct nn_iovec *iov,int32_t iovcnt)
@@ -403,7 +344,7 @@ void nn_usock_send(struct nn_usock *self,const struct nn_iovec *iov,int32_t iovc
         printf("%d, ",(int32_t)iov[i].iov_len);
         out++;
     }
-    printf("nn_usock_send sock.%d\n",self->s);
+    printf("nn_usock_send usock.%d\n",self->s);
     self->out.hdr.msg_iovlen = out;
     rc = nn_usock_send_raw (self, &self->out.hdr); // Try to send the data immediately
     if ( nn_fast(rc == 0) ) // Success
@@ -434,7 +375,7 @@ void nn_usock_recv(struct nn_usock *self,void *buf,size_t len,int32_t *fd)
         nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ERROR);
         return;
     }
-    printf("sock.%d nn_usock_recv.[%d %d %d %d] rc.%d nbytes.%d\n",self->s,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],rc,(int32_t)nbytes);
+    printf("usock.%d nn_usock_recv.[%d %d %d %d] rc.%d nbytes.%d\n",self->s,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],rc,(int32_t)nbytes);
     if ( nn_fast(nbytes == len) ) // Success
     {
         nn_fsm_raise(&self->fsm,&self->event_received,NN_USOCK_RECEIVED);
@@ -485,97 +426,83 @@ static void nn_usock_shutdown (struct nn_fsm *self, int src, int type,NN_UNUSED 
 {
     struct nn_usock *usock;
 
-    usock = nn_cont (self, struct nn_usock, fsm);
-
-    if (nn_internal_tasks (usock, src, type))
+    usock = nn_cont(self,struct nn_usock,fsm);
+    if ( nn_internal_tasks(usock,src,type))
         return;
-
-    if (nn_slow (src == NN_FSM_ACTION && type == NN_FSM_STOP)) {
-
-        /*  Socket in ACCEPTING or CANCELLING state cannot be closed.
-            Stop the socket being accepted first. */
-        nn_assert (usock->state != NN_USOCK_STATE_ACCEPTING &&
-            usock->state != NN_USOCK_STATE_CANCELLING);
-
+    if ( nn_slow(src == NN_FSM_ACTION && type == NN_FSM_STOP) )
+    {
+        // Socket in ACCEPTING or CANCELLING state cannot be closed. Stop the socket being accepted first
+        nn_assert(usock->state != NN_USOCK_STATE_ACCEPTING && usock->state != NN_USOCK_STATE_CANCELLING);
         usock->errnum = 0;
-
-        /*  Synchronous stop. */
-        if (usock->state == NN_USOCK_STATE_IDLE)
+        // Synchronous stop
+        if ( usock->state == NN_USOCK_STATE_IDLE )
             goto finish3;
-        if (usock->state == NN_USOCK_STATE_DONE)
+        if ( usock->state == NN_USOCK_STATE_DONE )
             goto finish2;
-        if (usock->state == NN_USOCK_STATE_STARTING ||
+        if ( usock->state == NN_USOCK_STATE_STARTING ||
               usock->state == NN_USOCK_STATE_ACCEPTED ||
               usock->state == NN_USOCK_STATE_ACCEPTING_ERROR ||
               usock->state == NN_USOCK_STATE_LISTENING)
             goto finish1;
-
-        /*  When socket that's being accepted is asked to stop, we have to
-            ask the listener socket to stop accepting first. */
-        if (usock->state == NN_USOCK_STATE_BEING_ACCEPTED) {
-            nn_fsm_action (&usock->asock->fsm, NN_USOCK_ACTION_CANCEL);
+        // When socket that's being accepted is asked to stop, we have to ask the listener socket to stop accepting first
+        if ( usock->state == NN_USOCK_STATE_BEING_ACCEPTED )
+        {
+            nn_fsm_action(&usock->asock->fsm,NN_USOCK_ACTION_CANCEL);
             usock->state = NN_USOCK_STATE_STOPPING_ACCEPT;
             return;
         }
-
-        /*  Asynchronous stop. */
-        if (usock->state != NN_USOCK_STATE_REMOVING_FD)
-            nn_usock_async_stop (usock);
+        if ( usock->state != NN_USOCK_STATE_REMOVING_FD ) // Asynchronous stop
+            nn_usock_async_stop(usock);
         usock->state = NN_USOCK_STATE_STOPPING;
         return;
     }
-    if (nn_slow (usock->state == NN_USOCK_STATE_STOPPING_ACCEPT)) {
+    if ( nn_slow(usock->state == NN_USOCK_STATE_STOPPING_ACCEPT) )
+    {
         nn_assert (src == NN_FSM_ACTION && type == NN_USOCK_ACTION_DONE);
         goto finish2;
     }
-    if (nn_slow (usock->state == NN_USOCK_STATE_STOPPING)) {
-        if (src != NN_USOCK_SRC_TASK_STOP)
+    if ( nn_slow(usock->state == NN_USOCK_STATE_STOPPING) )
+    {
+        if ( src != NN_USOCK_SRC_TASK_STOP )
             return;
-        nn_assert (type == NN_WORKER_TASK_EXECUTE);
-        nn_worker_rm_fd (usock->worker, &usock->wfd);
+        nn_assert(type == NN_WORKER_TASK_EXECUTE);
+        nn_worker_rm_fd(usock->worker,&usock->wfd);
 finish1:
-        nn_closefd (usock->s);
+        nn_closefd(usock->s);
         usock->s = -1;
 finish2:
         usock->state = NN_USOCK_STATE_IDLE;
-        nn_fsm_stopped (&usock->fsm, NN_USOCK_STOPPED);
+        nn_fsm_stopped(&usock->fsm,NN_USOCK_STOPPED);
 finish3:
         return;
     }
-
     nn_fsm_bad_state(usock->state, src, type);
 }
 
-static void nn_usock_handler (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_usock_handler (struct nn_fsm *self,int32_t src,int32_t type,NN_UNUSED void *srcptr)
 {
-    int rc;
-    struct nn_usock *usock;
-    int s;
-    size_t sz;
-    int sockerr;
-
-    usock = nn_cont (self, struct nn_usock, fsm);
-
-    if(nn_internal_tasks(usock, src, type))
+    int32_t rc,s,sockerr; struct nn_usock *usock; size_t sz;
+    usock = nn_cont(self,struct nn_usock,fsm);
+    if ( nn_internal_tasks(usock,src,type) )
         return;
-
-    switch (usock->state) {
-
+    switch ( usock->state )
+    {
 /******************************************************************************/
 /*  IDLE state.                                                               */
 /*  nn_usock object is initialised, but underlying OS socket is not yet       */
 /*  created.                                                                  */
 /******************************************************************************/
     case NN_USOCK_STATE_IDLE:
-        switch (src) {
+        switch ( src )
+        {
         case NN_FSM_ACTION:
-            switch (type) {
+            switch ( type )
+            {
             case NN_FSM_START:
                 usock->state = NN_USOCK_STATE_STARTING;
                 return;
             default:
-                nn_fsm_bad_action (usock->state, src, type);
+                nn_fsm_bad_action(usock->state, src, type);
             }
         default:
             nn_fsm_bad_source (usock->state, src, type);
@@ -723,14 +650,15 @@ static void nn_usock_handler (struct nn_fsm *self, int src, int type,
             case NN_WORKER_FD_IN:
                 sz = usock->in.len;
                 rc = nn_usock_recv_raw(usock,usock->in.buf,&sz);
-                printf("NN_USOCK_STATE_ACTIVE FD_IN[%d] (%d %d %d %d)\n",rc,usock->in.buf[0],usock->in.buf[1],usock->in.buf[2],usock->in.buf[3]);
-                if (nn_fast (rc == 0)) {
+                printf("NN_USOCK_STATE_ACTIVE FD_IN[%d] (%d %d %d %d) sz.%d\n",rc,usock->in.buf[0],usock->in.buf[1],usock->in.buf[2],usock->in.buf[3],(int32_t)sz);
+                if ( nn_fast(rc == 0) )
+                {
                     usock->in.len -= sz;
                     usock->in.buf += sz;
-                    if (!usock->in.len) {
-                        nn_worker_reset_in (usock->worker, &usock->wfd);
-                        nn_fsm_raise (&usock->fsm, &usock->event_received,
-                            NN_USOCK_RECEIVED);
+                    if ( !usock->in.len )
+                    {
+                        nn_worker_reset_in(usock->worker,&usock->wfd);
+                        nn_fsm_raise(&usock->fsm,&usock->event_received,NN_USOCK_RECEIVED);
                     }
                     return;
                 }
@@ -1019,7 +947,7 @@ static int32_t nn_usock_send_raw(struct nn_usock *self,struct msghdr *hdr)
 
 static int32_t nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
 {
-    size_t sz,length; int32_t nbytes; struct iovec iov; struct msghdr hdr; uint8_t ctrl[256];
+    size_t sz,length; ssize_t nbytes; struct iovec iov; struct msghdr hdr; uint8_t ctrl[256];
 #if defined NN_HAVE_MSG_CONTROL
     struct cmsghdr *cmsg;
 #endif
@@ -1098,7 +1026,11 @@ static int32_t nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
                     *self->in.pfd = *((int32_t *)CMSG_DATA(cmsg));
                     self->in.pfd = NULL;
                 }
-                else nn_closefd(*((int32_t *)CMSG_DATA(cmsg)));
+                else
+                {
+                    printf("cmsg nn_closefd(%d)\n",*((int32_t *)CMSG_DATA(cmsg)));
+                    nn_closefd(*((int32_t *)CMSG_DATA(cmsg)));
+                }
                 break;
             }
             cmsg = CMSG_NXTHDR(&hdr,cmsg);

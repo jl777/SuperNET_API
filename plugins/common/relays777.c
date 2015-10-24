@@ -222,6 +222,8 @@ printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
+    strcpy(servers[n++],"5.9.102.210");
+    return(n);
     strcpy(servers[n++],"89.248.160.237");
     strcpy(servers[n++],"89.248.160.238");
     strcpy(servers[n++],"89.248.160.239");
@@ -265,10 +267,10 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t 
     char Cservers[32][MAX_SERVERNAME],Bservers[32][MAX_SERVERNAME],failsafes[4][MAX_SERVERNAME];
     int32_t n,m,lbsock,numfailsafes = 0;
     //strcpy(failsafes[numfailsafes++],"5.9.56.103");
-    strcpy(failsafes[numfailsafes++],"5.9.102.210");
+    //strcpy(failsafes[numfailsafes++],"5.9.102.210");
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
-    lbsock = _lb_socket(port,globalport,relaysport,maxmillis,Bservers,m*0,Cservers,n*0,failsafes,numfailsafes);
+    lbsock = _lb_socket(port,globalport,relaysport,maxmillis,Bservers,m,Cservers,n*0,failsafes,numfailsafes);
     return(lbsock);
 }
 
