@@ -347,4 +347,8 @@ uint8_t *encode_str(int32_t *cipherlenp,void *str,int32_t len,bits256 destpubkey
 int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *myprivkey);
 extern queue_t InstantDEXQ;
 
+char *SuperNET_setconf(char *,int32_t val);
+int32_t SuperNET_saveconf(char *);
+int32_t RS_encode(char *rsaddr,uint64_t id);
+
 #endif

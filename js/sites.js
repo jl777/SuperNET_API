@@ -3,42 +3,42 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
     SPNAPI.pageContent.InstantDEX = function () {
         var site = "InstantDEX";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,site);
     };
 
     SPNAPI.pageContent.Pangea = function () {
         var site = "Pangea";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,"pangea");
     };
 
     SPNAPI.pageContent.Jumblr = function () {
         var site = "Jumblr";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,"jumblr");
     };
 
     SPNAPI.pageContent.MGW = function () {
         var site = "MGW";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,site);
     };
 
     SPNAPI.pageContent.Atomic = function () {
         var site = "Atomic";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,"atomic");
     };
 
     SPNAPI.pageContent.PAX = function () {
         var site = "PAX";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,"peggy");
     };
 
     SPNAPI.pageContent.Tradebots = function () {
         var site = "Tradebots";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,"tradebots");
     };
 
     SPNAPI.pageContent.Wallet = function () {
         var site = "Wallet";
-        SPNAPI.loadSiteAPI(site);
+        SPNAPI.loadSiteAPI(site,"wallet");
     };
 
     SPNAPI.pageContent.Debug = function () {
@@ -59,7 +59,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
         $(".json_submit_url").html("");
         $(".api_formfill").html("");
-        $(".api-panel-title").html("Panel Titel");
+        $(".api-panel-title").html("Panel Title");
 
         $('.navigation[data-page=' + page + ']').addClass('active');
 
@@ -70,7 +70,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
     };
 
 
-    SPNAPI.loadSiteAPI = function (site) {
+    SPNAPI.loadSiteAPI = function (site,agent) {
 
         $(".api-navpills").html('<ul class="nav nav-pills nav-stacked">'+
         '<li class="active '+site+'_pills"><a href="#">ALL</a></li>'+
@@ -85,7 +85,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         $(".api_method").on("click", function (e) {
             e.preventDefault();
 
-            var agent = $(this).data("agent");
+            //var agent = $(this).data("agent");
             var method = $(this).data("method");
 
             $('.nav-pills li.active').removeClass('active');

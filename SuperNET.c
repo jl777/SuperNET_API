@@ -25,7 +25,7 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-#define DEFAULT_SUPERNET_CONF "{\"peggy\":0,\"secret\":\"randvals\",\"pangeatest\":\"9\",\"notabot\":0}"
+#define DEFAULT_SUPERNET_CONF "{\"peggy\":0,\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
@@ -203,6 +203,7 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
         {
             if ( strcmp(plugin.buf,"pangea") == 0 )
             {
+                printf("call pangea.(%s)\n",jsonstr);
                 if ( (retstr= Pangea_bypass(SUPERNET.my64bits,SUPERNET.myprivkey,json)) != 0 )
                 {
                     free(json);
@@ -456,6 +457,7 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
 void SuperNET_initconf(cJSON *json)
 {
     struct destbuf tmp; uint8_t mysecret[32],mypublic[32]; FILE *fp;
+    PostMessage("SuperNET_initconf.(%s)\n",jprint(json,0));
     MAX_DEPTH = get_API_int(cJSON_GetObjectItem(json,"MAX_DEPTH"),MAX_DEPTH);
     if ( MAX_DEPTH > _MAX_DEPTH )
         MAX_DEPTH = _MAX_DEPTH;
@@ -630,30 +632,59 @@ testtcp();
     getchar();
 }
 
+int32_t SuperNET_saveconf(char *jsonstr)
+{
+    FILE *fp;
+    if ( (fp= fopen(os_compatible_path("SuperNET.conf"),"w")) != 0 )
+    {
+        fprintf(fp,"%s\n",jsonstr);
+        fclose(fp);
+        PostMessage("SuperNET_saveconf (%s)\n",jsonstr);
+        return(0);
+    }
+    return(-1);
+}
+
+char *SuperNET_setconf(char *field,int32_t val)
+{
+    char *confstr; uint64_t allocsize; cJSON *json;
+    printf("save.(\"%s\":%d)\n",field,val);
+    if ( (confstr= loadfile(&allocsize,os_compatible_path("SuperNET.conf"))) == 0 )
+        json = cJSON_CreateObject();
+    else
+    {
+        json = cJSON_Parse(confstr);
+        free(confstr);
+    }
+    if ( json == 0 )
+        json = cJSON_CreateObject();
+    if ( jobj(json,field) != 0 )
+        cJSON_DeleteItemFromObject(json,field);
+    jaddnum(json,field,val);
+    confstr = jprint(json,1);
+    if ( confstr != 0 )
+        SuperNET_saveconf(confstr);
+    if ( confstr != 0 )
+        free(confstr);
+    return(clonestr("{\"result\":\"SuperNET.conf field replaced\"}"));
+}
+
 int SuperNET_start(char *fname,char *myip)
 {
     void SuperNET_loop(void *_args);
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
-    FILE *fp; char *strs[16],*jsonargs=0,ipaddr[256]; cJSON *json; int32_t i,n = 0; uint64_t allocsize;
+    char *strs[16],*jsonargs=0,ipaddr[256]; cJSON *json; int32_t i,n = 0; uint64_t allocsize;
     //nanotests();
     randombytes((void *)&i,sizeof(i));
     portable_OS_init();
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     printf("%p myip.(%s) rand.%llx fname.(%s)\n",myip,myip,(long long)i,fname);
+    SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
     if ( (jsonargs= loadfile(&allocsize,os_compatible_path(fname))) == 0 )
     {
         printf("ERROR >>>>>>>>>>> (%s) SuperNET.conf file doesnt exist\n",fname);
         jsonargs = clonestr(DEFAULT_SUPERNET_CONF);
-    }
-    if ( 1 )
-    {
-        jsonargs = clonestr(DEFAULT_SUPERNET_CONF);
-        if ( (fp= fopen(os_compatible_path("SuperNET.conf"),"w")) != 0 )
-        {
-            fprintf(fp,"%s\n",jsonargs);
-            fclose(fp);
-        }
     }
     if ( (json= cJSON_Parse(jsonargs)) != 0 )
         SuperNET_initconf(json), free_json(json);

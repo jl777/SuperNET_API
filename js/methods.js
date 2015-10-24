@@ -18,17 +18,21 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
     ];
 
     SPNAPI.methods.Pangea = [
-        {"id":1,"method":"start","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante","hostrake":"hostrake"},
-        {"id":2,"method":"status","tableid":"tableid"},
-        {"id":3,"method":"turn","tableid":"tableid"},
-        {"id":4,"method":"mode"},
-        {"id":5,"method":"buyin","tableid":"tableid"},
-        {"id":6,"method":"history","tableid":"tableid","handid":"handid"},
-        {"id":7,"method":"rates","base":"base"},
-        {"id":8,"method":"lobby"},
-        {"id":9,"method":"tournaments"},
-        {"id":10,"method":"rosetta","base":"base"}
-    ];
+         {"id":14,"method":"start","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante","hostrake":"hostrake"},
+        {"id":13,"method":"status","tableid":"tableid"},
+        {"id":12,"method":"turn","tableid":"tableid"},
+        {"id":11,"method":"mode"},
+        {"id":10,"method":"buyin","tableid":"tableid"},
+        {"id":9,"method":"history","tableid":"tableid","handid":"handid"},
+        {"id":8,"method":"rates","base":"base"},
+        {"id":7,"method":"lobby"},
+        {"id":6,"method":"tournaments"},
+                             {"id":5,"method":"pangeatest","numplayers":"2_to_9"},
+                             {"id":4,"method":"notabot","val":"0_or_-1"},
+                             {"id":3,"method":"clearconf"},
+                             {"id":2,"method":"secret","passphrase":"high_entropy_password"},
+                             {"id":1,"method":"rosetta","base":"base","wip":"from_dumpprivkey"}
+ ];
 
     SPNAPI.methods.Jumblr = [
         {"id":1,"method":"jumblr","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
@@ -62,7 +66,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
     ];
 
 
-    SPNAPI.loadApiBox = function (agent, methods) {
+    SPNAPI.loadApiBox = function (methods,agent) {
 
         methods = methods[0];
         $(".api-panel-title").html(methods.method);

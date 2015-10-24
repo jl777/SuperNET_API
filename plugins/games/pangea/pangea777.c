@@ -1920,7 +1920,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     {
         item = cJSON_CreateObject();
         walletitem = cJSON_CreateObject();
-        if ( i != 0 && plugin->notabot != numthreads )
+        if ( plugin->notabot != numthreads )
         {
             if ( i != plugin->notabot )
                 jaddnum(walletitem,"isbot",1);
@@ -1980,12 +1980,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
         free_json(argjson);
         printf("(%s) pangea.my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",jprint(json,0),(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
-#ifdef __PNACL
-        PANGEA_MAXTHREADS = 9, plugin->notabot = -1;
-#else
         PANGEA_MAXTHREADS = juint(json,"pangeatest");
         plugin->notabot = juint(json,"notabot");
-#endif
         if ( PANGEA_MAXTHREADS != 0 )
         {
             printf("notabot.%d launch pangea_test\n",plugin->notabot);
@@ -2050,7 +2046,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 
 char *Pangea_bypass(uint64_t my64bits,uint8_t myprivkey[32],cJSON *json)
 {
-    char *methodstr,*retstr = 0;
+    char *methodstr,*passphrase,*retstr = 0;
     if ( (methodstr= jstr(json,"method")) != 0 )
     {
         if ( strcmp(methodstr,"turn") == 0 )
@@ -2067,7 +2063,46 @@ char *Pangea_bypass(uint64_t my64bits,uint8_t myprivkey[32],cJSON *json)
             retstr = pangea_history(my64bits,j64bits(json,"tableid"),json);
         else if ( strcmp(methodstr,"rates") == 0 )
             retstr = peggyrates(0,jstr(json,"name"));
+        else if ( strcmp(methodstr,"pangeatest") == 0 )
+        {
+            int32_t n;
+            n = juint(json,"numplayers");
+            if ( n >= 2 && n <= 9 )
+                retstr = SuperNET_setconf(methodstr,n);
+            else return(clonestr("{\"error\":\"invalid numplayers\"}"));
+        }
+        else if ( strcmp(methodstr,"notabot") == 0 )
+        {
+            int32_t n;
+            n = juint(json,"val");
+            if ( n == 0 || n == -1 )
+                retstr = SuperNET_setconf(methodstr,n);
+            else return(clonestr("{\"error\":\"invalid notabot\"}"));
+        }
+        else if ( strcmp(methodstr,"clearconf") == 0 )
+        {
+            if ( SuperNET_saveconf("{\"secret\":\"randvals\"}") == 0 )
+                return(clonestr("{\"result\":\"SuperNET.conf restored to defaults\"}"));
+            else return(clonestr("{\"error\":\"SuperNET.conf couldnt be cleared\"}"));
+        }
+        else if ( strcmp(methodstr,"secret") == 0 && (passphrase= jstr(json,"passphrase")) != 0 )
+        {
+            char buf[1024],rsaddr[64]; uint64_t nxt64bits; bits256 pubkey,privkey;
+            sprintf(buf,"{\"secret\":\"%s\"}",passphrase);
+            if ( SuperNET_saveconf(buf) == 0 )
+            {
+                nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)passphrase,(int32_t)strlen(passphrase));
+                RS_encode(rsaddr,nxt64bits);
+                sprintf(buf,"{\"result\":\"success\",\"NXT\":\"%llu\",\"RS\":\"%s\"}",(long long)nxt64bits,rsaddr);
+                return(clonestr(buf));
+            }
+            else return(clonestr("{\"error\":\"couldnt sent new passphrase\"}"));
+        }
     }
+    // ./BitcoinDarkd SuperNET '{"agent":"pangea","method":"pangeatest","numplayers":2}'
+    // ./BitcoinDarkd SuperNET '{"agent":"pangea","method":"notabot","val":-1}'
+    // ./BitcoinDarkd SuperNET '{"agent":"pangea","method":"clearconf"}'
+    // ./BitcoinDarkd SuperNET '{"agent":"pangea","method":"secret","passphrase":"password"}'
     return(retstr);
 }
 

@@ -59,9 +59,14 @@ cJSON *pangea_handitem(int32_t *cardip,cJSON **pitemp,uint8_t type,uint64_t valA
         case CARDS777_SNAPSHOT:
             jaddnum(item,"handid",valA);
             array = cJSON_CreateArray();
-            for (i=0; i<numplayers; i++)
-                jaddinum(array,dstr(bits64p[i]));
+            for (i=0; i<CARDS777_MAXPLAYERS; i++)
+            {
+                if ( i < numplayers )
+                    jaddinum(array,dstr(bits64p[i]));
+                else jaddinum(array,dstr(0));
+            }
             jadd(item,"snapshot",array);
+            //printf("add snapshot for numplayers.%d\n",numplayers);
             break;
         case CARDS777_CHANGES:
             n = (int32_t)(valA & 0xf);
@@ -170,7 +175,7 @@ void pangea_summary(union hostnet777 *hn,struct cards777_pubdata *dp,uint8_t typ
         printf("pangea_summary: parse error card mismatch %llx != %llx\n",(long long)card.txid,*(long long *)arg1);
     else if ( card.txid == 0 && memcmp(arg1,bits64,size1) != 0 )
         printf("pangea_summary: parse error bits64 %llx != %llx\n",(long long)bits64,*(long long *)arg0);
-    if ( 0 && hn->client->H.slot == pangea_slotA(dp->table) )
+    if ( 1 && hn->client->H.slot == pangea_slotA(dp->table) )
     {
         if ( (item= pangea_handitem(&cardi,&pitem,type,valA,bits64,card,dp->N)) != 0 )
         {
@@ -412,7 +417,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
     for (i=0; i<sp->numaddrs; i++)
         dp->snapshot[i] = sp->balances[i];
     handid = dp->numhands - 1;
-    pangea_summary(hn,dp,CARDS777_SNAPSHOT,(void *)&handid,sizeof(handid),(void *)dp->snapshot,sizeof(uint64_t)*sp->numaddrs);
+    pangea_summary(hn,dp,CARDS777_SNAPSHOT,(void *)&handid,sizeof(handid),(void *)dp->snapshot,sizeof(uint64_t)*CARDS777_MAXPLAYERS);
     for (i=0; i<dp->N; i++)
         if ( sp->balances[pangea_slot(sp,i)] <= 0 )
             pangea_fold(hn,dp,i);
