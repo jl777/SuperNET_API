@@ -25,7 +25,7 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-#define DEFAULT_SUPERNET_CONF "{\"peggy\":0,\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
+#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"jnxt.org:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
@@ -679,6 +679,7 @@ int SuperNET_start(char *fname,char *myip)
     portable_OS_init();
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
+    SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
     printf("%p myip.(%s) rand.%llx fname.(%s)\n",myip,myip,(long long)i,fname);
     if ( (jsonargs= loadfile(&allocsize,os_compatible_path(fname))) == 0 )
     {
