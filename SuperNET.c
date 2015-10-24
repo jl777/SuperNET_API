@@ -25,7 +25,7 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"jnxt.org:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
+#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
