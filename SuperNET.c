@@ -680,7 +680,6 @@ int SuperNET_start(char *fname,char *myip)
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     printf("%p myip.(%s) rand.%llx fname.(%s)\n",myip,myip,(long long)i,fname);
-    SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
     if ( (jsonargs= loadfile(&allocsize,os_compatible_path(fname))) == 0 )
     {
         printf("ERROR >>>>>>>>>>> (%s) SuperNET.conf file doesnt exist\n",fname);
