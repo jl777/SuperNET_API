@@ -23,13 +23,13 @@
 #include "efd.h"
 
 #if defined NN_HAVE_WINDOWS
-#include "efd_win.c"
+#include "efd_win.inc"
 #elif defined NN_HAVE_EVENTFD
-#include "efd_eventfd.c"
+#include "efd_eventfd.inc"
 #elif defined NN_HAVE_PIPE
-#include "efd_pipe.c"
+#include "efd_pipe.inc"
 #elif defined NN_HAVE_SOCKETPAIR
-#include "efd_socketpair.c"
+#include "efd_socketpair.inc"
 #else
 #error
 #endif
@@ -38,14 +38,14 @@
 
 #include <poll.h>
 
-int nn_efd_wait(struct nn_efd *self, int timeout)
+int nn_efd_wait (struct nn_efd *self, int timeout)
 {
     int rc;
     struct pollfd pfd;
+
     pfd.fd = nn_efd_getfd (self);
     pfd.events = POLLIN;
-    //printf("nn_efd_wait.%p [%d] timeout.%d\n",self,pfd.fd,timeout);
-    rc = poll(&pfd,1,timeout);
+    rc = poll (&pfd, 1, timeout);
     if (nn_slow (rc < 0 && errno == EINTR))
         return -EINTR;
     errno_assert (rc >= 0);

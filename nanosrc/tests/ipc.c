@@ -129,7 +129,7 @@ int testipc()
         //printf("close s1\n");
         test_close (s1);
     }
-    printf("finished ipc test\n");
+    //printf("finished ipc test\n");
 
     return 0;
 }

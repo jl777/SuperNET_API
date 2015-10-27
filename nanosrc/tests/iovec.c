@@ -68,9 +68,9 @@ int testiovec()
         nn_assert (rc == 6);
         nn_assert (memcmp (buf, "ABCDEF", 6) == 0);
     }
-    printf("close socket sc\n");
+    //printf("close socket sc\n");
     test_close (sc);
-    printf("close socket sb\n");
+    //printf("close socket sb\n");
     test_close (sb);
 
     return 0;

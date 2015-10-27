@@ -165,7 +165,7 @@ int nn_cws_create (void *hint, struct nn_epbase **epbase)
     colon = strrchr (addr, ':');
     slash = colon ? strchr (colon, '/') : strchr (addr, '/');
     resource = slash ? slash : addr + addrlen;
-    self->remote_hostname_len = (int32_t)(colon ? colon - hostname : resource - hostname);
+    self->remote_hostname_len = (int)(colon ? colon - hostname : resource - hostname);
     
     /*  Host contains both hostname and port. */
     hostlen = resource - hostname;
@@ -384,7 +384,8 @@ static void nn_cws_handler (struct nn_fsm *self, int src, int type,
             switch (type) {
             case NN_DNS_STOPPED:
                 if (cws->dns_result.error == 0) {
-                    nn_cws_start_connecting (cws, &cws->dns_result.addr,cws->dns_result.addrlen);
+                    nn_cws_start_connecting (cws, &cws->dns_result.addr,
+                        cws->dns_result.addrlen);
                     return;
                 }
                 nn_backoff_start (&cws->retry);
@@ -420,8 +421,9 @@ static void nn_cws_handler (struct nn_fsm *self, int src, int type,
                 nn_epbase_clear_error (&cws->epbase);
                 return;
             case NN_USOCK_ERROR:
-                nn_epbase_set_error (&cws->epbase,nn_usock_geterrno (&cws->usock),__FILE__,__LINE__);
-                nn_usock_stop(&cws->usock);
+                nn_epbase_set_error (&cws->epbase,
+                    nn_usock_geterrno (&cws->usock));
+                nn_usock_stop (&cws->usock);
                 cws->state = NN_CWS_STATE_STOPPING_USOCK;
                 nn_epbase_stat_increment (&cws->epbase,
                     NN_STAT_INPROGRESS_CONNECTIONS, -1);
@@ -639,31 +641,31 @@ static void nn_cws_start_connecting (struct nn_cws *self,
 
     /*  Try to start the underlying socket. */
     rc = nn_usock_start (&self->usock, remote.ss_family, SOCK_STREAM, 0);
-    printf("CWS start connecting rc.%d\n",rc);
-    if ( nn_slow(rc < 0) )
-    {
-        printf("backoff\n");
-        nn_backoff_start(&self->retry);
+    if (nn_slow (rc < 0)) {
+        nn_backoff_start (&self->retry);
         self->state = NN_CWS_STATE_WAITING;
         return;
     }
-    //  Set the relevant socket options
+
+    /*  Set the relevant socket options. */
     sz = sizeof (val);
-    nn_epbase_getopt(&self->epbase, NN_SOL_SOCKET, NN_SNDBUF, &val, &sz);
+    nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_SNDBUF, &val, &sz);
     nn_assert (sz == sizeof (val));
-    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_SNDBUF,&val, sizeof (val));
+    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_SNDBUF,
+        &val, sizeof (val));
     sz = sizeof (val);
     nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_RCVBUF, &val, &sz);
     nn_assert (sz == sizeof (val));
-    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_RCVBUF,&val, sizeof (val));
+    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_RCVBUF,
+        &val, sizeof (val));
 
     /*  Bind the socket to the local network interface. */
     rc = nn_usock_bind (&self->usock, (struct sockaddr*) &local, locallen);
     errnum_assert (rc == 0, -rc);
-    printf("usock bind.%d\n",rc);
+
     /*  Start connecting. */
     nn_usock_connect (&self->usock, (struct sockaddr*) &remote, remotelen);
-    printf("usock connect\n");
     self->state = NN_CWS_STATE_CONNECTING;
-    nn_epbase_stat_increment (&self->epbase,NN_STAT_INPROGRESS_CONNECTIONS, 1);
+    nn_epbase_stat_increment (&self->epbase,
+        NN_STAT_INPROGRESS_CONNECTIONS, 1);
 }

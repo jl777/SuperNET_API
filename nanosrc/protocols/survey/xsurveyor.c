@@ -39,8 +39,7 @@
 static void nn_xsurveyor_destroy (struct nn_sockbase *self);
 
 /*  Implementation of nn_sockbase's virtual functions. */
-static const struct nn_sockbase_vfptr nn_xsurveyor_sockbase_vfptr =
-{
+static const struct nn_sockbase_vfptr nn_xsurveyor_sockbase_vfptr = {
     NULL,
     nn_xsurveyor_destroy,
     nn_xsurveyor_add,
@@ -54,7 +53,8 @@ static const struct nn_sockbase_vfptr nn_xsurveyor_sockbase_vfptr =
     nn_xsurveyor_getopt
 };
 
-void nn_xsurveyor_init (struct nn_xsurveyor *self,const struct nn_sockbase_vfptr *vfptr, void *hint)
+void nn_xsurveyor_init (struct nn_xsurveyor *self,
+    const struct nn_sockbase_vfptr *vfptr, void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
     nn_dist_init (&self->outpipes);

@@ -40,28 +40,28 @@ struct nn_ep {
     struct nn_ep_options options;
     int eid;
     struct nn_list_item item;
-    char addr[NN_SOCKADDR_MAX + 1];
-    
+    char addr [NN_SOCKADDR_MAX + 1];
+
     /*  Error state for endpoint */
-    int last_errno,bind;
-    struct nn_transport *transport;
+    int last_errno;
 };
 
-int nn_ep_init(struct nn_ep *self, int src, struct nn_sock *sock, int eid,struct nn_transport *transport, int bind, const char *addr);
-void nn_ep_term(struct nn_ep *self);
+int nn_ep_init (struct nn_ep *self, int src, struct nn_sock *sock, int eid,
+    struct nn_transport *transport, int bind, const char *addr);
+void nn_ep_term (struct nn_ep *self);
 
-void nn_ep_start(struct nn_ep *self);
-void nn_ep_stop(struct nn_ep *self);
+void nn_ep_start (struct nn_ep *self);
+void nn_ep_stop (struct nn_ep *self);
 
-void nn_ep_stopped(struct nn_ep *self);
+void nn_ep_stopped (struct nn_ep *self);
 
-struct nn_ctx *nn_ep_getctx(struct nn_ep *self);
-const char *nn_ep_getaddr(struct nn_ep *self);
-void nn_ep_getopt(struct nn_ep *self,int32_t level,int32_t option,void *optval, size_t *optvallen);
-int nn_ep_ispeer (struct nn_ep *self,int32_t socktype);
-//void nn_ep_set_error(struct nn_ep *self,int32_t errnum);
-void nn_ep_set_error(struct nn_ep *self,int32_t errnum,char *fname,int32_t linenum);
+struct nn_ctx *nn_ep_getctx (struct nn_ep *self);
+const char *nn_ep_getaddr (struct nn_ep *self);
+void nn_ep_getopt (struct nn_ep *self, int level, int option,
+    void *optval, size_t *optvallen);
+int nn_ep_ispeer (struct nn_ep *self, int socktype);
+void nn_ep_set_error(struct nn_ep *self, int errnum);
 void nn_ep_clear_error(struct nn_ep *self);
-void nn_ep_stat_increment(struct nn_ep *self,int32_t name,int32_t increment);
+void nn_ep_stat_increment(struct nn_ep *self, int name, int increment);
 
 #endif

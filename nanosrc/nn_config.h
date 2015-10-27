@@ -23,6 +23,10 @@
 #ifndef NNCONFIG_H_INCLUDED
 #define NNCONFIG_H_INCLUDED
 
+#ifdef __APPLE__
+#define NN_HAVE_OSX 1
+#endif
+
 #define NN_HAVE_POLL 1 // must have
 #define NN_HAVE_SEMAPHORE 1 // must have
 
@@ -33,6 +37,7 @@
 
 // need one of following 3, listed in order of precedence, used by poller*
 #define NN_USE_POLL 1
+//#define NN_USE_EPOLL 1
 //#define NN_USE_KQUEUE 1
 
 #define NN_DISABLE_GETADDRINFO_A 1
@@ -40,16 +45,25 @@
 #define NN_HAVE_STDINT 1
 
 #define NN_HAVE_MSG_CONTROL 1
-
+#define STANDALONE 1
 
 #ifdef __PNACL
 void PostMessage(const char* format, ...);
+#include <glibc-compat/sys/uio.h>
+#include <glibc-compat/sys/un.h>
 #else
-#define PostMessage(...)
+#define PostMessage printf
+#include <sys/uio.h>
+#include <sys/un.h>
 #endif
 
-#ifndef __PNACL
-#define STANDALONE
+/*  Size of the buffer used for batch-reads of inbound data. To keep the
+ performance optimal make sure that this value is larger than network MTU. */
+#define _NN_USOCK_BATCH_SIZE 65536
+#define NN_USOCK_BATCH_SIZE (_NN_USOCK_BATCH_SIZE - 5 - 256 - 16) // adjust for veclen/clen + sizeof(ctrl)
+
+#if defined __PNACL || defined __APPLE__
+#define NN_USE_MYMSG 1
 #endif
 
 #endif

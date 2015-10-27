@@ -54,7 +54,8 @@ static const struct nn_sockbase_vfptr nn_xreq_sockbase_vfptr = {
     nn_xreq_getopt
 };
 
-void nn_xreq_init (struct nn_xreq *self, const struct nn_sockbase_vfptr *vfptr,void *hint)
+void nn_xreq_init (struct nn_xreq *self, const struct nn_sockbase_vfptr *vfptr,
+    void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
     nn_lb_init (&self->lb);

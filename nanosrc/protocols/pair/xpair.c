@@ -71,7 +71,8 @@ static const struct nn_sockbase_vfptr nn_xpair_sockbase_vfptr = {
     nn_xpair_getopt
 };
 
-static void nn_xpair_init (struct nn_xpair *self,const struct nn_sockbase_vfptr *vfptr, void *hint)
+static void nn_xpair_init (struct nn_xpair *self,
+    const struct nn_sockbase_vfptr *vfptr, void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
     nn_excl_init (&self->excl);

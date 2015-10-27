@@ -30,7 +30,8 @@
 
 uint16_t nn_gets (const uint8_t *buf)
 {
-    return (((uint16_t) buf [0]) << 8) | ((uint16_t) buf [1]);
+    return (((uint16_t) buf [0]) << 8) |
+           ((uint16_t) buf [1]);
 }
 
 void nn_puts (uint8_t *buf, uint16_t val)

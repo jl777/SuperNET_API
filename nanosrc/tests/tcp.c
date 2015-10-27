@@ -126,7 +126,7 @@ int testtcp()
     test_connect (sc, SOCKET_ADDRESS);
 
     /*  Leave enough time for at least on re-connect attempt. */
-    nn_sleep (200);
+    nn_sleep (1000);
 
     sb = test_socket (AF_SP, NN_PAIR);
     test_bind (sb, SOCKET_ADDRESS);
@@ -163,6 +163,7 @@ int testtcp()
     test_close (s2);
     test_close (s1);
     test_close (sb);
+    nn_sleep (1000);
 
     /*  Test two sockets binding to the same address. */
     sb = test_socket (AF_SP, NN_PAIR);
@@ -171,7 +172,7 @@ int testtcp()
     test_bind (s1, SOCKET_ADDRESS);
     sc = test_socket (AF_SP, NN_PAIR);
     test_connect (sc, SOCKET_ADDRESS);
-    nn_sleep (100);
+    nn_sleep (1000);
     test_send (sb, "ABC");
     test_recv (sc, "ABC");
     test_close (sb);

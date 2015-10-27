@@ -20,19 +20,15 @@
     IN THE SOFTWARE.
 */
 
-#include "../../utils/err.h"
-#include "../../utils/wire.h"
+#include "err.h"
+#include "wire.h"
 
 #if defined NN_HAVE_WINDOWS
 #include "../../utils/win.h"
 #else
 #include <unistd.h>
 #include <sys/socket.h>
-#ifndef __PNACL
 #include <sys/un.h>
-#else
-#include <glibc-compat/sys/un.h>
-#endif
 #endif
 
 #include "tcpmux.h"
@@ -67,6 +63,7 @@ int tcpmux_listen (int port, const char *service)
     nn_assert (ssz == 2);
     ssz = send (s, service, sz, 0);
     errno_assert (ssz >= 0);
+    printf("ssz.%d vs sz.%d\n",(int)ssz,(int)sz);
     nn_assert (ssz == sz);
 
     /*  Return the connection file descriptor to the user. */

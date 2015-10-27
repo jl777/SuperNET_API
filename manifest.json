@@ -13,22 +13,16 @@
       "scripts": ["background.js"]
     }
   },
-    "sockets": { "udp": { "send": "*" },
-        "tcp": { "connect": "" },
-        "tcpServer": { "listen": "*:*" }
-    },
+    {
+        "name": "My Sockets app",
+        "sockets": {
+            "tcp": { "connect": "" },
+            "tcpServer": { "listen": ":*" }
+        },
     "permissions": [
                     "unlimitedStorage",
                     "nativeMessaging",
                     "dns", "browser", "filesystem", "storage",
-                    "system.storage", "system.display", "system.network",
-                    {
-                    "socket": [
-                               "tcp-listen:*:*",
-                               "tcp-connect",
-                               "resolve-host", 
-                               "udp-bind:*:*", 
-                               "udp-send-to:*:*"
-                               ]
-                    }]
+                    "system.storage", "system.display", "system.network"
+                ]
 }

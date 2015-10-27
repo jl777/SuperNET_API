@@ -115,24 +115,27 @@ int testdevice()
     /*  Test the bi-directional device. */
 
     /*  Start the device. */
-    printf("start thread\n");
+    //printf("start thread\n");
     nn_thread_init (&thread1, device1, NULL);
-
+    nn_sleep(3000);
     /*  Create two sockets to connect to the device. */
-    printf("create NN_PAIR\n");
+    //printf("create NN_PAIR\n");
     enda = test_socket (AF_SP, NN_PAIR);
-    printf("connect to enda.%d\n",enda);
+    //printf("connect to enda.%d\n",enda);
+    //nn_sleep(3000);
     test_connect (enda, SOCKET_ADDRESS_A);
-    printf("connect to endb\n");
+    //printf("connect to endb\n");
+    //nn_sleep(3000);
     endb = test_socket (AF_SP, NN_PAIR);
+    //nn_sleep(3000);
     test_connect (endb, SOCKET_ADDRESS_B);
-    printf("send messages (%d %d)\n",enda,endb);
+    //printf("send messages (%d %d)\n",enda,endb);
     /*  Pass a pair of messages between endpoints. */
     test_send (enda, "ABC");
     test_recv (endb, "ABC");
     test_send (endb, "ABC");
     test_recv (enda, "ABC");
-    printf("close %d/%d\n",endb,enda);
+    //printf("close %d/%d\n",endb,enda);
     /*  Clean up. */
     test_close (endb);
     test_close (enda);
@@ -181,15 +184,15 @@ int testdevice()
     errno_assert (rc == 0);
     rc = nn_recv (ende1, buf, sizeof (buf), 0);
     errno_assert (rc < 0 && nn_errno () == EAGAIN);
-    printf("closes\n");
+    //printf("closes\n");
     /*  Clean up. */
     test_close (ende2);
     test_close (ende1);
 
     /*  Shut down the devices. */
-    printf("nn_term\n");
+    //printf("nn_term\n");
     nn_term ();
-    printf("nn_thread_terms\n");
+    //printf("nn_thread_terms\n");
     nn_thread_term (&thread1);
     nn_thread_term (&thread2);
     nn_thread_term (&thread3);

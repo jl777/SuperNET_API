@@ -44,12 +44,6 @@
 #include "../../utils/win.h"
 #else
 #include <unistd.h>
-#ifndef __PNACL
-#include <sys/uio.h>
-#include <sys/un.h>
-#else
-#include <glibc-compat/sys/un.h>
-#endif
 #include <arpa/inet.h>
 #endif
 
@@ -487,7 +481,6 @@ static void nn_btcpmux_start_connecting (struct nn_btcpmux *self)
     int port;
 
     /*  Try to start the underlying socket. */
-    printf("BTCPMUX start connecting\n");
     rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);

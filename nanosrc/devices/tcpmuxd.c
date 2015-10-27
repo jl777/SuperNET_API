@@ -53,12 +53,6 @@ int nn_tcpmuxd (int port)
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/time.h>
-#ifndef __PNACL
-#include <sys/un.h>
-#else
-#include <glibc-compat/sys/un.h>
-#include <glibc-compat/sys/uio.h>
-#endif
 #include <stddef.h>
 #include <ctype.h>
 #include <poll.h>
@@ -168,7 +162,7 @@ static void nn_tcpmuxd_routine (void *arg)
     while (1) {
 
         /*  Wait for events. */
-        rc = (int32_t)poll (ctx->pfd, (int32_t)ctx->pfd_size, -1);
+        rc = (int)poll (ctx->pfd, (int)ctx->pfd_size, -1);
         errno_assert (rc >= 0);
         nn_assert (rc != 0);
 
@@ -201,7 +195,7 @@ static void nn_tcpmuxd_routine (void *arg)
                 }
                 errno_assert (ssz >= 0);
                 nn_assert (ssz == 1);
-                service [pos] = tolower ((int32_t)service [pos]);
+                service [pos] = tolower ((uint32_t)service [pos]);
                 if (pos > 0 && service [pos - 1] == 0x0d &&
                       service [pos] == 0x0a)
                     break;
@@ -281,9 +275,10 @@ static void nn_tcpmuxd_routine (void *arg)
             nn_assert (tc->service);
             ssz = recv (conn, tc->service, sz, 0);
             errno_assert (ssz >= 0);
+            printf("tcpmuxd: sz.%d vs ssz.%d\n",(int)sz,(int)ssz);
             nn_assert (ssz == sz);
             for (i = 0; i != sz; ++i)
-                tc->service [i] = tolower ((int32_t)tc->service [i]);
+                tc->service [i] = tolower ((uint32_t)tc->service [i]);
             tc->service [sz] = 0;
             
             /*  Add the entry to the IPC connections list. */
@@ -365,7 +360,7 @@ static int nn_tcpmuxd_send_fd (int s, int fd)
 #endif
 
     /*  Pass the file descriptor to the registered process. */
-    rc = (int32_t)sendmsg (s, &msg, 0);
+    rc = (int)sendmsg (s, &msg, 0);
     if (rc < 0)
         return -1;
     nn_assert (rc == 1);

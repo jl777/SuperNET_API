@@ -31,10 +31,10 @@
 
 /*  Stress test the IPC transport. */
 
-#define THREAD_COUNT 1
-#define TEST2_THREAD_COUNT 1
-#define MESSAGES_PER_THREAD 1
-#define TEST_LOOPS 1
+#define THREAD_COUNT 4
+#define TEST2_THREAD_COUNT 4
+#define MESSAGES_PER_THREAD 10
+#define TEST_LOOPS 3
 #define SOCKET_ADDRESS "ipc://test-shutdown.ipc"
 
 volatile int active;
@@ -65,7 +65,7 @@ static void routine2 (NN_UNUSED void *arg)
     for (i = 0; i < MESSAGES_PER_THREAD; ++i) {
         test_recv (s, "hello");
     }
-    printf("inactivate socket active.%d\n",active);
+    //printf("inactivate socket active.%d\n",active);
     test_close (s);
     active --;
 }

@@ -40,10 +40,13 @@
 #define NN_AIPC_SRC_LISTENER 3
 
 /*  Private functions. */
-static void nn_aipc_handler (struct nn_fsm *self, int src, int type,void *srcptr);
-static void nn_aipc_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_aipc_handler (struct nn_fsm *self, int src, int type,
+   void *srcptr);
+static void nn_aipc_shutdown (struct nn_fsm *self, int src, int type,
+   void *srcptr);
 
-void nn_aipc_init (struct nn_aipc *self, int src,struct nn_epbase *epbase, struct nn_fsm *owner)
+void nn_aipc_init (struct nn_aipc *self, int src,
+    struct nn_epbase *epbase, struct nn_fsm *owner)
 {
     nn_fsm_init (&self->fsm, nn_aipc_handler, nn_aipc_shutdown,
         src, self, owner);
@@ -134,7 +137,8 @@ static void nn_aipc_shutdown (struct nn_fsm *self, int src, int type,
     nn_fsm_bad_state(aipc->state, src, type);
 }
 
-static void nn_aipc_handler (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
+static void nn_aipc_handler (struct nn_fsm *self, int src, int type,
+    NN_UNUSED void *srcptr)
 {
     struct nn_aipc *aipc;
     int val;
@@ -179,13 +183,17 @@ static void nn_aipc_handler (struct nn_fsm *self, int src, int type,NN_UNUSED vo
 
                 /*  Set the relevant socket options. */
                 sz = sizeof (val);
-                nn_epbase_getopt (aipc->epbase, NN_SOL_SOCKET, NN_SNDBUF,&val, &sz);
+                nn_epbase_getopt (aipc->epbase, NN_SOL_SOCKET, NN_SNDBUF,
+                    &val, &sz);
                 nn_assert (sz == sizeof (val));
-                nn_usock_setsockopt (&aipc->usock, SOL_SOCKET, SO_SNDBUF,&val, sizeof (val));
+                nn_usock_setsockopt (&aipc->usock, SOL_SOCKET, SO_SNDBUF,
+                    &val, sizeof (val));
                 sz = sizeof (val);
-                nn_epbase_getopt (aipc->epbase, NN_SOL_SOCKET, NN_RCVBUF,&val, &sz);
+                nn_epbase_getopt (aipc->epbase, NN_SOL_SOCKET, NN_RCVBUF,
+                    &val, &sz);
                 nn_assert (sz == sizeof (val));
-                nn_usock_setsockopt (&aipc->usock, SOL_SOCKET, SO_RCVBUF,&val, sizeof (val));
+                nn_usock_setsockopt (&aipc->usock, SOL_SOCKET, SO_RCVBUF,
+                    &val, sizeof (val));
 
                 /*  Return ownership of the listening socket to the parent. */
                 nn_usock_swap_owner (aipc->listener, &aipc->listener_owner);
@@ -195,11 +203,12 @@ static void nn_aipc_handler (struct nn_fsm *self, int src, int type,NN_UNUSED vo
                 nn_fsm_raise (&aipc->fsm, &aipc->accepted, NN_AIPC_ACCEPTED);
 
                 /*  Start the sipc state machine. */
-                 //   printf("nn_usock_activate epbase \n");
                 nn_usock_activate (&aipc->usock);
                 nn_sipc_start (&aipc->sipc, &aipc->usock);
                 aipc->state = NN_AIPC_STATE_ACTIVE;
-                nn_epbase_stat_increment(aipc->epbase,NN_STAT_ACCEPTED_CONNECTIONS,1);
+
+                nn_epbase_stat_increment (aipc->epbase,
+                    NN_STAT_ACCEPTED_CONNECTIONS, 1);
 
                 return;
 
@@ -210,7 +219,8 @@ static void nn_aipc_handler (struct nn_fsm *self, int src, int type,NN_UNUSED vo
         case NN_AIPC_SRC_LISTENER:
             switch (type) {
             case NN_USOCK_ACCEPT_ERROR:
-                nn_epbase_set_error (aipc->epbase,nn_usock_geterrno (aipc->listener),__FILE__,__LINE__);
+                nn_epbase_set_error (aipc->epbase,
+                    nn_usock_geterrno (aipc->listener));
                 nn_epbase_stat_increment (aipc->epbase,
                     NN_STAT_ACCEPT_ERRORS, 1);
                 nn_usock_accept (&aipc->usock, aipc->listener);

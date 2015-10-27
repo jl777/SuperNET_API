@@ -23,21 +23,20 @@
 #include "worker.h"
 
 #if defined NN_HAVE_WINDOWS
-#include "worker_win.c"
+#include "worker_win.inc"
 #else
-#include "worker_posix.c"
+#include "worker_posix.inc"
 #endif
 
 void nn_worker_timer_init (struct nn_worker_timer *self, struct nn_fsm *owner)
 {
     self->owner = owner;
-    nn_timerset_hndl_init(&self->hndl);
+    nn_timerset_hndl_init (&self->hndl);
 }
 
-void nn_worker_timer_term(struct nn_worker_timer *self)
+void nn_worker_timer_term (struct nn_worker_timer *self)
 {
-    //printf("nn_worker_timer_term\n");
-    nn_timerset_hndl_term(&self->hndl);
+    nn_timerset_hndl_term (&self->hndl);
 }
 
 int nn_worker_timer_isactive (struct nn_worker_timer *self)

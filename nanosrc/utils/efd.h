@@ -42,19 +42,29 @@
 #error
 #endif
 
-// Initialise the efd object
+/* from socketpair
+typedef int nn_fd;
+
+struct nn_efd {
+    int r;
+    int w;
+};*/
+
+
+/*  Initialise the efd object. */
 int nn_efd_init (struct nn_efd *self);
 
-// Uninitialise the efd object
+/*  Uninitialise the efd object. */
 void nn_efd_term (struct nn_efd *self);
 
-// Get the OS file descriptor that is readable when the efd object is signaled
+/*  Get the OS file descriptor that is readable when the efd object
+    is signaled. */
 nn_fd nn_efd_getfd (struct nn_efd *self);
 
-// Switch the object into signaled state
+/*  Switch the object into signaled state. */
 void nn_efd_signal (struct nn_efd *self);
 
-// Switch the object into unsignaled state
+/*  Switch the object into unsignaled state. */
 void nn_efd_unsignal (struct nn_efd *self);
 
 /*  Wait till efd object becomes signaled or when timeout (in milliseconds,

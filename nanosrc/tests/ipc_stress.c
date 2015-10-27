@@ -97,7 +97,7 @@ int testipc_stress()
 	int bytes;
     struct nn_thread srv_thread;
     struct nn_thread cli_threads[THREAD_COUNT];
-    printf("test ipc stress\n");
+    //printf("test ipc stress\n");
     nn_atomic_init(&active,THREAD_COUNT);
     // Stress the shutdown algorithm
     nn_thread_init(&srv_thread, server,&srv_thread);
@@ -109,18 +109,19 @@ int testipc_stress()
             nn_thread_term(&cli_threads[i]);
     }
     active.n = 0;
+    nn_sleep(1000);
     cli_sock = test_socket(AF_SP, NN_PUSH);
-    printf("main cli_sock.%d\n",cli_sock);
+    //printf("main cli_sock.%d\n",cli_sock);
     nn_assert(cli_sock >= 0);
     nn_assert(nn_connect(cli_sock, SOCKET_ADDRESS) >= 0);
     bytes = nn_send(cli_sock, &i, sizeof(i), 0);
-    printf("main bytes.%d vs %d\n",bytes,(int32_t)sizeof(i));
+    //printf("main bytes.%d vs %d\n",bytes,(int32_t)sizeof(i));
     nn_assert(bytes == sizeof(i));
-    printf("close sock.%d\n",cli_sock);
+    //printf("close sock.%d\n",cli_sock);
     nn_close(cli_sock);
     nn_thread_term(&srv_thread);
 #endif 
-    printf("finished ipc stress\n");
+    //printf("finished ipc stress\n");
 
     return 0;
 }

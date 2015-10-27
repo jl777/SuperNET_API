@@ -42,13 +42,13 @@ int testws()
 
     /*  Try closing bound but unconnected socket. */
     sb = test_socket (AF_SP, NN_PAIR);
-    test_bind (sb, "ws://*:5555");
+    test_bind (sb, "ws://*:5556");
     test_close (sb);
 
     /*  Try closing a TCP socket while it not connected. At the same time
         test specifying the local address for the connection. */
     sc = test_socket (AF_SP, NN_PAIR);
-    test_connect (sc, "ws://127.0.0.1:5555");
+    test_connect (sc, "ws://127.0.0.1:5556");
     test_close (sc);
 
     /*  Open the socket anew. */

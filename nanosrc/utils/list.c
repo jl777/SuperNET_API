@@ -32,11 +32,10 @@ void nn_list_init (struct nn_list *self)
     self->last = NULL;
 }
 
-void nn_list_term(struct nn_list *self)
+void nn_list_term (struct nn_list *self)
 {
-    //printf("nn_list_term.%p [%p %p]\n",self,self->first,self->last);
-    nn_assert(self->first == NULL);
-    nn_assert(self->last == NULL);
+    nn_assert (self->first == NULL);
+    nn_assert (self->last == NULL);
 }
 
 int nn_list_empty (struct nn_list *self)
@@ -87,35 +86,42 @@ void nn_list_insert (struct nn_list *self, struct nn_list_item *item,
         self->last = item;
 }
 
-struct nn_list_item *nn_list_erase (struct nn_list *self,struct nn_list_item *item)
+struct nn_list_item *nn_list_erase (struct nn_list *self,
+    struct nn_list_item *item)
 {
     struct nn_list_item *next;
-    nn_assert(nn_list_item_isinlist (item));
-    if ( item->prev )
+
+    nn_assert (nn_list_item_isinlist (item));
+
+    if (item->prev)
         item->prev->next = item->next;
-    else self->first = item->next;
-    if ( item->next )
+    else
+        self->first = item->next;
+    if (item->next)
         item->next->prev = item->prev;
-    else self->last = item->prev;
+    else
+        self->last = item->prev;
+
     next = item->next;
+
     item->prev = NN_LIST_NOTINLIST;
     item->next = NN_LIST_NOTINLIST;
+
     return next;
 }
 
-void nn_list_item_init(struct nn_list_item *self)
+void nn_list_item_init (struct nn_list_item *self)
 {
     self->prev = NN_LIST_NOTINLIST;
     self->next = NN_LIST_NOTINLIST;
 }
 
-void nn_list_item_term(struct nn_list_item *self)
+void nn_list_item_term (struct nn_list_item *self)
 {
-    //printf("nn_list_item_term\n");
-    nn_assert(!nn_list_item_isinlist(self));
+    nn_assert (!nn_list_item_isinlist (self));
 }
 
-int nn_list_item_isinlist(struct nn_list_item *self)
+int nn_list_item_isinlist (struct nn_list_item *self)
 {
     return self->prev == NN_LIST_NOTINLIST ? 0 : 1;
 }

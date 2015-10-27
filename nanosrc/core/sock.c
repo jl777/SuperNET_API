@@ -58,58 +58,67 @@
 
 /*  Private functions. */
 static struct nn_optset *nn_sock_optset (struct nn_sock *self, int id);
-static int nn_sock_setopt_inner (struct nn_sock *self, int level,int option, const void *optval, size_t optvallen);
+static int nn_sock_setopt_inner (struct nn_sock *self, int level,
+    int option, const void *optval, size_t optvallen);
 static void nn_sock_onleave (struct nn_ctx *self);
-static void nn_sock_handler (struct nn_fsm *self, int src, int type,void *srcptr);
-static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_sock_handler (struct nn_fsm *self, int src, int type,
+    void *srcptr);
+static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,
+    void *srcptr);
 static void nn_sock_action_zombify (struct nn_sock *self);
 
-int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t fd)
+int nn_sock_init (struct nn_sock *self, struct nn_socktype *socktype, int fd)
 {
-    int32_t i,rc;
-    // Make sure that at least one message direction is supported
-    nn_assert(!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) || !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV) );
-    //  Create the AIO context for the SP socket
-    nn_ctx_init(&self->ctx,nn_global_getpool(),nn_sock_onleave);
-    //  Initialise the state machine
-    nn_fsm_init_root (&self->fsm, nn_sock_handler,nn_sock_shutdown, &self->ctx);
+    int rc;
+    int i;
+
+    /* Make sure that at least one message direction is supported. */
+    nn_assert (!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) ||
+        !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV));
+
+    /*  Create the AIO context for the SP socket. */
+    nn_ctx_init (&self->ctx, nn_global_getpool (), nn_sock_onleave);
+
+    /*  Initialise the state machine. */
+    nn_fsm_init_root (&self->fsm, nn_sock_handler,
+        nn_sock_shutdown, &self->ctx);
     self->state = NN_SOCK_STATE_INIT;
-    // Open the NN_SNDFD and NN_RCVFD efds. Do so, only if the socket type supports send/recv, as appropriate
-    if ( socktype->flags & NN_SOCKTYPE_FLAG_NOSEND )
-        memset(&self->sndfd,0xcd,sizeof(self->sndfd));
-    else
-    {
-        rc = nn_efd_init(&self->sndfd);
-        if ( nn_slow(rc < 0) )
+
+    /*  Open the NN_SNDFD and NN_RCVFD efds. Do so, only if the socket type
+        supports send/recv, as appropriate. */
+    if (socktype->flags & NN_SOCKTYPE_FLAG_NOSEND)
+        memset (&self->sndfd, 0xcd, sizeof (self->sndfd));
+    else {
+        rc = nn_efd_init (&self->sndfd);
+        if (nn_slow (rc < 0))
             return rc;
     }
-    if ( socktype->flags & NN_SOCKTYPE_FLAG_NORECV )
-        memset(&self->rcvfd,0xcd,sizeof(self->rcvfd));
-    else
-    {
-        rc = nn_efd_init(&self->rcvfd);
-        if ( nn_slow(rc < 0) )
-        {
-            if ( !(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
-                nn_efd_term(&self->sndfd);
+    if (socktype->flags & NN_SOCKTYPE_FLAG_NORECV)
+        memset (&self->rcvfd, 0xcd, sizeof (self->rcvfd));
+    else {
+        rc = nn_efd_init (&self->rcvfd);
+        if (nn_slow (rc < 0)) {
+            if (!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND))
+                nn_efd_term (&self->sndfd);
             return rc;
         }
     }
-    nn_sem_init(&self->termsem);
-    if ( nn_slow (rc < 0) )
-    {
-        if ( !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV) )
-            nn_efd_term(&self->rcvfd);
-        if ( !(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
-            nn_efd_term(&self->sndfd);
+    nn_sem_init (&self->termsem);
+    if (nn_slow (rc < 0)) {
+        if (!(socktype->flags & NN_SOCKTYPE_FLAG_NORECV))
+            nn_efd_term (&self->rcvfd);
+        if (!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND))
+            nn_efd_term (&self->sndfd);
         return rc;
     }
+
     self->flags = 0;
-    nn_clock_init(&self->clock);
-    nn_list_init(&self->eps);
-    nn_list_init(&self->sdeps);
+    nn_clock_init (&self->clock);
+    nn_list_init (&self->eps);
+    nn_list_init (&self->sdeps);
     self->eid = 1;
-    //  Default values for NN_SOL_SOCKET options
+
+    /*  Default values for NN_SOL_SOCKET options. */
     self->linger = 1000;
     self->sndbuf = 128 * 1024;
     self->rcvbuf = 128 * 1024;
@@ -121,7 +130,8 @@ int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t f
     self->ep_template.sndprio = 8;
     self->ep_template.rcvprio = 8;
     self->ep_template.ipv4only = 1;
-    // Initialize statistic entries
+
+    /* Initialize statistic entries */
     self->statistics.established_connections = 0;
     self->statistics.accepted_connections = 0;
     self->statistics.dropped_connections = 0;
@@ -129,27 +139,35 @@ int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t f
     self->statistics.connect_errors = 0;
     self->statistics.bind_errors = 0;
     self->statistics.accept_errors = 0;
+
     self->statistics.messages_sent = 0;
     self->statistics.messages_received = 0;
     self->statistics.bytes_sent = 0;
     self->statistics.bytes_received = 0;
+
     self->statistics.current_connections = 0;
     self->statistics.inprogress_connections = 0;
     self->statistics.current_snd_priority = 0;
     self->statistics.current_ep_errors = 0;
-    //  Should be pretty much enough space for just the number
-    sprintf(self->socket_name,"%d",fd);
-    //  The transport-specific options are not initialised immediately, rather, they are allocated later on when needed
-    for (i=0; i<NN_MAX_TRANSPORT; i++)
-        self->optsets[i] = NULL;
-    //  Create the specific socket type itself
-    rc = socktype->create((void *)self,&self->sockbase);
-    errnum_assert(rc == 0, -rc);
+
+    /*  Should be pretty much enough space for just the number  */
+    sprintf(self->socket_name, "%d", fd);
+
+    /*  The transport-specific options are not initialised immediately,
+        rather, they are allocated later on when needed. */
+    for (i = 0; i != NN_MAX_TRANSPORT; ++i)
+        self->optsets [i] = NULL;
+
+    /*  Create the specific socket type itself. */
+    rc = socktype->create ((void*) self, &self->sockbase);
+    errnum_assert (rc == 0, -rc);
     self->socktype = socktype;
-    //  Launch the state machine
-    nn_ctx_enter(&self->ctx);
-    nn_fsm_start(&self->fsm);
-    nn_ctx_leave(&self->ctx);
+
+    /*  Launch the state machine. */
+    nn_ctx_enter (&self->ctx);
+    nn_fsm_start (&self->fsm);
+    nn_ctx_leave (&self->ctx);
+
     return 0;
 }
 
@@ -170,41 +188,48 @@ void nn_sock_zombify (struct nn_sock *self)
     nn_ctx_leave (&self->ctx);
 }
 
-int32_t nn_sock_term(struct nn_sock *self)
+int nn_sock_term (struct nn_sock *self)
 {
-    int32_t i,rc;
-    // Ask the state machine to start closing the socket
-    nn_ctx_enter(&self->ctx);
-    nn_fsm_stop(&self->fsm);
-    nn_ctx_leave(&self->ctx);
-    // Shutdown process was already started but some endpoints may still alive. Here we are going to wait till they are all closed
-    rc = nn_sem_wait(&self->termsem);
-    if ( nn_slow(rc == -EINTR) )
+    int rc;
+    int i;
+
+    /*  Ask the state machine to start closing the socket. */
+    nn_ctx_enter (&self->ctx);
+    nn_fsm_stop (&self->fsm);
+    nn_ctx_leave (&self->ctx);
+
+    /*  Shutdown process was already started but some endpoints may still
+        alive. Here we are going to wait till they are all closed. */
+    rc = nn_sem_wait (&self->termsem);
+    if (nn_slow (rc == -EINTR))
         return -EINTR;
-    errnum_assert(rc == 0, -rc);
+    errnum_assert (rc == 0, -rc);
+
     /*  The thread that posted the semaphore can still have the ctx locked
         for a short while. By simply entering the context and exiting it
         immediately we can be sure that the thread in question have already
         exited the context. */
-    nn_ctx_enter(&self->ctx);
-    nn_ctx_leave(&self->ctx);
-    // Deallocate the resources
-    nn_fsm_stopped_noevent(&self->fsm);
-    nn_fsm_term(&self->fsm);
-    nn_sem_term(&self->termsem);
-    printf("from nn_sock_term %s\n",self->socket_name);
-    nn_list_term(&self->sdeps);
-    nn_list_term(&self->eps);
-    nn_clock_term(&self->clock);
-    nn_ctx_term(&self->ctx);
-    // Destroy any optsets associated with the socket
+    nn_ctx_enter (&self->ctx);
+    nn_ctx_leave (&self->ctx);
+
+    /*  Deallocate the resources. */
+    nn_fsm_stopped_noevent (&self->fsm);
+    nn_fsm_term (&self->fsm);
+    nn_sem_term (&self->termsem);
+    nn_list_term (&self->sdeps);
+    nn_list_term (&self->eps);
+    nn_clock_term (&self->clock);
+    nn_ctx_term (&self->ctx);
+
+    /*  Destroy any optsets associated with the socket. */
     for (i = 0; i != NN_MAX_TRANSPORT; ++i)
-        if ( self->optsets[i])
-            self->optsets[i]->vfptr->destroy(self->optsets[i]);
+        if (self->optsets [i])
+            self->optsets [i]->vfptr->destroy (self->optsets [i]);
+
     return 0;
 }
 
-struct nn_ctx *nn_sock_getctx(struct nn_sock *self)
+struct nn_ctx *nn_sock_getctx (struct nn_sock *self)
 {
     return &self->ctx;
 }
@@ -239,36 +264,42 @@ int nn_sock_setopt (struct nn_sock *self, int level, int option,
     return rc;
 }
 
-static int nn_sock_setopt_inner (struct nn_sock *self, int level,int option, const void *optval, size_t optvallen)
+static int nn_sock_setopt_inner (struct nn_sock *self, int level,
+    int option, const void *optval, size_t optvallen)
 {
-    struct nn_optset *optset; int val,*dst;
+    struct nn_optset *optset;
+    int val;
+    int *dst;
+
     /*  Protocol-specific socket options. */
     if (level > NN_SOL_SOCKET)
-        return self->sockbase->vfptr->setopt(self->sockbase, level, option,optval, optvallen);
+        return self->sockbase->vfptr->setopt (self->sockbase, level, option,
+            optval, optvallen);
+
     /*  Transport-specific options. */
-    if (level < NN_SOL_SOCKET)
-    {
+    if (level < NN_SOL_SOCKET) {
         optset = nn_sock_optset (self, level);
         if (!optset)
             return -ENOPROTOOPT;
         return optset->vfptr->setopt (optset, option, optval, optvallen);
     }
+
     /*  Special-casing socket name for now as it's the only string option  */
-    if (level == NN_SOL_SOCKET && option == NN_SOCKET_NAME)
-    {
+    if (level == NN_SOL_SOCKET && option == NN_SOCKET_NAME) {
         if (optvallen > 63)
             return -EINVAL;
         memcpy (self->socket_name, optval, optvallen);
         self->socket_name [optvallen] = 0;
         return 0;
     }
+
     /*  At this point we assume that all options are of type int. */
     if (optvallen != sizeof (int))
         return -EINVAL;
-    val = *(int *) optval;
+    val = *(int*) optval;
+
     /*  Generic socket-level options. */
-    if (level == NN_SOL_SOCKET)
-    {
+    if (level == NN_SOL_SOCKET) {
         switch (option) {
         case NN_LINGER:
             dst = &self->linger;
@@ -323,26 +354,31 @@ static int nn_sock_setopt_inner (struct nn_sock *self, int level,int option, con
             return -ENOPROTOOPT;
         }
         *dst = val;
+
         return 0;
     }
+
     nn_assert (0);
 }
 
-int nn_sock_getopt(struct nn_sock *self, int level, int option,void *optval, size_t *optvallen)
+int nn_sock_getopt (struct nn_sock *self, int level, int option,
+    void *optval, size_t *optvallen)
 {
     int rc;
+
     nn_ctx_enter (&self->ctx);
-    if (nn_slow (self->state == NN_SOCK_STATE_ZOMBIE))
-    {
+    if (nn_slow (self->state == NN_SOCK_STATE_ZOMBIE)) {
         nn_ctx_leave (&self->ctx);
         return -ETERM;
     }
     rc = nn_sock_getopt_inner (self, level, option, optval, optvallen);
     nn_ctx_leave (&self->ctx);
+
     return rc;
 }
 
-int nn_sock_getopt_inner (struct nn_sock *self, int level,int option, void *optval, size_t *optvallen)
+int nn_sock_getopt_inner (struct nn_sock *self, int level,
+    int option, void *optval, size_t *optvallen)
 {
     int rc;
     struct nn_optset *optset;
@@ -424,154 +460,162 @@ int nn_sock_getopt_inner (struct nn_sock *self, int level,int option, void *optv
 
     /*  Protocol-specific socket options. */
     if (level > NN_SOL_SOCKET)
-        return rc = self->sockbase->vfptr->getopt (self->sockbase,level, option, optval, optvallen);
+        return rc = self->sockbase->vfptr->getopt (self->sockbase,
+            level, option, optval, optvallen);
 
     /*  Transport-specific options. */
-    if (level < NN_SOL_SOCKET)
-    {
+    if (level < NN_SOL_SOCKET) {
         optset = nn_sock_optset (self, level);
         if (!optset)
             return -ENOPROTOOPT;
         return optset->vfptr->getopt (optset, option, optval, optvallen);
     }
+
     nn_assert (0);
 }
 
-struct nn_ep *nn_find_ep(struct nn_sock *self,int32_t eid,const char *addr,struct nn_transport *transport,int32_t bind)
+int nn_sock_add_ep (struct nn_sock *self, struct nn_transport *transport,
+    int bind, const char *addr)
 {
-    struct nn_ep *ep; struct nn_list_item *it;
-    ep = NULL; // Find the specified enpoint
-    for (it=nn_list_begin(&self->eps); it!=nn_list_end(&self->eps); it=nn_list_next(&self->eps,it))
-    {
-        ep = nn_cont(it,struct nn_ep,item);
-        if ( addr == 0 && ep->eid == eid )
-            break;
-        else if ( addr != 0 && transport != 0 && strcmp(addr,ep->addr) == 0 && ep->transport == transport && ep->bind == bind )
+    int rc;
+    struct nn_ep *ep;
+    int eid;
+
+    nn_ctx_enter (&self->ctx);
+
+    /*  Instantiate the endpoint. */
+    ep = nn_alloc (sizeof (struct nn_ep), "endpoint");
+    rc = nn_ep_init (ep, NN_SOCK_SRC_EP, self, self->eid, transport,
+        bind, addr);
+    if (nn_slow (rc < 0)) {
+        nn_free (ep);
+        nn_ctx_leave (&self->ctx);
+        return rc;
+    }
+    nn_ep_start (ep);
+
+    /*  Increase the endpoint ID for the next endpoint. */
+    eid = self->eid;
+    ++self->eid;
+
+    /*  Add it to the list of active endpoints. */
+    nn_list_insert (&self->eps, &ep->item, nn_list_end (&self->eps));
+
+    nn_ctx_leave (&self->ctx);
+
+    return eid;
+}
+
+int nn_sock_rm_ep (struct nn_sock *self, int eid)
+{
+    struct nn_list_item *it;
+    struct nn_ep *ep;
+
+    nn_ctx_enter (&self->ctx);
+
+    /*  Find the specified enpoint. */
+    ep = NULL;
+    for (it = nn_list_begin (&self->eps);
+          it != nn_list_end (&self->eps);
+          it = nn_list_next (&self->eps, it)) {
+        ep = nn_cont (it, struct nn_ep, item);
+        if (ep->eid == eid)
             break;
         ep = NULL;
     }
-    return(ep);
-}
 
-int nn_sock_add_ep(struct nn_sock *self,struct nn_transport *transport,int32_t bind,const char *addr)
-{
-    int rc,eid; struct nn_ep *ep;
-    nn_ctx_enter (&self->ctx);
-    if ( (ep= nn_find_ep(self,0,addr,transport,bind)) == NULL ) // The endpoint doesn't exist
-    {
-        ep = nn_alloc(sizeof(struct nn_ep),"endpoint"); // Instantiate the endpoint
-        rc = nn_ep_init(ep,NN_SOCK_SRC_EP,self,self->eid,transport,bind,addr);
-        if ( nn_slow(rc < 0) )
-        {
-            nn_free(ep);
-            nn_ctx_leave(&self->ctx);
-            return rc;
-        }
-        nn_ep_start(ep);
-        //printf("ep sock.(%s) started %s://(%s) bind.%d\n",self->socket_name,transport->name,addr,bind);
-        eid = self->eid++; // Increase the endpoint ID for the next endpoint
-        nn_list_insert(&self->eps,&ep->item,nn_list_end(&self->eps)); // Add to the list of active endpoints
+    /*  The endpoint doesn't exist. */
+    if (!ep) {
         nn_ctx_leave (&self->ctx);
-    } else printf("self->sock.(%s) [%s] already has (%s)\n",self->socket_name,self->sockbase->sock->socket_name,addr);
-    return(ep->eid);
-}
-
-int32_t nn_sock_rm_ep(struct nn_sock *self,int32_t eid)
-{
-    struct nn_ep *ep;
-    nn_ctx_enter(&self->ctx);
-    if ( (ep= nn_find_ep(self,eid,0,0,0)) == NULL ) // The endpoint doesn't exist
-    {
-        nn_ctx_leave(&self->ctx);
         return -EINVAL;
     }
-    //  Move the endpoint from the list of active endpoints to the list of shutting down endpoints.
-    nn_list_erase(&self->eps,&ep->item);
-    nn_list_insert(&self->sdeps,&ep->item,nn_list_end(&self->sdeps));
-    //  Ask the endpoint to stop. Actual terminatation may be delayed by the transport.
-    nn_ep_stop(ep);
-    nn_ctx_leave(&self->ctx);
+
+    /*  Move the endpoint from the list of active endpoints to the list
+        of shutting down endpoints. */
+    nn_list_erase (&self->eps, &ep->item);
+    nn_list_insert (&self->sdeps, &ep->item, nn_list_end (&self->sdeps));
+
+    /*  Ask the endpoint to stop. Actual terminatation may be delayed
+        by the transport. */
+    nn_ep_stop (ep);
+
+    nn_ctx_leave (&self->ctx);
+
     return 0;
 }
 
-int32_t nn_sock_send(struct nn_sock *self,struct nn_msg *msg,int32_t flags)
+int nn_sock_send (struct nn_sock *self, struct nn_msg *msg, int flags)
 {
-    int32_t rc,timeout; uint64_t deadline,now;
-    //  Some sockets types cannot be used for sending messages
-    if ( nn_slow(self->socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
-    {
-        printf("nn_sock_send: cant send to usock.%s\n",self->socket_name);
+    int rc;
+    uint64_t deadline;
+    uint64_t now;
+    int timeout;
+
+    /*  Some sockets types cannot be used for sending messages. */
+    if (nn_slow (self->socktype->flags & NN_SOCKTYPE_FLAG_NOSEND))
         return -ENOTSUP;
-    }
-    nn_ctx_enter(&self->ctx);
-    //  Compute the deadline for SNDTIMEO timer
-    if ( self->sndtimeo < 0 )
-    {
+
+    nn_ctx_enter (&self->ctx);
+
+    /*  Compute the deadline for SNDTIMEO timer. */
+    if (self->sndtimeo < 0) {
         deadline = -1;
         timeout = -1;
     }
-    else
-    {
+    else {
+        deadline = nn_clock_now (&self->clock) + self->sndtimeo;
         timeout = self->sndtimeo;
-        deadline = nn_clock_now(&self->clock) + timeout;
     }
-    //printf("nn_sock_send\n");
-    //int32_t n = 0;
-    while ( 1 )
-    {
-        //printf("while loop2.[%s]\n",self->sockbase->sock->socket_name);
-        //printf("sockbase send.%d\n",n++);
-        //  If nn_term() was already called, return ETERM
-        if ( nn_slow(self->state == NN_SOCK_STATE_ZOMBIE) )
-        {
-            printf("nn_sock_send: zombie return\n");
+
+    while (1) {
+
+        /*  If nn_term() was already called, return ETERM. */
+        if (nn_slow (self->state == NN_SOCK_STATE_ZOMBIE)) {
             nn_ctx_leave (&self->ctx);
             return -ETERM;
         }
-        //  Try to send the message in a non-blocking way
-        //printf("call vfptr->sockbase send\n");
-        rc = self->sockbase->vfptr->send(self->sockbase,msg);
-        //printf("done sockbase send rc.(%d)\n",rc);
-        if ( nn_fast(rc == 0) )
-        {
+
+        /*  Try to send the message in a non-blocking way. */
+        rc = self->sockbase->vfptr->send (self->sockbase, msg);
+        if (nn_fast (rc == 0)) {
             nn_ctx_leave (&self->ctx);
             return 0;
         }
         nn_assert (rc < 0);
-        // Any unexpected error is forwarded to the caller
-        if ( nn_slow(rc != -EAGAIN) )
-        {
-            printf("errcode.%d for timeout.%d\n",rc,timeout);
-            nn_ctx_leave(&self->ctx);
+
+        /*  Any unexpected error is forwarded to the caller. */
+        if (nn_slow (rc != -EAGAIN)) {
+            nn_ctx_leave (&self->ctx);
             return rc;
         }
-        //  If the message cannot be sent at the moment and the send call is non-blocking, return immediately
-        if ( nn_fast(flags & NN_DONTWAIT) )
-        {
-            printf("NN_DONTWAIT for timeout.%d -> return EAGAIN\n",timeout);
+
+        /*  If the message cannot be sent at the moment and the send call
+            is non-blocking, return immediately. */
+        if (nn_fast (flags & NN_DONTWAIT)) {
             nn_ctx_leave (&self->ctx);
             return -EAGAIN;
         }
-        //  With blocking send, wait while there are new pipes available for sending.
+
+        /*  With blocking send, wait while there are new pipes available
+            for sending. */
         nn_ctx_leave (&self->ctx);
-        rc = nn_efd_wait(&self->sndfd,timeout);
-        if ( nn_slow(rc == -ETIMEDOUT) )
-        {
-            printf("ETIMEOUT for timeout.%d -> return EAGAIN\n",timeout);
+        rc = nn_efd_wait (&self->sndfd, timeout);
+        if (nn_slow (rc == -ETIMEDOUT))
             return -EAGAIN;
-        }
-        if ( nn_slow(rc == -EINTR))
+        if (nn_slow (rc == -EINTR))
             return -EINTR;
         errnum_assert (rc == 0, rc);
         nn_ctx_enter (&self->ctx);
-        // Double check if pipes are still available for sending
-        if ( !nn_efd_wait (&self->sndfd, 0) )
-        {
+        /*
+         *  Double check if pipes are still available for sending
+         */
+        if (!nn_efd_wait (&self->sndfd, 0)) {
             self->flags |= NN_SOCK_FLAG_OUT;
         }
-        //  If needed, re-compute the timeout to reflect the time that have already elapsed
-        if ( self->sndtimeo >= 0 )
-        {
+
+        /*  If needed, re-compute the timeout to reflect the time that have
+            already elapsed. */
+        if (self->sndtimeo >= 0) {
             now = nn_clock_now (&self->clock);
             timeout = (int) (now > deadline ? 0 : deadline - now);
         }
@@ -611,9 +655,7 @@ int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
 
         /*  Try to receive the message in a non-blocking way. */
         rc = self->sockbase->vfptr->recv (self->sockbase, msg);
-        //printf("Sockbase recv rc.%d\n",rc);
-        if ( nn_fast(rc == 0) )
-        {
+        if (nn_fast (rc == 0)) {
             nn_ctx_leave (&self->ctx);
             return 0;
         }
@@ -675,17 +717,23 @@ void nn_sock_rm (struct nn_sock *self, struct nn_pipe *pipe)
     nn_sock_stat_increment (self, NN_STAT_CURRENT_CONNECTIONS, -1);
 }
 
-static void nn_sock_onleave(struct nn_ctx *self)
+static void nn_sock_onleave (struct nn_ctx *self)
 {
-    struct nn_sock *sock; int events;
-    sock = nn_cont(self,struct nn_sock,ctx);
-    // If nn_close() was already called there's no point in adjusting the snd/rcv file descriptors
+    struct nn_sock *sock;
+    int events;
+
+    sock = nn_cont (self, struct nn_sock, ctx);
+
+    /*  If nn_close() was already called there's no point in adjusting the
+        snd/rcv file descriptors. */
     if (nn_slow (sock->state != NN_SOCK_STATE_ACTIVE))
         return;
-    // Check whether socket is readable and/or writable at the moment
+
+    /*  Check whether socket is readable and/or writable at the moment. */
     events = sock->sockbase->vfptr->events (sock->sockbase);
     errnum_assert (events >= 0, -events);
-    // Signal/unsignal IN as needed
+
+    /*  Signal/unsignal IN as needed. */
     if (!(sock->socktype->flags & NN_SOCKTYPE_FLAG_NORECV)) {
         if (events & NN_SOCKBASE_EVENT_IN) {
             if (!(sock->flags & NN_SOCK_FLAG_IN)) {
@@ -706,13 +754,13 @@ static void nn_sock_onleave(struct nn_ctx *self)
         if (events & NN_SOCKBASE_EVENT_OUT) {
             if (!(sock->flags & NN_SOCK_FLAG_OUT)) {
                 sock->flags |= NN_SOCK_FLAG_OUT;
-                nn_efd_signal(&sock->sndfd);
+                nn_efd_signal (&sock->sndfd);
             }
         }
         else {
             if (sock->flags & NN_SOCK_FLAG_OUT) {
                 sock->flags &= ~NN_SOCK_FLAG_OUT;
-                nn_efd_unsignal(&sock->sndfd);
+                nn_efd_unsignal (&sock->sndfd);
             }
         }
     }
@@ -745,21 +793,8 @@ static struct nn_optset *nn_sock_optset (struct nn_sock *self, int id)
     return self->optsets [index];
 }
 
-void nn_sock_ulist(struct nn_fsm *self,int32_t s)
-{
-    struct nn_sock *sock; struct nn_list_item *it; struct nn_ep *ep;
-    sock = nn_cont(self,struct nn_sock,fsm);
-    it = nn_list_begin(&sock->eps);
-    while ( it != nn_list_end(&sock->eps) )
-    {
-        ep = nn_cont(it,struct nn_ep,item);
-        printf("(eid.%d %s) ",ep->eid,ep->sock->socket_name);
-        it = nn_list_next(&sock->eps,it);
-    }
-    printf("usocks for nn_sock.%d\n",s);
-}
-
-static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,void *srcptr)
+static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,
+    void *srcptr)
 {
     struct nn_sock *sock;
     struct nn_list_item *it;
@@ -771,26 +806,27 @@ static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,void *srcpt
         nn_assert (sock->state == NN_SOCK_STATE_ACTIVE ||
             sock->state == NN_SOCK_STATE_ZOMBIE);
 
-        // Close sndfd and rcvfd. This should make any current select/poll using SNDFD and/or RCVFD exit
-        if ( !(sock->socktype->flags & NN_SOCKTYPE_FLAG_NORECV) )
-        {
+        /*  Close sndfd and rcvfd. This should make any current
+            select/poll using SNDFD and/or RCVFD exit. */
+        if (!(sock->socktype->flags & NN_SOCKTYPE_FLAG_NORECV)) {
             nn_efd_term (&sock->rcvfd);
             memset (&sock->rcvfd, 0xcd, sizeof (sock->rcvfd));
         }
-        if ( !(sock->socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
-        {
+        if (!(sock->socktype->flags & NN_SOCKTYPE_FLAG_NOSEND)) {
             nn_efd_term (&sock->sndfd);
             memset (&sock->sndfd, 0xcd, sizeof (sock->sndfd));
         }
-        // Ask all the associated endpoints to stop
+
+        /*  Ask all the associated endpoints to stop. */
         it = nn_list_begin (&sock->eps);
-        while ( it != nn_list_end(&sock->eps) )
-        {
-            ep = nn_cont(it,struct nn_ep,item);
-            it = nn_list_next(&sock->eps,it);
-            nn_list_erase(&sock->eps,&ep->item);
-            nn_list_insert(&sock->sdeps,&ep->item,nn_list_end(&sock->sdeps));
-            nn_ep_stop(ep);
+        while (it != nn_list_end (&sock->eps)) {
+            ep = nn_cont (it, struct nn_ep, item);
+            it = nn_list_next (&sock->eps, it);
+            nn_list_erase (&sock->eps, &ep->item);
+            nn_list_insert (&sock->sdeps, &ep->item,
+                nn_list_end (&sock->sdeps));
+            nn_ep_stop (ep);
+
         }
         sock->state = NN_SOCK_STATE_STOPPING_EPS;
         goto finish2;
@@ -798,8 +834,7 @@ static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,void *srcpt
     if (nn_slow (sock->state == NN_SOCK_STATE_STOPPING_EPS)) {
 
         /*  Endpoint is stopped. Now we can safely deallocate it. */
-        if (!(src == NN_SOCK_SRC_EP && type == NN_EP_STOPPED))
-        {
+        if (!(src == NN_SOCK_SRC_EP && type == NN_EP_STOPPED)) {
             fprintf (stderr, "src=%d type=%d\n", (int) src, (int) type);
             nn_assert (src == NN_SOCK_SRC_EP && type == NN_EP_STOPPED);
         }
@@ -843,7 +878,8 @@ finish1:
     nn_fsm_bad_state(sock->state, src, type);
 }
 
-static void nn_sock_handler (struct nn_fsm *self, int src, int type,void *srcptr)
+static void nn_sock_handler (struct nn_fsm *self, int src, int type,
+    void *srcptr)
 {
     struct nn_sock *sock;
     struct nn_ep *ep;
@@ -890,10 +926,11 @@ static void nn_sock_handler (struct nn_fsm *self, int src, int type,void *srcptr
             }
 
         case NN_SOCK_SRC_EP:
-            switch (type)
-            {
+            switch (type) {
             case NN_EP_STOPPED:
-                // This happens when an endpoint is closed using nn_shutdown() function
+
+                /*  This happens when an endpoint is closed using
+                    nn_shutdown() function. */
                 ep = (struct nn_ep*) srcptr;
                 nn_list_erase (&sock->sdeps, &ep->item);
                 nn_ep_term (ep);
@@ -905,15 +942,16 @@ static void nn_sock_handler (struct nn_fsm *self, int src, int type,void *srcptr
             }
 
         default:
-            // The assumption is that all the other events come from pipes
-            switch ( type )
-            {
+
+            /*  The assumption is that all the other events come from pipes. */
+            switch (type) {
             case NN_PIPE_IN:
-                sock->sockbase->vfptr->in(sock->sockbase,(struct nn_pipe *)srcptr);
+                sock->sockbase->vfptr->in (sock->sockbase,
+                    (struct nn_pipe*) srcptr);
                 return;
             case NN_PIPE_OUT:
-                 //   printf("sock.c pipe out\n");
-                sock->sockbase->vfptr->out(sock->sockbase,(struct nn_pipe *)srcptr);
+                sock->sockbase->vfptr->out (sock->sockbase,
+                    (struct nn_pipe*) srcptr);
                 return;
             default:
                 nn_fsm_bad_action (sock->state, src, type);
@@ -957,23 +995,20 @@ static void nn_sock_action_zombify (struct nn_sock *self)
     }
 }
 
-void nn_sock_report_error(struct nn_sock *self,struct nn_ep *ep,int32_t errnum,char *fname,int32_t linenum)
+void nn_sock_report_error (struct nn_sock *self, struct nn_ep *ep, int errnum)
 {
-#ifndef __PNACL
-    if ( !nn_global_print_errors() )
+    if (!nn_global_print_errors())
         return;
-#endif
-    if ( errnum == 0 )
+
+    if (errnum == 0)
         return;
-    if ( ep != 0 )
-    {
-        fprintf(stderr,"nanomsg: socket.%s[%s]: Error: %s\n",self->socket_name,nn_ep_getaddr(ep),nn_strerror(errnum));
-        PostMessage("nanomsg: socket.%s[%s]: [%s:%d] Error: %s\n",self->socket_name,nn_ep_getaddr(ep),fname,linenum,nn_strerror(errnum));
-    }
-    else
-    {
-        fprintf(stderr,"nanomsg: socket.%s: Error: %s\n",self->socket_name, nn_strerror(errnum));
-        PostMessage("nanomsg: socket.%s: [%s:%d] Error: %s\n",self->socket_name,fname,linenum,nn_strerror(errnum));
+
+    if(ep) {
+        fprintf(stderr, "nanomsg: socket.%s[%s]: Error: %s\n",
+            self->socket_name, nn_ep_getaddr(ep), nn_strerror(errnum));
+    } else {
+        fprintf(stderr, "nanomsg: socket.%s: Error: %s\n",
+            self->socket_name, nn_strerror(errnum));
     }
 }
 

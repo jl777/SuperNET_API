@@ -46,29 +46,28 @@
 
 /*  TCP-specific socket options. */
 
-struct nn_tcp_optset
-{
+struct nn_tcp_optset {
     struct nn_optset base;
     int nodelay;
 };
 
 static void nn_tcp_optset_destroy (struct nn_optset *self);
-static int nn_tcp_optset_setopt (struct nn_optset *self, int option,const void *optval, size_t optvallen);
-static int nn_tcp_optset_getopt (struct nn_optset *self, int option,void *optval, size_t *optvallen);
-static const struct nn_optset_vfptr nn_tcp_optset_vfptr =
-{
+static int nn_tcp_optset_setopt (struct nn_optset *self, int option,
+    const void *optval, size_t optvallen);
+static int nn_tcp_optset_getopt (struct nn_optset *self, int option,
+    void *optval, size_t *optvallen);
+static const struct nn_optset_vfptr nn_tcp_optset_vfptr = {
     nn_tcp_optset_destroy,
     nn_tcp_optset_setopt,
     nn_tcp_optset_getopt
 };
 
-// nn_transport interface
-static int nn_tcp_bind(void *hint,struct nn_epbase **epbase);
-static int nn_tcp_connect(void *hint,struct nn_epbase **epbase);
-static struct nn_optset *nn_tcp_optset(void);
+/*  nn_transport interface. */
+static int nn_tcp_bind (void *hint, struct nn_epbase **epbase);
+static int nn_tcp_connect (void *hint, struct nn_epbase **epbase);
+static struct nn_optset *nn_tcp_optset (void);
 
-static struct nn_transport nn_tcp_vfptr =
-{
+static struct nn_transport nn_tcp_vfptr = {
     "tcp",
     NN_TCP,
     NULL,
@@ -81,17 +80,17 @@ static struct nn_transport nn_tcp_vfptr =
 
 struct nn_transport *nn_tcp = &nn_tcp_vfptr;
 
-static int nn_tcp_bind(void *hint,struct nn_epbase **epbase)
+static int nn_tcp_bind (void *hint, struct nn_epbase **epbase)
 {
-    return nn_btcp_create(hint, epbase);
+    return nn_btcp_create (hint, epbase);
 }
 
-static int nn_tcp_connect(void *hint,struct nn_epbase **epbase)
+static int nn_tcp_connect (void *hint, struct nn_epbase **epbase)
 {
-    return nn_ctcp_create(hint, epbase);
+    return nn_ctcp_create (hint, epbase);
 }
 
-static struct nn_optset *nn_tcp_optset()
+static struct nn_optset *nn_tcp_optset ()
 {
     struct nn_tcp_optset *optset;
 

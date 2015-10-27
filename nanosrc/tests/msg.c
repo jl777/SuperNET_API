@@ -30,7 +30,7 @@
 #define SOCKET_ADDRESS "inproc://a"
 #define SOCKET_ADDRESS_TCP "tcp://127.0.0.1:9456"
 
-char longdata[(1 << 5)+1];
+char longdata[NN_USOCK_BATCH_SIZE];
 
 int testmsg()
 {
@@ -42,7 +42,7 @@ int testmsg()
     struct nn_iovec iov;
     struct nn_msghdr hdr;
     printf("test msg\n");
-    if ( 0 )
+    if ( 1 )
     {
         sb = test_socket (AF_SP, NN_PAIR);
         test_bind (sb, SOCKET_ADDRESS);
@@ -53,7 +53,9 @@ int testmsg()
         alloc_assert (buf1);
         for (i = 0; i != 256; ++i)
             buf1 [i] = (unsigned char) i;
+        printf("send 256\n");
         rc = nn_send (sc, &buf1, NN_MSG, 0);
+        printf("rc.%d\n",rc);
         errno_assert (rc >= 0);
         nn_assert (rc == 256);
         
@@ -100,10 +102,10 @@ int testmsg()
     }
     /*  Test receiving of large message  */
     sb = test_socket(AF_SP, NN_PAIR);
-    printf("test_bind.(%s)\n",SOCKET_ADDRESS_TCP);
+    //printf("test_bind.(%s)\n",SOCKET_ADDRESS_TCP);
     test_bind(sb,SOCKET_ADDRESS_TCP);
     sc = test_socket(AF_SP,NN_PAIR);
-    printf("test_connect.(%s)\n",SOCKET_ADDRESS_TCP);
+    //printf("test_connect.(%s)\n",SOCKET_ADDRESS_TCP);
     test_connect(sc,SOCKET_ADDRESS_TCP);
 
     for (i = 0; i < (int) sizeof (longdata); ++i)
@@ -123,7 +125,7 @@ int testmsg()
 
     test_close (sc);
     test_close (sb);
-    printf("testmsg completed\n");
+    //printf("testmsg completed\n");
     return 0;
 }
 

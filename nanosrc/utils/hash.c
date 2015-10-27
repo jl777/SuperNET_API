@@ -71,10 +71,12 @@ static void nn_hash_rehash (struct nn_hash *self) {
     /*  Move the items from old slot array to new slot array. */
     for (i = 0; i != oldslots; ++i) {
     while (!nn_list_empty (&oldarray [i])) {
-        hitm = nn_cont (nn_list_begin (&oldarray [i]),struct nn_hash_item, list);
+        hitm = nn_cont (nn_list_begin (&oldarray [i]),
+                struct nn_hash_item, list);
         nn_list_erase (&oldarray [i], &hitm->list);
         newslot = nn_hash_key (hitm->key) % self->slots;
-        nn_list_insert (&self->array [newslot], &hitm->list,nn_list_end (&self->array [newslot]));
+        nn_list_insert (&self->array [newslot], &hitm->list,
+                nn_list_end (&self->array [newslot]));
     }
 
     nn_list_term (&oldarray [i]);

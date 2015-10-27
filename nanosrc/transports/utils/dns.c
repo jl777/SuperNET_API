@@ -89,7 +89,7 @@ int nn_dns_check_hostname (const char *name, size_t namelen)
 }
 
 #if defined NN_HAVE_GETADDRINFO_A && !defined NN_DISABLE_GETADDRINFO_A
-#include "dns_getaddrinfo_a.c"
+#include "dns_getaddrinfo_a.inc"
 #else
-#include "dns_getaddrinfo.c"
+#include "dns_getaddrinfo.inc"
 #endif

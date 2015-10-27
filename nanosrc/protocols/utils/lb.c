@@ -27,42 +27,62 @@
 
 #include <stddef.h>
 
-void nn_lb_init(struct nn_lb *self) { nn_priolist_init(&self->priolist); }
-
-void nn_lb_term(struct nn_lb *self) { nn_priolist_term(&self->priolist); }
-
-void nn_lb_add(struct nn_lb *self,struct nn_lb_data *data,struct nn_pipe *pipe,int32_t priority)
+void nn_lb_init (struct nn_lb *self)
 {
-    nn_priolist_add(&self->priolist,&data->priodata,pipe,priority);
+    nn_priolist_init (&self->priolist);
 }
 
-void nn_lb_rm(struct nn_lb *self,struct nn_lb_data *data) { nn_priolist_rm(&self->priolist,&data->priodata); }
-
-void nn_lb_out(struct nn_lb *self,struct nn_lb_data *data)
+void nn_lb_term (struct nn_lb *self)
 {
-    nn_priolist_activate(&self->priolist,&data->priodata);
+    nn_priolist_term (&self->priolist);
 }
 
-int32_t nn_lb_can_send(struct nn_lb *self) { return nn_priolist_is_active(&self->priolist); }
-
-int32_t nn_lb_get_priority (struct nn_lb *self) { return nn_priolist_get_priority (&self->priolist); }
-
-int32_t nn_lb_send(struct nn_lb *self,struct nn_msg *msg,struct nn_pipe **to)
+void nn_lb_add (struct nn_lb *self, struct nn_lb_data *data,
+    struct nn_pipe *pipe, int priority)
 {
-    int32_t rc; struct nn_pipe *pipe;
-    printf("lbsend\n");
-    pipe = nn_priolist_getpipe(&self->priolist); // Pipe is NULL only when no avialable pipes
-    if ( nn_slow(!pipe) )
-    {
-        printf("nn_lb_send no available pipes\n");
-        //return -ENOBUFS;
+    nn_priolist_add (&self->priolist, &data->priodata, pipe, priority);
+}
+
+void nn_lb_rm (struct nn_lb *self, struct nn_lb_data *data)
+{
+    nn_priolist_rm (&self->priolist, &data->priodata);
+}
+
+void nn_lb_out (struct nn_lb *self, struct nn_lb_data *data)
+{
+    nn_priolist_activate (&self->priolist, &data->priodata);
+}
+
+int nn_lb_can_send (struct nn_lb *self)
+{
+    return nn_priolist_is_active (&self->priolist);
+}
+
+int nn_lb_get_priority (struct nn_lb *self)
+{
+    return nn_priolist_get_priority (&self->priolist);
+}
+
+int nn_lb_send (struct nn_lb *self, struct nn_msg *msg, struct nn_pipe **to)
+{
+    int rc;
+    struct nn_pipe *pipe;
+
+    /*  Pipe is NULL only when there are no avialable pipes. */
+    pipe = nn_priolist_getpipe (&self->priolist);
+    if (nn_slow (!pipe))
         return -EAGAIN;
-    }
-    rc = nn_pipe_send(pipe,msg); // Send the messsage
+
+    /*  Send the messsage. */
+    rc = nn_pipe_send (pipe, msg);
     errnum_assert (rc >= 0, -rc);
-    nn_priolist_advance(&self->priolist,rc & NN_PIPE_RELEASE); // Move to the next pipe
-    if ( to != NULL )
+
+    /*  Move to the next pipe. */
+    nn_priolist_advance (&self->priolist, rc & NN_PIPE_RELEASE);
+
+    if (to != NULL)
         *to = pipe;
+
     return rc & ~NN_PIPE_RELEASE;
 }
 

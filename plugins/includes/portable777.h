@@ -17,7 +17,7 @@
 #ifndef crypto777_portable777_h
 #define crypto777_portable777_h
 
-#define TEST_TRANSPORT "ws"
+#define TEST_TRANSPORT "inproc"
 
 #include <stdint.h>
 #include <pthread.h>
@@ -35,9 +35,14 @@
 #include "uthash.h"
 #include "curve25519.h"
 
+
 #ifdef __PNACL
 void PostMessage(const char* format, ...);
 #define printf PostMessage
+#else
+#ifndef PostMessage
+#define PostMessage printf
+#endif
 #endif
 
 #define portable_mutex_t struct nn_mutex

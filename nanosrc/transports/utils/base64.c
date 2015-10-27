@@ -70,13 +70,13 @@ int nn_base64_decode (const char *in, size_t in_len,
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
     for (io = 0, ii = 0, v = 0, rem = 0; ii < in_len; ii++) {
-        if (isspace ((int32_t)in [ii]))
+        if (isspace ((uint32_t)in [ii]))
             continue;
         
         if (in [ii] == '=')
             break;
         
-        ch = DECODEMAP [(int32_t)in [ii]];
+        ch = DECODEMAP [(uint32_t)in [ii]];
         
         /*  Discard invalid characters as per RFC 2045. */
         if (ch == 0xFF)

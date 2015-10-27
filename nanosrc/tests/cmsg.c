@@ -26,7 +26,7 @@
 
 #include "testutil.h"
 
-#define SOCKET_ADDRESS "tcp://127.0.0.1:5555"
+#define SOCKET_ADDRESS "tcp://127.0.0.1:5565"
 
 int testcmsg()
 {

@@ -48,58 +48,51 @@ void nn_ctx_enter (struct nn_ctx *self)
     nn_mutex_lock (&self->sync);
 }
 
-void nn_ctx_leave(struct nn_ctx *self)
+void nn_ctx_leave (struct nn_ctx *self)
 {
     struct nn_queue_item *item;
     struct nn_fsm_event *event;
     struct nn_queue eventsto;
-    //PostMessage("nn_ctx_leave\n");
-    while ( 1 ) // Process any queued events before leaving the context
-    {
-        item = nn_queue_pop(&self->events);
-        //PostMessage("nn_ctx_leave nn_queue_pop: %p\n",item);
-        event = nn_cont(item,struct nn_fsm_event,item);
-        //PostMessage("nn_ctx_leave event: %p\n",event);
-        if ( !event )
+
+    /*  Process any queued events before leaving the context. */
+    while (1) {
+        item = nn_queue_pop (&self->events);
+        event = nn_cont (item, struct nn_fsm_event, item);
+        if (!event)
             break;
-        //PostMessage("nn_ctx_leave nn_fsm_event_process event.%p\n",event);
-        nn_fsm_event_process(event);
-        //PostMessage("nn_ctx_leave nn_fsm_event_process done.%p\n",event);
+        nn_fsm_event_process (event);
     }
-    //PostMessage("nn_ctx_leave: notify owner\n");
-    if ( nn_fast(self->onleave != NULL) ) // Notify the owner that we are leaving the context
-    {
-        //PostMessage("nn_ctx_leave notify owner.%p\n",self);
+
+    /*  Notify the owner that we are leaving the context. */
+    if (nn_fast (self->onleave != NULL))
         self->onleave (self);
-    }
-    if ( nn_queue_empty(&self->eventsto) ) // Shortcut in the case there are no external events
-    {
-        //PostMessage("nn_ctx_leave: shortcut\n");
-        nn_mutex_unlock(&self->sync);
-        //PostMessage("nn_ctx_leave: no external evels\n");
+
+    /*  Shortcut in the case there are no external events. */
+    if (nn_queue_empty (&self->eventsto)) {
+        nn_mutex_unlock (&self->sync);
         return;
     }
-    //  Make a copy of the queue of the external events so that it does not get corrupted once we unlock the context
+
+    /*  Make a copy of the queue of the external events so that it does not
+        get corrupted once we unlock the context. */
     eventsto = self->eventsto;
-    //PostMessage("nn_ctx_leave copy queue.%p\n",eventsto);
     nn_queue_init (&self->eventsto);
+
     nn_mutex_unlock (&self->sync);
-    //PostMessage("nn_ctx_leave copied queue.%p\n",eventsto);
-    while ( 1 )  // Process any queued external events. Before processing each event lock the context it belongs to
-    {
-        item = nn_queue_pop(&eventsto);
-        event = nn_cont(item,struct nn_fsm_event,item);
-        if ( !event )
+
+    /*  Process any queued external events. Before processing each event
+        lock the context it belongs to. */
+    while (1) {
+        item = nn_queue_pop (&eventsto);
+        event = nn_cont (item, struct nn_fsm_event, item);
+        if (!event)
             break;
-        //PostMessage("process event lock: enter\n");
         nn_ctx_enter (event->fsm->ctx);
-        //PostMessage("process event lock\n");
         nn_fsm_event_process (event);
-        //PostMessage("process event lock: leave\n");
         nn_ctx_leave (event->fsm->ctx);
-        //PostMessage("nn_ctx_leave even lock\n");
     }
-    nn_queue_term(&eventsto);
+
+    nn_queue_term (&eventsto);
 }
 
 struct nn_worker *nn_ctx_choose_worker (struct nn_ctx *self)

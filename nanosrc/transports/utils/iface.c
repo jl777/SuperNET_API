@@ -34,7 +34,7 @@
 #endif
 
 /*  Private functions. */
-void nn_iface_any (int ipv4only, struct sockaddr_storage *result,
+static void nn_iface_any (int ipv4only, struct sockaddr_storage *result,
     size_t *resultlen);
 
 #if defined NN_USE_IFADDRS
@@ -232,7 +232,7 @@ int nn_iface_resolve (const char *addr, size_t addrlen, int ipv4only,
 
 #endif
 
-void nn_iface_any (int ipv4only, struct sockaddr_storage *result,
+ void nn_iface_any (int ipv4only, struct sockaddr_storage *result,
     size_t *resultlen)
 {
     if (ipv4only) {

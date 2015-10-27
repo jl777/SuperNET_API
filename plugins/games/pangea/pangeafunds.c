@@ -1184,6 +1184,7 @@ int32_t pangea_lastman(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
 void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t cardi)
 {
     uint32_t now,i; char hex[1024];
+    msleep(3000);
     if ( dp->hand.betstarted == 0 )
     {
         dp->hand.betstarted = 1;

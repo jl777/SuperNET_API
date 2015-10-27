@@ -83,8 +83,10 @@ struct nn_epbase {
     struct nn_ep *ep;
 };
 
-// Creates a new endpoint. 'hint' parameter is an opaque value that was passed to transport's bind or connect function
-void nn_epbase_init (struct nn_epbase *self,const struct nn_epbase_vfptr *vfptr, void *hint);
+/*  Creates a new endpoint. 'hint' parameter is an opaque value that
+    was passed to transport's bind or connect function. */
+void nn_epbase_init (struct nn_epbase *self,
+    const struct nn_epbase_vfptr *vfptr, void *hint);
 
 /*  Notify the user that stopping is done. */
 void nn_epbase_stopped (struct nn_epbase *self);
@@ -107,8 +109,7 @@ void nn_epbase_getopt (struct nn_epbase *self, int level, int option,
 int nn_epbase_ispeer (struct nn_epbase *self, int socktype);
 
 /*  Notifies a monitoring system the error on this endpoint  */
-//void nn_epbase_set_error(struct nn_epbase *self, int errnum);
-void nn_epbase_set_error(struct nn_epbase *self,int32_t errnum,char *fname,int32_t linenum);
+void nn_epbase_set_error(struct nn_epbase *self, int errnum);
 
 /*  Notifies a monitoring system that error is gone  */
 void nn_epbase_clear_error(struct nn_epbase *self);
@@ -153,14 +154,15 @@ struct nn_pipebase;
     the messages passed with a single process. */
 #define NN_PIPEBASE_PARSED 2
 
-struct nn_pipebase_vfptr
-{
+struct nn_pipebase_vfptr {
+
     /*  Send a message to the network. The function can return either error
         (negative number) or any combination of the flags defined above. */
-    int (*send)(struct nn_pipebase *self, struct nn_msg *msg);
+    int (*send) (struct nn_pipebase *self, struct nn_msg *msg);
+
     /*  Receive a message from the network. The function can return either error
         (negative number) or any combination of the flags defined above. */
-    int (*recv)(struct nn_pipebase *self, struct nn_msg *msg);
+    int (*recv) (struct nn_pipebase *self, struct nn_msg *msg);
 };
 
 /*  Endpoint specific options. Same restrictions as for nn_pipebase apply  */
@@ -173,8 +175,7 @@ struct nn_ep_options
 
 /*  The member of this structure are used internally by the core. Never use
     or modify them directly from the transport. */
-struct nn_pipebase
-{
+struct nn_pipebase {
     struct nn_fsm fsm;
     const struct nn_pipebase_vfptr *vfptr;
     uint8_t state;
@@ -188,7 +189,8 @@ struct nn_pipebase
 };
 
 /*  Initialise the pipe.  */
-void nn_pipebase_init (struct nn_pipebase *self,const struct nn_pipebase_vfptr *vfptr,struct nn_epbase *epbase);
+void nn_pipebase_init (struct nn_pipebase *self,
+    const struct nn_pipebase_vfptr *vfptr, struct nn_epbase *epbase);
 
 /*  Terminate the pipe. */
 void nn_pipebase_term (struct nn_pipebase *self);
@@ -206,39 +208,50 @@ void nn_pipebase_received (struct nn_pipebase *self);
 void nn_pipebase_sent (struct nn_pipebase *self);
 
 /*  Retrieve value of a socket option. */
-void nn_pipebase_getopt(struct nn_pipebase *self,int level,int option,void *optval,size_t *optvallen);
+void nn_pipebase_getopt (struct nn_pipebase *self, int level, int option,
+    void *optval, size_t *optvallen);
 
-// Returns 1 is the specified socket type is a valid peer for this socket, or 0 otherwise.
-int nn_pipebase_ispeer(struct nn_pipebase *self,int socktype);
+/*  Returns 1 is the specified socket type is a valid peer for this socket,
+    or 0 otherwise. */
+int nn_pipebase_ispeer (struct nn_pipebase *self, int socktype);
 
 /******************************************************************************/
 /*  The transport class.                                                      */
 /******************************************************************************/
 
-struct nn_transport
-{
-    // Name of the transport as it appears in the connection strings ("tcp", "ipc", "inproc" etc.
+struct nn_transport {
+
+    /*  Name of the transport as it appears in the connection strings ("tcp",
+        "ipc", "inproc" etc. */
     const char *name;
-    // ID of the transport
+
+    /*  ID of the transport. */
     int id;
+
     /*  Following methods are guarded by a global critical section. Two of these
         function will never be invoked in parallel. The first is called when
         the library is initialised, the second one when it is terminated, i.e.
         when there are no more open sockets. Either of them can be set to NULL
         if no specific initialisation/termination is needed. */
-    void (*init)(void);
-    void (*term)(void);
+    void (*init) (void);
+    void (*term) (void);
+
     /*  Each of these functions creates an endpoint and returns the newly
         created endpoint in 'epbase' parameter. 'hint' is in opaque pointer
         to be passed to nn_epbase_init(). The epbase object can then be used
         to retrieve the address to bind/connect to. These functions are guarded
         by a socket-wide critical section. Two of these function will never be
         invoked in parallel on the same socket. */
-    int (*bind)(void *hint, struct nn_epbase **epbase);
-    int (*connect)(void *hint, struct nn_epbase **epbase);
-    // Create an object to hold transport-specific socket options. Set this member to NULL in case there are no transport-specific socket options available
-    struct nn_optset *(*optset)(void);
-    // This member is used exclusively by the core. Never touch it directly from the transport
+    int (*bind) (void *hint, struct nn_epbase **epbase);
+    int (*connect) (void *hint, struct nn_epbase **epbase);
+
+    /*  Create an object to hold transport-specific socket options.
+        Set this member to NULL in case there are no transport-specific
+        socket options available. */
+    struct nn_optset *(*optset) (void);
+
+    /*  This member is used exclusively by the core. Never touch it directly
+        from the transport. */
     struct nn_list_item item;
 };
 

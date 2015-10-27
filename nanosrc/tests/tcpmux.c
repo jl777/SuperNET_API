@@ -28,7 +28,7 @@
 
 /*  Tests TCPMUX transport. */
 
-int testtcpmux()
+int testtcpmux(int32_t iter)
 {
 #if !defined NN_HAVE_WINDOWS
     int rc;
@@ -38,14 +38,17 @@ int testtcpmux()
     printf("test tcpmux\n");
 
     /*  First, start tcpmux daemon. */
-    rc = nn_tcpmuxd (5555);
+    if ( iter == 0 )
+    {
+    rc = nn_tcpmuxd(5585);
     errno_assert (rc == 0);
+    }
 
     /*  Create a connection. */
     sb = test_socket (AF_SP, NN_PAIR);
-    test_bind (sb, "tcpmux://*:5555/foo");
+    test_bind (sb, "tcpmux://*:5585/foo");
     sc = test_socket (AF_SP, NN_PAIR);
-    test_connect (sc, "tcpmux://127.0.0.1:5555/foo");
+    test_connect (sc, "tcpmux://127.0.0.1:5585/foo");
 
     /*  Ping-pong test. */
     for (i = 0; i != 100; ++i) {

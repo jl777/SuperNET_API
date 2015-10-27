@@ -30,9 +30,7 @@ extern "C" {
 
 #include <errno.h>
 #include <stddef.h>
-
 #include "nn_config.h"
-
     
 /*  Handle DSO symbol visibility                                             */
 #if defined NN_NO_EXPORTS

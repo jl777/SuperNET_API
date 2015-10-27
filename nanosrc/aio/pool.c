@@ -22,16 +22,17 @@
 
 #include "pool.h"
 
-// TODO: The dummy implementation of a thread pool. As for now there's only one worker thread created.
+/*  TODO: The dummy implementation of a thread pool. As for now there's only
+    one worker thread created. */
 
-int nn_pool_init(struct nn_pool *self)
+int nn_pool_init (struct nn_pool *self)
 {
-    return nn_worker_init(&self->worker);
+    return nn_worker_init (&self->worker);
 }
 
-void nn_pool_term(struct nn_pool *self)
+void nn_pool_term (struct nn_pool *self)
 {
-    nn_worker_term(&self->worker);
+    nn_worker_term (&self->worker);
 }
 
 struct nn_worker *nn_pool_choose_worker (struct nn_pool *self)

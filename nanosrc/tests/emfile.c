@@ -25,7 +25,7 @@
 #include "../tcp.h"
 #include "../utils/err.h"
 
-#define SOCKET_ADDRESS "tcp://127.0.0.1:5555"
+#define SOCKET_ADDRESS "tcp://127.0.0.1:5575"
 #define MAX_SOCKETS 1000
 
 int testemfile()

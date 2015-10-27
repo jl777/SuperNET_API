@@ -80,7 +80,8 @@ static const struct nn_sockbase_vfptr nn_xpub_sockbase_vfptr = {
     nn_xpub_getopt
 };
 
-static void nn_xpub_init (struct nn_xpub *self,const struct nn_sockbase_vfptr *vfptr, void *hint)
+static void nn_xpub_init (struct nn_xpub *self,
+    const struct nn_sockbase_vfptr *vfptr, void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
     nn_dist_init (&self->outpipes);

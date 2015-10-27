@@ -146,7 +146,7 @@ int nn_chunk_realloc (size_t size, void **chunk)
 void nn_chunk_free (void *p)
 {
     struct nn_chunk *self;
-
+    //printf("nn_chunk_free.%p\n",p);
     self = nn_chunk_getptr (p);
 
     /*  Decrement the reference count. Actual deallocation happens only if
@@ -175,9 +175,9 @@ void nn_chunk_addref (void *p, uint32_t n)
 }
 
 
-size_t nn_chunk_size(void *p)
+size_t nn_chunk_size (void *p)
 {
-    return nn_chunk_getptr(p)->size;
+    return nn_chunk_getptr (p)->size;
 }
 
 void *nn_chunk_trim (void *p, size_t n)
@@ -208,10 +208,10 @@ static struct nn_chunk *nn_chunk_getptr (void *p)
 {
     uint32_t off;
 
-    nn_assert (nn_getl((uint8_t *) p - sizeof (uint32_t)) == NN_CHUNK_TAG);
+    nn_assert (nn_getl ((uint8_t*) p - sizeof (uint32_t)) == NN_CHUNK_TAG);
     off = nn_getl ((uint8_t*) p - 2 * sizeof (uint32_t));
 
-    return (struct nn_chunk *) ((uint8_t*) p - 2 *sizeof (uint32_t) - off -
+    return (struct  nn_chunk*) ((uint8_t*) p - 2 *sizeof (uint32_t) - off -
         sizeof (struct nn_chunk));
 }
 

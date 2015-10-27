@@ -40,12 +40,13 @@
 #define NN_NORETURN
 #endif
 
-//  Same as system assert(). However, under Win32 assert has some deficiencies. Thus this macro
+/*  Same as system assert(). However, under Win32 assert has some deficiencies.
+    Thus this macro. */
 #define nn_assert(x) \
     do {\
         if (nn_slow (!(x))) {\
-            printf("Assertion failed: %s (%s:%d)\n", #x,__FILE__, __LINE__);\
-            PostMessage("Assertion failed: %s (%s:%d)\n", #x,__FILE__, __LINE__);\
+            PostMessage( "Assertion failed: %s (%s:%d)\n", #x, \
+                __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -53,8 +54,10 @@
 #define nn_assert_state(obj, state_name) \
     do {\
         if (nn_slow ((obj)->state != state_name)) {\
-            printf("Assertion failed: %d == %s (%s:%d)\n",(obj)->state, #state_name,__FILE__, __LINE__);\
-            PostMessage("Assertion failed: %d == %s (%s:%d)\n",(obj)->state, #state_name,__FILE__, __LINE__);\
+            PostMessage( \
+                "Assertion failed: %d == %s (%s:%d)\n", \
+                (obj)->state, #state_name, \
+                __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -63,8 +66,8 @@
 #define alloc_assert(x) \
     do {\
         if (nn_slow (!x)) {\
-PostMessage("Out of memory (%s:%d)\n",__FILE__, __LINE__);\
-printf("Out of memory (%s:%d)\n",__FILE__, __LINE__);\
+            PostMessage( "Out of memory (%s:%d)\n",\
+                __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -73,8 +76,8 @@ printf("Out of memory (%s:%d)\n",__FILE__, __LINE__);\
 #define errno_assert(x) \
     do {\
         if (nn_slow (!(x))) {\
-PostMessage("%s [%d] (%s:%d)\n", nn_err_strerror (errno),(int) errno, __FILE__, __LINE__);\
-printf("%s [%d] (%s:%d)\n", nn_err_strerror (errno),(int) errno, __FILE__, __LINE__);\
+            PostMessage( "%s [%d] (%s:%d)\n", nn_err_strerror (errno),\
+                (int) errno, __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -83,8 +86,8 @@ printf("%s [%d] (%s:%d)\n", nn_err_strerror (errno),(int) errno, __FILE__, __LIN
 #define errnum_assert(cond, err) \
     do {\
         if (nn_slow (!(cond))) {\
-PostMessage("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE__);\
-printf("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE__);\
+            PostMessage( "%s [%d] (%s:%d)\n", nn_err_strerror (err),\
+                (int) (err), __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -95,7 +98,7 @@ printf("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE_
         if (nn_slow (!(x))) {\
             char errstr [256];\
             nn_win_error ((int) GetLastError (), errstr, 256);\
-            fprintf (stderr, "%s [%d] (%s:%d)\n",\
+            PostMessage( "%s [%d] (%s:%d)\n",\
                 errstr, (int) GetLastError (), __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
@@ -107,7 +110,7 @@ printf("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE_
         if (nn_slow (!(x))) {\
             char errstr [256];\
             nn_win_error (WSAGetLastError (), errstr, 256);\
-            fprintf (stderr, "%s [%d] (%s:%d)\n",\
+            PostMessage( "%s [%d] (%s:%d)\n",\
                 errstr, (int) WSAGetLastError (), __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
@@ -116,8 +119,8 @@ printf("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE_
 /*  Assertion-like macros for easier fsm debugging. */
 #define nn_fsm_error(message, state, src, type) \
     do {\
-PostMessage("%s: state=%d source=%d action=%d (%s:%d)\n",message, state, src, type, __FILE__, __LINE__);\
-printf("%s: state=%d source=%d action=%d (%s:%d)\n",message, state, src, type, __FILE__, __LINE__);\
+        PostMessage( "%s: state=%d source=%d action=%d (%s:%d)\n", \
+            message, state, src, type, __FILE__, __LINE__);\
         nn_err_abort ();\
     } while (0)
 

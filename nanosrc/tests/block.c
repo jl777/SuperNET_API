@@ -67,7 +67,7 @@ int testblock()
 
     test_close (sc);
     test_close (sb);
-    printf("finished block test\n");
+    //printf("finished block test\n");
     return 0;
 }
 

@@ -83,7 +83,6 @@ void nn_atcpmux_start (struct nn_atcpmux *self, int fd)
     nn_fsm_start (&self->fsm);
 
     /*  Start the stcp state machine. */
-    printf("ATCPMUX start connecting\n");
     nn_usock_start_fd (&self->usock, fd);
     nn_stcpmux_start (&self->stcpmux, &self->usock);
     self->state = NN_ATCPMUX_STATE_ACTIVE;

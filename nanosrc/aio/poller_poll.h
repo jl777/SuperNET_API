@@ -20,8 +20,6 @@
     IN THE SOFTWARE.
 */
 
-#include "../nn_config.h"
-
 #include <poll.h>
 
 #define NN_POLLER_HAVE_ASYNC_ADD 0
@@ -30,8 +28,7 @@ struct nn_poller_hndl {
     int index;
 };
 
-struct nn_poller
-{
+struct nn_poller {
 
     /*  Actual number of elements in the pollset. */
     int size;

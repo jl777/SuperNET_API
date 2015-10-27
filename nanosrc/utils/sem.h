@@ -23,6 +23,8 @@
 #ifndef NN_SEM_INCLUDED
 #define NN_SEM_INCLUDED
 
+#include "../nn_config.h"
+
 /*  Simple semaphore. It can have only two values (0/1 i.e. locked/unlocked). */
 
 struct nn_sem;
@@ -39,7 +41,7 @@ void nn_sem_post (struct nn_sem *self);
 /*  Waits till sem object becomes unlocked and locks it. */
 int nn_sem_wait (struct nn_sem *self);
 
-#if defined __APPLE__ || defined __PNACL
+#if defined NN_HAVE_OSX || defined __PNACL
 
 #include <pthread.h>
 

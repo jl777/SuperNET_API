@@ -70,7 +70,7 @@ int testterm()
 
     /*  Wait till worker thread terminates. */
     nn_thread_term(&thread);
-    printf("nn_thread_term finished\n");
+    //printf("nn_thread_term finished\n");
     return 0;
 }
 

@@ -280,7 +280,7 @@ static int nn_ws_match_token (const char* token, const char **subj,
 
     if (case_insensitive) {
         while (*token && *pos) {
-            if (tolower ((int32_t)*token) != tolower ((int32_t)*pos))
+            if (tolower ((uint32_t)*token) != tolower ((uint32_t)*pos))
                 return NN_WS_HANDSHAKE_NOMATCH;
             token++;
             pos++;
@@ -368,7 +368,7 @@ static int nn_ws_validate_value (const char* expected, const char *subj,
 
     if (case_insensitive) {
         while (*expected && *subj) {
-            if (tolower ((int32_t)*expected) != tolower ((int32_t)*subj))
+            if (tolower ((uint32_t)*expected) != tolower ((uint32_t)*subj))
                 return NN_WS_HANDSHAKE_NOMATCH;
             expected++;
             subj++;

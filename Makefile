@@ -22,7 +22,7 @@ DEPS = nacl_io
 LIBS = curl z pthread ssl crypto ppapi nacl_io 
 #LDFLAGS = -L $(NACL_SDK_ROOT)/toolchain/pnacl/usr/lib
 
-CFLAGS = -Wall -Ipicocoin/include -D STANDALONE  -D __PNACL
+CFLAGS = -Wall -Ipicocoin/include -D STANDALONE  -D __PNACL -DNN_HAVE_POLL=1 -DNN_HAVE_SEMAPHORE=1 -DNN_HAVE_PIPE=1 -DNN_USE_POLL=1 -DNN_DISABLE_GETADDRINFO_A=1 -DNN_USE_LITERAL_IFADDR=1 -DNN_HAVE_STDINT=1 -DNN_HAVE_MSG_CONTROL=1 -DNN_USE_MYMSG
 
 #    nanosrc/core/ep.h \
 #    nanosrc/core/global.h \

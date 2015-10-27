@@ -27,8 +27,7 @@
 #include "../../pipeline.h"
 #include "../../utils/list.h"
 
-static struct nn_socktype nn_push_socktype_struct =
-{
+static struct nn_socktype nn_push_socktype_struct = {
     AF_SP,
     NN_PUSH,
     NN_SOCKTYPE_FLAG_NORECV,

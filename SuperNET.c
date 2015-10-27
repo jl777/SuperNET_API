@@ -25,8 +25,8 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-//#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
-#define DEFAULT_SUPERNET_CONF "{\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
+#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
+//#define DEFAULT_SUPERNET_CONF "{\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
@@ -569,9 +569,9 @@ char *SuperNET_launch_agent(char *name,char *jsonargs,int32_t *readyflagp)
     return(str);
 }
 
-void nanotests()
+void nanotests(int32_t numiters)
 {
-    int32_t i,seed,errs = 0;
+    int32_t i,seed;
     randombytes((void *)&seed,sizeof(seed));
     srand(seed);
     for (i=0; i<10; i++)
@@ -583,11 +583,14 @@ void nanotests()
     int testlist(); int testmsg(); int testdomain(); int testblock();
     int testdevice(); int testipc(); int testinproc(); int testinproc_shutdown();
     int testipc_shutdown(); int testipc_stress(); int testtcp(); int testtcp_shutdown();
-    int testtcpmux(); int testws(); int testpair(); int testbus();
+    int testtcpmux(int); int testws(); int testpair(); int testbus();
     int testpipeline(); int testpubsub(); int testreqrep(); int testsurvey();
-    testipc();
-    for (i=0; i<0; i++)
+    testmsg();
+    testcmsg();
+    printf("testmsg and testcmsg done\n");
+    for (i=0; i<numiters; i++)
     {
+        printf("nanotest iter.%d\n",i);
         testhash();
         testtrie();
         testlist();
@@ -595,6 +598,8 @@ void nanotests()
         testiovec();
         testblock();
         testemfile();
+        testmsg();
+        testcmsg();
         testzerocopy();
         testinproc();
         testinproc_shutdown();
@@ -609,24 +614,20 @@ void nanotests()
         testsurvey();
         testws();
         testpoll();
-        testmsg();
-        testcmsg();
         testseparation();
         testipc();
         testtcp();
         testreqrep();
+        testipc();
         testipc_stress();
-    }
-    for (i=0; i<1; i++)
         testipc_shutdown();
-    printf("finished nanotest loop\n"), exit(0); getchar();
- testdevice();
-    testterm();
-    testtcp_shutdown();
-        testtcpmux();
-
-    printf("nanotests num errs.%d\n",errs);
-    getchar();
+        testtcp_shutdown();
+        testterm();
+        testdevice();
+        if ( 0 && i == 0 ) // since myrecvmsg uses multiple packets, assumption is violated
+            testtcpmux(i);
+    }
+    printf("finished nanotests\n");
 }
 
 int32_t SuperNET_saveconf(char *jsonstr)
@@ -672,7 +673,7 @@ int SuperNET_start(char *fname,char *myip)
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     char *strs[16],*jsonargs=0,ipaddr[256]; cJSON *json; int32_t i,n = 0; uint64_t allocsize;
     portable_OS_init();
-    nanotests();
+    //nanotests(1);
     char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
     if ( 0 && (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
     {
