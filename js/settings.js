@@ -11,7 +11,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
             case 'InstantDEX':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
                 break;
-            case 'Pangea':
+            case 'pangea':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
                 break;
             case 'Jumblr':
@@ -29,9 +29,12 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
             case 'Tradebots':
                 extraInfo = 'Extra Info on this '+agent+' Agent';
                 break;
-            case 'Wallet':
-                extraInfo = 'Extra Info on this '+agent+' Agent';
-                break;
+              case 'Wallet':
+              extraInfo = 'Extra Info on this '+agent+' Agent';
+              break;
+              case 'Jay':
+              extraInfo = 'Extra Info on this '+agent+' Agent';
+              break;
 
         }
 

@@ -111,8 +111,7 @@ int nn_cipc_create (void *hint, struct nn_epbase **epbase)
 
     /*  Initialise the structure. */
     nn_epbase_init (&self->epbase, &nn_cipc_epbase_vfptr, hint);
-    nn_fsm_init_root (&self->fsm, nn_cipc_handler, nn_cipc_shutdown,
-        nn_epbase_getctx (&self->epbase));
+    nn_fsm_init_root (&self->fsm, nn_cipc_handler, nn_cipc_shutdown,nn_epbase_getctx (&self->epbase));
     self->state = NN_CIPC_STATE_IDLE;
     nn_usock_init (&self->usock, NN_CIPC_SRC_USOCK, &self->fsm);
     sz = sizeof (reconnect_ivl);
@@ -201,7 +200,7 @@ static void nn_cipc_handler (struct nn_fsm *self, int src, int type,
     NN_UNUSED void *srcptr)
 {
     struct nn_cipc *cipc;
-
+    //PostMessage("CIPC handler.(%d %d)\n",src,type);
     cipc = nn_cont (self, struct nn_cipc, fsm);
 
     switch (cipc->state) {
@@ -238,20 +237,16 @@ static void nn_cipc_handler (struct nn_fsm *self, int src, int type,
             case NN_USOCK_CONNECTED:
                 nn_sipc_start (&cipc->sipc, &cipc->usock);
                 cipc->state = NN_CIPC_STATE_ACTIVE;
-                nn_epbase_stat_increment (&cipc->epbase,
-                    NN_STAT_INPROGRESS_CONNECTIONS, -1);
-                nn_epbase_stat_increment (&cipc->epbase,
-                    NN_STAT_ESTABLISHED_CONNECTIONS, 1);
+                nn_epbase_stat_increment (&cipc->epbase,NN_STAT_INPROGRESS_CONNECTIONS, -1);
+                nn_epbase_stat_increment (&cipc->epbase,NN_STAT_ESTABLISHED_CONNECTIONS, 1);
                 nn_epbase_clear_error (&cipc->epbase);
                 return;
             case NN_USOCK_ERROR:
                 nn_epbase_set_error (&cipc->epbase,nn_usock_geterrno (&cipc->usock),__FILE__,__LINE__);
                 nn_usock_stop (&cipc->usock);
                 cipc->state = NN_CIPC_STATE_STOPPING_USOCK;
-                nn_epbase_stat_increment (&cipc->epbase,
-                    NN_STAT_INPROGRESS_CONNECTIONS, -1);
-                nn_epbase_stat_increment (&cipc->epbase,
-                    NN_STAT_CONNECT_ERRORS, 1);
+                nn_epbase_stat_increment (&cipc->epbase,NN_STAT_INPROGRESS_CONNECTIONS, -1);
+                nn_epbase_stat_increment (&cipc->epbase,NN_STAT_CONNECT_ERRORS, 1);
                 return;
             default:
                 nn_fsm_bad_action (cipc->state, src, type);
@@ -394,7 +389,7 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
     size_t sz;
 
     /*  Try to start the underlying socket. */
-    printf("CIPC start connecting\n");
+    //printf("CIPC start connecting\n");
     rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);

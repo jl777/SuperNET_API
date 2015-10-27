@@ -35,13 +35,13 @@ int testipc()
 {
     int sb;
     int sc;
-    int i,r = 2;//(rand() % 3);
+    int i;
     int s1, s2;
 
 	size_t size;
 	char * buf;
-    printf("test ipc r.%d\n",r);
-    if ( r == 0 )
+    printf("test ipc\n");
+    if ( 1 )
     {
         /*  Try closing a IPC socket while it not connected. */
         sc = test_socket (AF_SP, NN_PAIR);
@@ -88,7 +88,7 @@ int testipc()
         test_close (sc);
         test_close (sb);
     }
-    else if ( r == 1 )
+    if ( 1 )
     {
         /*  Test whether connection rejection is handled decently. */
         sb = test_socket (AF_SP, NN_PAIR);
@@ -102,7 +102,7 @@ int testipc()
         test_close (s1);
         test_close (sb);
     }
-    else
+    if ( 1 )
     {
         /*  Test two sockets binding to the same address. */
         sb = test_socket (AF_SP, NN_PAIR);
@@ -111,23 +111,22 @@ int testipc()
         test_bind (s1, SOCKET_ADDRESS);
         sc = test_socket (AF_SP, NN_PAIR);
         test_connect (sc, SOCKET_ADDRESS);
-        printf("sb.%d s1.%d sc.%d\n",sb,s1,sc);
-        nn_sleep (3000);
-        printf("send.(ABC) to sb\n");
+        //printf("sb.%d s1.%d sc.%d\n",sb,s1,sc);
+        nn_sleep (100);
+        //printf("send.(ABC) to sb\n");
         test_send (sb, "ABC");
-        printf("check recv.(ABC) via sc\n");
+        //printf("check recv.(ABC) via sc\n");
         test_recv (sc, "ABC");
-        printf("close sb\n");
+        //printf("close sb\n");
         test_close (sb);
-        
-        printf("send.(DEF) to s1 getchar()\n"), getchar();
+        //printf("send.(DEF) to s1 getchar()\n"), getchar();
         test_send (s1, "DEF");
-        printf("check recv.(DEF) via sc, getchar()\n"); getchar();
-        nn_sleep(1000);
+        //printf("check recv.(DEF) via sc, getchar()\n"); getchar();
+        //nn_sleep(1000);
         test_recv (sc, "DEF");
-        printf("close sc\n");
+        //printf("close sc getchar()\n"); getchar();
         test_close (sc);
-        printf("close s1\n");
+        //printf("close s1\n");
         test_close (s1);
     }
     printf("finished ipc test\n");

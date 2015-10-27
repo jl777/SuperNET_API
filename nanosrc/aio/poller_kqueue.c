@@ -167,8 +167,7 @@ again:
 #endif
     ts.tv_sec = timeout / 1000;
     ts.tv_nsec = (timeout % 1000) * 1000000;
-    nevents = kevent (self->kq, NULL, 0, &self->events [0],
-        NN_POLLER_MAX_EVENTS, timeout >= 0 ? &ts : NULL);
+    nevents = kevent (self->kq, NULL, 0, &self->events [0],NN_POLLER_MAX_EVENTS, timeout >= 0 ? &ts : NULL);
     if (nevents == -1 && errno == EINTR)
 #if defined NN_IGNORE_EINTR
         goto again;

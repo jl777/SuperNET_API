@@ -135,9 +135,8 @@ void nn_fsm_stopped_noevent (struct nn_fsm *self)
 
 void nn_fsm_swap_owner (struct nn_fsm *self, struct nn_fsm_owner *owner)
 {
-    int oldsrc;
-    struct nn_fsm *oldowner;
-
+    int oldsrc; struct nn_fsm *oldowner;
+    //printf("FSM SWAP %d <-> %d\n",self->src,owner->src);
     oldsrc = self->src;
     oldowner = self->owner;
     self->src = owner->src;
@@ -166,8 +165,7 @@ void nn_fsm_raise (struct nn_fsm *self, struct nn_fsm_event *event, int type)
     nn_ctx_raise (self->ctx, event);
 }
 
-void nn_fsm_raiseto (struct nn_fsm *self, struct nn_fsm *dst,
-    struct nn_fsm_event *event, int src, int type, void *srcptr)
+void nn_fsm_raiseto (struct nn_fsm *self, struct nn_fsm *dst,struct nn_fsm_event *event, int src, int type, void *srcptr)
 {
     event->fsm = dst;
     event->src = src;

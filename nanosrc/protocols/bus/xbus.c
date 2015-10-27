@@ -57,8 +57,7 @@ static const struct nn_sockbase_vfptr nn_xbus_sockbase_vfptr = {
     nn_xbus_getopt
 };
 
-void nn_xbus_init (struct nn_xbus *self,
-    const struct nn_sockbase_vfptr *vfptr, void *hint)
+void nn_xbus_init (struct nn_xbus *self,const struct nn_sockbase_vfptr *vfptr, void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
     nn_dist_init (&self->outpipes);

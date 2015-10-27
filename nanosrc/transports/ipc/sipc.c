@@ -58,39 +58,36 @@
 /*  Stream is a special type of pipe. Implementation of the virtual pipe API. */
 static int nn_sipc_send (struct nn_pipebase *self, struct nn_msg *msg);
 static int nn_sipc_recv (struct nn_pipebase *self, struct nn_msg *msg);
-const struct nn_pipebase_vfptr nn_sipc_pipebase_vfptr = {
+const struct nn_pipebase_vfptr nn_sipc_pipebase_vfptr =
+{
     nn_sipc_send,
     nn_sipc_recv
 };
 
 /*  Private functions. */
-static void nn_sipc_handler (struct nn_fsm *self, int src, int type,
-    void *srcptr);
-static void nn_sipc_shutdown (struct nn_fsm *self, int src, int type,
-    void *srcptr);
+static void nn_sipc_handler (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_sipc_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
 
-void nn_sipc_init (struct nn_sipc *self, int src,
-    struct nn_epbase *epbase, struct nn_fsm *owner)
+void nn_sipc_init(struct nn_sipc *self,int32_t src,struct nn_epbase *epbase,struct nn_fsm *owner)
 {
-    nn_fsm_init (&self->fsm, nn_sipc_handler, nn_sipc_shutdown,
-        src, self, owner);
+    nn_fsm_init(&self->fsm,nn_sipc_handler,nn_sipc_shutdown,src,self,owner);
     self->state = NN_SIPC_STATE_IDLE;
-    nn_streamhdr_init (&self->streamhdr, NN_SIPC_SRC_STREAMHDR, &self->fsm);
+    nn_streamhdr_init(&self->streamhdr,NN_SIPC_SRC_STREAMHDR,&self->fsm);
     self->usock = NULL;
     self->usock_owner.src = -1;
     self->usock_owner.fsm = NULL;
-    nn_pipebase_init (&self->pipebase, &nn_sipc_pipebase_vfptr, epbase);
+    nn_pipebase_init(&self->pipebase,&nn_sipc_pipebase_vfptr,epbase);
     self->instate = -1;
-    nn_msg_init (&self->inmsg, 0);
+    nn_msg_init(&self->inmsg,0);
     self->outstate = -1;
-    nn_msg_init (&self->outmsg, 0);
-    nn_fsm_event_init (&self->done);
+    //printf("outstate.%p -1\n",self);
+    nn_msg_init(&self->outmsg,0);
+    nn_fsm_event_init(&self->done);
 }
 
 void nn_sipc_term (struct nn_sipc *self)
 {
     nn_assert_state (self, NN_SIPC_STATE_IDLE);
-
     nn_fsm_event_term (&self->done);
     nn_msg_term (&self->outmsg);
     nn_msg_term (&self->inmsg);
@@ -99,79 +96,58 @@ void nn_sipc_term (struct nn_sipc *self)
     nn_fsm_term (&self->fsm);
 }
 
-int nn_sipc_isidle (struct nn_sipc *self)
-{
-    return nn_fsm_isidle (&self->fsm);
-}
+int nn_sipc_isidle (struct nn_sipc *self) { return nn_fsm_isidle (&self->fsm); }
 
-void nn_sipc_start (struct nn_sipc *self, struct nn_usock *usock)
+void nn_sipc_stop(struct nn_sipc *self) { nn_fsm_stop (&self->fsm); }
+
+void nn_sipc_start(struct nn_sipc *self,struct nn_usock *usock)
 {
-    /*  Take ownership of the underlying socket. */
+    // Take ownership of the underlying socket
     nn_assert (self->usock == NULL && self->usock_owner.fsm == NULL);
     self->usock_owner.src = NN_SIPC_SRC_USOCK;
     self->usock_owner.fsm = &self->fsm;
     nn_usock_swap_owner (usock, &self->usock_owner);
     self->usock = usock;
-
-    /*  Launch the state machine. */
-    nn_fsm_start (&self->fsm);
+    nn_fsm_start (&self->fsm); // Launch the state machine
 }
 
-void nn_sipc_stop (struct nn_sipc *self)
+static int nn_sipc_send(struct nn_pipebase *self, struct nn_msg *msg)
 {
-    nn_fsm_stop (&self->fsm);
-}
-
-static int nn_sipc_send (struct nn_pipebase *self, struct nn_msg *msg)
-{
-    struct nn_sipc *sipc;
-    struct nn_iovec iov [3];
-
-    sipc = nn_cont (self, struct nn_sipc, pipebase);
-
-    nn_assert_state (sipc, NN_SIPC_STATE_ACTIVE);
+    struct nn_sipc *sipc; struct nn_iovec iov[3];
+    sipc = nn_cont(self,struct nn_sipc,pipebase);
+    //printf("nn_sipc_send.%p\n",sipc);
+    nn_assert_state(sipc,NN_SIPC_STATE_ACTIVE);
     nn_assert (sipc->outstate == NN_SIPC_OUTSTATE_IDLE);
-
-    /*  Move the message to the local storage. */
-    nn_msg_term (&sipc->outmsg);
-    nn_msg_mv (&sipc->outmsg, msg);
-
-    /*  Serialise the message header. */
-    sipc->outhdr [0] = NN_SIPC_MSG_NORMAL;
-    nn_putll (sipc->outhdr + 1, nn_chunkref_size (&sipc->outmsg.sphdr) +
-        nn_chunkref_size (&sipc->outmsg.body));
-
-    /*  Start async sending. */
-    iov [0].iov_base = sipc->outhdr;
-    iov [0].iov_len = sizeof (sipc->outhdr);
-    iov [1].iov_base = nn_chunkref_data (&sipc->outmsg.sphdr);
-    iov [1].iov_len = nn_chunkref_size (&sipc->outmsg.sphdr);
-    iov [2].iov_base = nn_chunkref_data (&sipc->outmsg.body);
-    iov [2].iov_len = nn_chunkref_size (&sipc->outmsg.body);
-    nn_usock_send (sipc->usock, iov, 3);
-
+    //  Move the message to the local storage
+    nn_msg_term(&sipc->outmsg);
+    nn_msg_mv(&sipc->outmsg, msg);
+    // Serialise the message header
+    sipc->outhdr[0] = NN_SIPC_MSG_NORMAL;
+    nn_putll(sipc->outhdr + 1,nn_chunkref_size(&sipc->outmsg.sphdr) + nn_chunkref_size(&sipc->outmsg.body));
+    // Start async sending
+    iov[0].iov_base = sipc->outhdr;
+    iov[0].iov_len = sizeof(sipc->outhdr);
+    iov[1].iov_base = nn_chunkref_data(&sipc->outmsg.sphdr);
+    iov[1].iov_len = nn_chunkref_size(&sipc->outmsg.sphdr);
+    iov[2].iov_base = nn_chunkref_data(&sipc->outmsg.body);
+    iov[2].iov_len = nn_chunkref_size(&sipc->outmsg.body);
+    nn_usock_send(sipc->usock,iov,3);
     sipc->outstate = NN_SIPC_OUTSTATE_SENDING;
-
+    printf("3 vecs.(%d %d %d) set outstate.%p NN_SIPC_OUTSTATE_SENDING.%d %d\n",(int32_t)iov[0].iov_len,(int32_t)iov[1].iov_len,(int32_t)iov[2].iov_len,sipc,NN_SIPC_OUTSTATE_SENDING,sipc->outstate);
     return 0;
 }
 
-static int nn_sipc_recv (struct nn_pipebase *self, struct nn_msg *msg)
+static int32_t nn_sipc_recv(struct nn_pipebase *self,struct nn_msg *msg)
 {
     struct nn_sipc *sipc;
-
-    sipc = nn_cont (self, struct nn_sipc, pipebase);
-
-    nn_assert_state (sipc, NN_SIPC_STATE_ACTIVE);
-    nn_assert (sipc->instate == NN_SIPC_INSTATE_HASMSG);
-
-    /*  Move received message to the user. */
-    nn_msg_mv (msg, &sipc->inmsg);
-    nn_msg_init (&sipc->inmsg, 0);
-
-    /*  Start receiving new message. */
-    sipc->instate = NN_SIPC_INSTATE_HDR;
-    nn_usock_recv (sipc->usock, sipc->inhdr, sizeof (sipc->inhdr), NULL);
-
+    sipc = nn_cont(self,struct nn_sipc,pipebase);
+    nn_assert_state(sipc,NN_SIPC_STATE_ACTIVE);
+    nn_assert(sipc->instate == NN_SIPC_INSTATE_HASMSG);
+    nn_msg_mv(msg,&sipc->inmsg); // Move received message to the user
+    nn_msg_init(&sipc->inmsg,0);
+    sipc->instate = NN_SIPC_INSTATE_HDR; // Start receiving new message
+    //printf("nn_sipc_recv usock.%d\n",sipc->usock->s);
+    nn_usock_recv(sipc->usock,sipc->inhdr,sizeof(sipc->inhdr),NULL);
     return 0;
 }
 
@@ -203,18 +179,13 @@ static void nn_sipc_shutdown (struct nn_fsm *self, int src, int type,
     nn_fsm_bad_state(sipc->state, src, type);
 }
 
-static void nn_sipc_handler (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_sipc_handler (struct nn_fsm *self,int32_t src,int32_t type,NN_UNUSED void *srcptr)
 {
-    int rc;
-    struct nn_sipc *sipc;
-    uint64_t size;
-
-    sipc = nn_cont (self, struct nn_sipc, fsm);
-
-
-    switch (sipc->state) {
-
+    int32_t rc; struct nn_sipc *sipc; uint64_t size;
+    sipc = nn_cont(self,struct nn_sipc,fsm);
+    //printf("nn_sipc_handler.%p -> sipc.%p src.%d type.%d\n",self,sipc,src,type);
+    switch ( sipc->state )
+    {
 /******************************************************************************/
 /*  IDLE state.                                                               */
 /******************************************************************************/
@@ -285,17 +256,16 @@ static void nn_sipc_handler (struct nn_fsm *self, int src, int type,
                     nn_fsm_raise (&sipc->fsm, &sipc->done, NN_SIPC_ERROR);
                     return;
                  }
-
-                 /*  Start receiving a message in asynchronous manner. */
-                 sipc->instate = NN_SIPC_INSTATE_HDR;
-                 nn_usock_recv (sipc->usock, &sipc->inhdr,
-                     sizeof (sipc->inhdr), NULL);
-
-                 /*  Mark the pipe as available for sending. */
-                 sipc->outstate = NN_SIPC_OUTSTATE_IDLE;
-
-                 sipc->state = NN_SIPC_STATE_ACTIVE;
-                 return;
+                    
+                    /*  Start receiving a message in asynchronous manner. */
+                    sipc->instate = NN_SIPC_INSTATE_HDR;
+                    nn_usock_recv(sipc->usock,&sipc->inhdr,sizeof(sipc->inhdr),NULL);
+                    
+                    /*  Mark the pipe as available for sending. */
+                    sipc->outstate = NN_SIPC_OUTSTATE_IDLE;
+                    //printf("set sipc.%p outstate.%d NN_SIPC_OUTSTATE_IDLE\n",sipc,NN_SIPC_OUTSTATE_IDLE);
+                    sipc->state = NN_SIPC_STATE_ACTIVE;
+                    return;
 
             default:
                 nn_fsm_bad_action (sipc->state, src, type);
@@ -312,28 +282,29 @@ static void nn_sipc_handler (struct nn_fsm *self, int src, int type,
         switch (src) {
 
         case NN_SIPC_SRC_USOCK:
-            switch (type) {
+            switch ( type )
+            {
             case NN_USOCK_SENT:
-
-                /*  The message is now fully sent. */
-                nn_assert (sipc->outstate == NN_SIPC_OUTSTATE_SENDING);
+                // The message is now fully sent
+                printf("NN_SIPC_SRC_USOCK NN_USOCK_SENT outstate.%d vs %d\n",sipc->outstate,NN_SIPC_OUTSTATE_SENDING);
+                nn_assert(sipc->outstate == NN_SIPC_OUTSTATE_SENDING);
                 sipc->outstate = NN_SIPC_OUTSTATE_IDLE;
-                nn_msg_term (&sipc->outmsg);
-                nn_msg_init (&sipc->outmsg, 0);
-                nn_pipebase_sent (&sipc->pipebase);
+                printf("set sipc.%p outstate.%d NN_SIPC_OUTSTATE_IDLE\n",sipc,NN_SIPC_OUTSTATE_IDLE);
+                nn_msg_term(&sipc->outmsg);
+                nn_msg_init(&sipc->outmsg,0);
+                nn_pipebase_sent(&sipc->pipebase);
                 return;
 
             case NN_USOCK_RECEIVED:
-
-                switch (sipc->instate) {
+                switch ( sipc->instate )
+                {
                 case NN_SIPC_INSTATE_HDR:
-
-                    /*  Message header was received. Allocate memory for the
-                        message. */
-                    nn_assert (sipc->inhdr [0] == NN_SIPC_MSG_NORMAL);
-                    size = nn_getll (sipc->inhdr + 1);
-                    nn_msg_term (&sipc->inmsg);
-                    nn_msg_init (&sipc->inmsg, (size_t) size);
+                    // Message header was received. Allocate memory for the message
+                        printf("got sipchdr[%d %d] vs %d\n",sipc->inhdr[0],sipc->inhdr[1],NN_SIPC_MSG_NORMAL);
+                    nn_assert(sipc->inhdr[0] == NN_SIPC_MSG_NORMAL);
+                    size = nn_getll(sipc->inhdr + 1);
+                    nn_msg_term(&sipc->inmsg);
+                    nn_msg_init(&sipc->inmsg,(size_t)size);
 
                     /*  Special case when size of the message body is 0. */
                     if (!size) {

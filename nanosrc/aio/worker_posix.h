@@ -48,7 +48,8 @@ struct nn_worker_task {
     struct nn_queue_item item;
 };
 
-struct nn_worker {
+struct nn_worker
+{
     struct nn_mutex sync;
     struct nn_queue tasks;
     struct nn_queue_item stop;

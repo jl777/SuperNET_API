@@ -312,8 +312,7 @@ static void nn_btcp_handler (struct nn_fsm *self, int src, int type,
 
                 /*  Move the newly created connection to the list of existing
                     connections. */
-                nn_list_insert (&btcp->atcps, &btcp->atcp->item,
-                    nn_list_end (&btcp->atcps));
+                nn_list_insert (&btcp->atcps, &btcp->atcp->item,nn_list_end (&btcp->atcps));
                 btcp->atcp = NULL;
 
                 /*  Start waiting for a new incoming connection. */
@@ -464,7 +463,7 @@ static void nn_btcp_start_listening (struct nn_btcp *self)
     }
     else nn_assert (0);
     //  Start listening for incoming connections
-    printf("BTCP start connecting (%s:%d)\n",addr,port);
+    //printf("BTCP start connecting (%s:%d)\n",addr,port);
     rc = nn_usock_start (&self->usock, ss.ss_family, SOCK_STREAM, 0);
     if (nn_slow (rc < 0))
     {
@@ -492,7 +491,7 @@ static void nn_btcp_start_listening (struct nn_btcp *self)
     }
     nn_btcp_start_accepting(self);
     self->state = NN_BTCP_STATE_ACTIVE;
-    printf("BTCP start accepting\n");
+    //printf("BTCP start accepting\n");
 }
 
 static void nn_btcp_start_accepting (struct nn_btcp *self)

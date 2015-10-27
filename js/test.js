@@ -1,6 +1,6 @@
 var pages = [
     {value:"InstantDEX", width:100,"click":InstantDEX},
-    { view:"button", value:"Pangea", width:100,"click":Pangea },
+    { view:"button", value:"pangea", width:100,"click":Pangea },
     { view:"button", value:"Jumblr", width:100,"click":Jumblr },
     { view:"button", value:"Atomic", width:100,"click":Atomic },
     { view:"button", value:"MGW", width:100,"click":MGW },

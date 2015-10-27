@@ -16,10 +16,17 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         {"id":12,"method":"balance","base":"","rel":"","exchange":"exchange","price":"","volume":""},
         {"id":13,"method":"peggyrates","base":"base","rel":"","exchange":"","price":"","volume":""}
     ];
-
-    SPNAPI.methods.Pangea = [
+              
+SPNAPI.methods.Jay = [
+{"id":1,"method":"NxtAPI","requestType":"","params":"{}"},
+{"id":2,"method":"signBytes","bytes":"","secretPhrase":""},
+{"id":4,"method":"createToken","data":"","secretPhrase":""},
+{"id":5,"method":"parseToken","token":"","data":""},
+{"id":6,"method":"status","tableid":"tableid"}
+];
+              
+    SPNAPI.methods.pangea = [
          {"id":14,"method":"start","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante","hostrake":"hostrake"},
-        {"id":13,"method":"status","tableid":"tableid"},
         {"id":12,"method":"turn","tableid":"tableid"},
         {"id":11,"method":"mode"},
         {"id":10,"method":"buyin","tableid":"tableid"},
@@ -31,8 +38,9 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
                              {"id":4,"method":"notabot","val":"0_or_-1"},
                              {"id":3,"method":"clearconf"},
                              {"id":2,"method":"secret","passphrase":"high_entropy_password"},
-                             {"id":1,"method":"rosetta","base":"base","wip":"from_dumpprivkey"}
- ];
+                             {"id":1,"method":"rosetta","base":"base","wip":"from_dumpprivkey"},
+                             {"id":13,"method":"status","tableid":"tableid"}
+];
 
     SPNAPI.methods.Jumblr = [
         {"id":1,"method":"jumblr","base":"base","maxplayers":"maxplayers","bigblind":"bigblind","ante":"ante"},
@@ -66,7 +74,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
     ];
 
 
-    SPNAPI.loadApiBox = function (methods,agent) {
+    SPNAPI.loadApiBox = function (agent,methods) {
 
         methods = methods[0];
         $(".api-panel-title").html(methods.method);

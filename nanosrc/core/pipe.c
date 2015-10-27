@@ -71,6 +71,7 @@ void nn_pipebase_term(struct nn_pipebase *self)
 int32_t nn_pipebase_start(struct nn_pipebase *self)
 {
     int32_t rc;
+    //printf("pipebase start.%p\n",self);
     nn_assert_state(self,NN_PIPEBASE_STATE_IDLE);
     self->state = NN_PIPEBASE_STATE_ACTIVE;
     self->instate = NN_PIPEBASE_INSTATE_ASYNC;
@@ -88,6 +89,7 @@ int32_t nn_pipebase_start(struct nn_pipebase *self)
 
 void nn_pipebase_stop(struct nn_pipebase *self)
 {
+    //printf("pipebase stop.%p\n",self);
     if ( self->state == NN_PIPEBASE_STATE_ACTIVE )
         nn_sock_rm(self->sock,(struct nn_pipe *)self);
     self->state = NN_PIPEBASE_STATE_IDLE;
@@ -164,11 +166,11 @@ void *nn_pipe_getdata(struct nn_pipe *self)
 int32_t nn_pipe_send(struct nn_pipe *self,struct nn_msg *msg)
 {
     int32_t rc; struct nn_pipebase *pipebase;
-    pipebase = (struct nn_pipebase *) self;
-    nn_assert (pipebase->outstate == NN_PIPEBASE_OUTSTATE_IDLE);
+    pipebase = (struct nn_pipebase *)self;
+    nn_assert(pipebase->outstate == NN_PIPEBASE_OUTSTATE_IDLE);
     pipebase->outstate = NN_PIPEBASE_OUTSTATE_SENDING;
-    //printf("nn_pipe_send.(%p) msg.%p\n",self,msg);
-    rc = pipebase->vfptr->send(pipebase, msg);
+    //printf("%p nn_pipe_send.(%p) msg.%p\n",self,pipebase->vfptr->send,msg);
+    rc = pipebase->vfptr->send(pipebase,msg);
     errnum_assert (rc >= 0, -rc);
     if ( nn_fast(pipebase->outstate == NN_PIPEBASE_OUTSTATE_SENT) )
     {

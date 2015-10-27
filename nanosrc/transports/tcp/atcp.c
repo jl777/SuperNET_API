@@ -159,7 +159,7 @@ static void nn_atcp_handler (struct nn_fsm *self, int src, int type,
             switch (type) {
             case NN_FSM_START:
                 nn_usock_accept(&atcp->usock, atcp->listener);
-                    printf("accepted\n");
+                   // printf("accepted\n");
                 atcp->state = NN_ATCP_STATE_ACCEPTING;
                 return;
             default:
@@ -200,7 +200,7 @@ static void nn_atcp_handler (struct nn_fsm *self, int src, int type,
                 //  Start the stcp state machine
                 nn_usock_activate(&atcp->usock);
                 nn_stcp_start(&atcp->stcp, &atcp->usock);
-                    printf("start accepting socket\n");
+                   // printf("start accepting socket\n");
                 atcp->state = NN_ATCP_STATE_ACTIVE;
                 nn_epbase_stat_increment(atcp->epbase,NN_STAT_ACCEPTED_CONNECTIONS,1);
                 return;

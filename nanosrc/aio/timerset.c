@@ -28,14 +28,16 @@
 
 void nn_timerset_init (struct nn_timerset *self)
 {
-    nn_clock_init (&self->clock);
-    nn_list_init (&self->timeouts);
+    nn_clock_init(&self->clock);
+    nn_list_init(&self->timeouts);
+    printf("nn_timerset_init: %p timeouts.(%p %p)\n",self,self->timeouts.first,self->timeouts.last);
 }
 
-void nn_timerset_term (struct nn_timerset *self)
+void nn_timerset_term(struct nn_timerset *self)
 {
-    nn_list_term (&self->timeouts);
-    nn_clock_term (&self->clock);
+    printf("nn_timerset_term: %p timeouts.(%p %p)\n",self,self->timeouts.first,self->timeouts.last);
+    nn_list_term(&self->timeouts);
+    nn_clock_term(&self->clock);
 }
 
 int nn_timerset_add (struct nn_timerset *self, int timeout,
@@ -79,15 +81,16 @@ int nn_timerset_rm (struct nn_timerset *self, struct nn_timerset_hndl *hndl)
     return first;
 }
 
-int nn_timerset_timeout (struct nn_timerset *self)
+int32_t nn_timerset_timeout(struct nn_timerset *self)
 {
-    int timeout;
-
-    if (nn_fast (nn_list_empty (&self->timeouts)))
+    int32_t timeout;
+    if ( nn_fast(nn_list_empty(&self->timeouts)) )
+    {
+        //printf("nn_timerset_timeout empty list\n");
         return -1;
-
-    timeout = (int) (nn_cont (nn_list_begin (&self->timeouts),
-        struct nn_timerset_hndl, list)->timeout - nn_clock_now (&self->clock));
+    }
+    timeout = (int32_t)(nn_cont(nn_list_begin(&self->timeouts),struct nn_timerset_hndl,list)->timeout - nn_clock_now(&self->clock));
+    //printf("timer set timeout.%d\n",timeout);
     return timeout < 0 ? 0 : timeout;
 }
 
@@ -119,6 +122,7 @@ void nn_timerset_hndl_init (struct nn_timerset_hndl *self)
 
 void nn_timerset_hndl_term (struct nn_timerset_hndl *self)
 {
+    //printf("nn_timerset_hndl_term\n");
     nn_list_item_term (&self->list);
 }
 

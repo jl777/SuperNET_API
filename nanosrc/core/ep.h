@@ -40,7 +40,7 @@ struct nn_ep {
     struct nn_ep_options options;
     int eid;
     struct nn_list_item item;
-    char addr [NN_SOCKADDR_MAX + 1];
+    char addr[NN_SOCKADDR_MAX + 1];
     
     /*  Error state for endpoint */
     int last_errno,bind;

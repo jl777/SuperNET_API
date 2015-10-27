@@ -50,8 +50,7 @@ int testseparation()
     pull = test_socket (AF_SP, NN_PULL);
     test_connect (pull, SOCKET_ADDRESS_INPROC);
     timeo = 100;
-    rc = nn_setsockopt (pair, NN_SOL_SOCKET, NN_SNDTIMEO,
-        &timeo, sizeof (timeo));
+    rc = nn_setsockopt (pair, NN_SOL_SOCKET, NN_SNDTIMEO,&timeo, sizeof (timeo));
     rc = nn_send (pair, "ABC", 3, 0);
     errno_assert (rc < 0 && nn_errno () == EAGAIN);
     test_close (pull);

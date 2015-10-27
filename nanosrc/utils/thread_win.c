@@ -31,12 +31,11 @@ static unsigned int __stdcall nn_thread_main_routine (void *arg)
     return 0;
 }
 
-void nn_thread_init (struct nn_thread *self,
-    nn_thread_routine *routine, void *arg)
+void nn_thread_init(struct nn_thread *self,nn_thread_routine *routine, void *arg)
 {
     self->routine = routine;
     self->arg = arg;
-    self->handle = (HANDLE) _beginthreadex (NULL, 0,nn_thread_main_routine, (void*) self, 0 , NULL);
+    self->handle = (HANDLE)_beginthreadex(NULL,0,nn_thread_main_routine,(void *)self,0,NULL);
     win_assert (self->handle != NULL);
 }
 

@@ -19,7 +19,7 @@ include $(NACL_SDK_ROOT)/tools/common.mk
 CHROME_ARGS += --allow-nacl-socket-api=localhost
 
 DEPS = nacl_io
-LIBS = curl z pthread ssl crypto ppapi_simple ppapi nacl_io 
+LIBS = curl z pthread ssl crypto ppapi nacl_io 
 #LDFLAGS = -L $(NACL_SDK_ROOT)/toolchain/pnacl/usr/lib
 
 CFLAGS = -Wall -Ipicocoin/include -D STANDALONE  -D __PNACL

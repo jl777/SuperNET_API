@@ -6,39 +6,44 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         SPNAPI.loadSiteAPI(site,site);
     };
 
-    SPNAPI.pageContent.Pangea = function () {
-        var site = "Pangea";
+    SPNAPI.pageContent.pangea = function () {
+        var site = "pangea";
         SPNAPI.loadSiteAPI(site,"pangea");
     };
 
+    SPNAPI.pageContent.Jay = function() {
+    var site = "Jay";
+    SPNAPI.loadSiteAPI(site,site);
+    }
+
     SPNAPI.pageContent.Jumblr = function () {
         var site = "Jumblr";
-        SPNAPI.loadSiteAPI(site,"jumblr");
+        SPNAPI.loadSiteAPI(site,"Jumblr");
     };
 
     SPNAPI.pageContent.MGW = function () {
         var site = "MGW";
-        SPNAPI.loadSiteAPI(site,site);
+        SPNAPI.loadSiteAPI(site,"MGW");
     };
 
     SPNAPI.pageContent.Atomic = function () {
         var site = "Atomic";
-        SPNAPI.loadSiteAPI(site,"atomic");
+        SPNAPI.loadSiteAPI(site,"Atomic");
     };
 
     SPNAPI.pageContent.PAX = function () {
         var site = "PAX";
-        SPNAPI.loadSiteAPI(site,"peggy");
+        SPNAPI.loadSiteAPI(site,"PAX");
     };
 
     SPNAPI.pageContent.Tradebots = function () {
         var site = "Tradebots";
-        SPNAPI.loadSiteAPI(site,"tradebots");
+        SPNAPI.loadSiteAPI(site,"Tradebots");
     };
 
     SPNAPI.pageContent.Wallet = function () {
         var site = "Wallet";
-        SPNAPI.loadSiteAPI(site,"wallet");
+        SPNAPI.loadSiteAPI(site,"Wallet");
     };
 
     SPNAPI.pageContent.Debug = function () {

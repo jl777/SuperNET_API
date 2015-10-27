@@ -44,11 +44,12 @@ int nn_queue_empty (struct nn_queue *self)
     return self->head ? 0 : 1;
 }
 
-void nn_queue_push (struct nn_queue *self, struct nn_queue_item *item)
+void nn_queue_push(struct nn_queue *self, struct nn_queue_item *item)
 {
     nn_assert (item->next == NN_QUEUE_NOTINQUEUE);
 
     item->next = NULL;
+    printf("nn_queue_push.%p item.%p next.NULL\n",self,item);
     if (!self->head)
         self->head = item;
     if (self->tail)
@@ -56,14 +57,14 @@ void nn_queue_push (struct nn_queue *self, struct nn_queue_item *item)
     self->tail = item;
 }
 
-void nn_queue_remove (struct nn_queue *self, struct nn_queue_item *item)
+void nn_queue_remove(struct nn_queue *self, struct nn_queue_item *item)
 {
     struct nn_queue_item *it;
     struct nn_queue_item *prev;
 
-    if (item->next == NN_QUEUE_NOTINQUEUE)
+    if ( item->next == NN_QUEUE_NOTINQUEUE )
         return;
-
+    printf("nn_queue_remove.%p item.%p\n",self,item);
     prev = NULL;
     for (it = self->head; it != NULL; it = it->next) {
         if (it == item) {
@@ -91,18 +92,20 @@ struct nn_queue_item *nn_queue_pop (struct nn_queue *self)
     if (!self->head)
         self->tail = NULL;
     result->next = NN_QUEUE_NOTINQUEUE;
+    printf("nn_queue_pop.%p -> result.%p next.%p\n",self,result,result->next);
     return result;
 }
 
 void nn_queue_item_init (struct nn_queue_item *self)
 {
-    //PostMessage("nn_queue_item_init.%p\n",self);
+    printf("nn_queue_item_init.%p next.%p\n",self,NN_QUEUE_NOTINQUEUE);
     self->next = NN_QUEUE_NOTINQUEUE;
 }
 
 void nn_queue_item_term (struct nn_queue_item *self)
 {
-    nn_assert (self->next == NN_QUEUE_NOTINQUEUE);
+    printf("nn_queue_item_term next.%p\n",self->next);
+    nn_assert(self->next == NN_QUEUE_NOTINQUEUE);
 }
 
 int nn_queue_item_isinqueue (struct nn_queue_item *self)

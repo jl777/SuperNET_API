@@ -32,9 +32,7 @@
 
 int nn_efd_init(struct nn_efd *self)
 {
-    int rc;
-    int flags;
-    int p [2];
+    int rc,flags,p[2];
     //PostMessage("inside efd_init: pipe\n");
 #if defined NN_HAVE_PIPE2
     rc = pipe2(p, O_NONBLOCK | O_CLOEXEC);
@@ -42,7 +40,7 @@ int nn_efd_init(struct nn_efd *self)
     rc = pipe(p);
 #endif
     //PostMessage("rc efd_init: %d\n",rc);
-    if (rc != 0 && (errno == EMFILE || errno == ENFILE))
+    if ( rc != 0 && (errno == EMFILE || errno == ENFILE) )
         return -EMFILE;
     errno_assert (rc == 0);
     self->r = p[0];
@@ -70,38 +68,38 @@ int nn_efd_init(struct nn_efd *self)
     return 0;
 }
 
-void nn_efd_term (struct nn_efd *self)
+void nn_efd_term(struct nn_efd *self)
 {
-    nn_closefd (self->r);
-    nn_closefd (self->w);
+    nn_closefd(self->r);
+    nn_closefd(self->w);
 }
 
-nn_fd nn_efd_getfd (struct nn_efd *self)
+nn_fd nn_efd_getfd(struct nn_efd *self)
 {
     return self->r;
 }
 
-void nn_efd_signal (struct nn_efd *self)
+void nn_efd_signal(struct nn_efd *self)
 {
     ssize_t nbytes;
     char c = 101;
-
-    nbytes = write (self->w, &c, 1);
-    errno_assert (nbytes != -1);
-    nn_assert (nbytes == 1);
+    //printf("nn_efd_signal 101\n");
+    nbytes = write(self->w,&c,1);
+    errno_assert(nbytes != -1);
+    nn_assert(nbytes == 1);
 }
 
-void nn_efd_unsignal (struct nn_efd *self)
+void nn_efd_unsignal(struct nn_efd *self)
 {
-    ssize_t nbytes;
-    uint8_t buf [16];
-
-    while (1) {
-        nbytes = read (self->r, buf, sizeof (buf));
-        if (nbytes < 0 && errno == EAGAIN)
+    ssize_t nbytes; uint8_t buf[16];
+    while ( 1 )
+    {
+        nbytes = read(self->r,buf,sizeof(buf));
+        //printf("unsignal read.%d [%d]\n",(int32_t)nbytes,buf[0]);
+        if ( nbytes < 0 && errno == EAGAIN )
             nbytes = 0;
-        errno_assert (nbytes >= 0);
-        if (nn_fast ((size_t) nbytes < sizeof (buf)))
+        errno_assert(nbytes >= 0);
+        if ( nn_fast((size_t)nbytes < sizeof (buf)) )
             break;
     }
 }

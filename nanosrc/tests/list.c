@@ -60,8 +60,8 @@ int testlist()
     nn_assert (nn_list_item_isinlist (&that.item));
 
     /*  Before termination, item must be removed from the list. */
-    nn_list_item_init (&that.item);
-    nn_list_item_term (&that.item);
+    nn_list_item_init(&that.item);
+    nn_list_item_term(&that.item);
 
     /*  Initializing a list. */
 

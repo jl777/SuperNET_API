@@ -75,8 +75,7 @@ static const struct nn_sockbase_vfptr nn_xpull_sockbase_vfptr = {
     nn_xpull_getopt
 };
 
-static void nn_xpull_init (struct nn_xpull *self,
-    const struct nn_sockbase_vfptr *vfptr, void *hint)
+static void nn_xpull_init (struct nn_xpull *self,const struct nn_sockbase_vfptr *vfptr, void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
     nn_fq_init (&self->fq);

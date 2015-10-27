@@ -32,8 +32,7 @@
 /*  Private functions. */
 static void nn_worker_routine (void *arg);
 
-void nn_worker_fd_init (struct nn_worker_fd *self, int src,
-    struct nn_fsm *owner)
+void nn_worker_fd_init (struct nn_worker_fd *self, int src,struct nn_fsm *owner)
 {
     self->src = src;
     self->owner = owner;
@@ -53,14 +52,14 @@ void nn_worker_rm_fd (struct nn_worker *self, struct nn_worker_fd *fd)
     nn_poller_rm (&((struct nn_worker*) self)->poller, &fd->hndl);
 }
 
-void nn_worker_set_in (struct nn_worker *self, struct nn_worker_fd *fd)
+void nn_worker_set_in(struct nn_worker *self,struct nn_worker_fd *fd)
 {
-    nn_poller_set_in (&((struct nn_worker*) self)->poller, &fd->hndl);
+    nn_poller_set_in(&((struct nn_worker *)self)->poller,&fd->hndl);
 }
 
 void nn_worker_reset_in (struct nn_worker *self, struct nn_worker_fd *fd)
 {
-    nn_poller_reset_in (&((struct nn_worker*) self)->poller, &fd->hndl);
+    nn_poller_reset_in(&((struct nn_worker *)self)->poller,&fd->hndl);
 }
 
 void nn_worker_set_out (struct nn_worker *self, struct nn_worker_fd *fd)
@@ -73,11 +72,9 @@ void nn_worker_reset_out (struct nn_worker *self, struct nn_worker_fd *fd)
     nn_poller_reset_out (&((struct nn_worker*) self)->poller, &fd->hndl);
 }
 
-void nn_worker_add_timer (struct nn_worker *self, int timeout,
-    struct nn_worker_timer *timer)
+void nn_worker_add_timer (struct nn_worker *self, int timeout,struct nn_worker_timer *timer)
 {
-    nn_timerset_add (&((struct nn_worker*) self)->timerset, timeout,
-        &timer->hndl);
+    nn_timerset_add (&((struct nn_worker*) self)->timerset, timeout,&timer->hndl);
 }
 
 void nn_worker_rm_timer (struct nn_worker *self, struct nn_worker_timer *timer)
@@ -85,8 +82,7 @@ void nn_worker_rm_timer (struct nn_worker *self, struct nn_worker_timer *timer)
     nn_timerset_rm (&((struct nn_worker*) self)->timerset, &timer->hndl);
 }
 
-void nn_worker_task_init (struct nn_worker_task *self, int src,
-    struct nn_fsm *owner)
+void nn_worker_task_init (struct nn_worker_task *self, int src,struct nn_fsm *owner)
 {
     self->src = src;
     self->owner = owner;
@@ -126,41 +122,45 @@ int nn_worker_init(struct nn_worker *self)
     return 0;
 }
 
-void nn_worker_term (struct nn_worker *self)
+void nn_worker_term(struct nn_worker *self)
 {
-    printf("nn_worker_term\n");
-    /*  Ask worker thread to terminate. */
-    nn_mutex_lock (&self->sync);
-    nn_queue_push (&self->tasks, &self->stop);
-    nn_efd_signal (&self->efd);
-    nn_mutex_unlock (&self->sync);
-
-    /*  Wait till worker thread terminates. */
+    printf("nn_worker_term queue.%p push stop.%p\n",&self->tasks,&self->stop);
+    //  Ask worker thread to terminate
+    nn_mutex_lock(&self->sync);
+    nn_queue_push(&self->tasks,&self->stop);
+    nn_efd_signal(&self->efd);
+    nn_mutex_unlock(&self->sync);
+    // Wait till worker thread terminates
     printf("nn_worker_term calling nn_thread_term\n");
     nn_thread_term(&self->thread);
-
-    /*  Clean up. */
-    nn_timerset_term (&self->timerset);
-    nn_poller_term (&self->poller);
-    nn_efd_term (&self->efd);
-    nn_queue_item_term (&self->stop);
-    nn_queue_term (&self->tasks);
-    nn_mutex_term (&self->sync);
+    // Clean up
+    printf("from nn_worker_term: terminate timerset, etc\n");
+    nn_timerset_term(&self->timerset);
+    printf("poller term\n");
+    nn_poller_term(&self->poller);
+    printf("efd term\n");
+    nn_efd_term(&self->efd);
+    printf("nn_queue_item_term term stop.%p\n",&self->stop);
+    nn_queue_item_term(&self->stop);
+    printf("nn_queue_term term\n");
+    nn_queue_term(&self->tasks);
+    printf("nn_mutex_term term\n");
+    nn_mutex_term(&self->sync);
 }
 
-void nn_worker_execute (struct nn_worker *self, struct nn_worker_task *task)
+void nn_worker_execute(struct nn_worker *self,struct nn_worker_task *task)
 {
-    nn_mutex_lock (&self->sync);
-    nn_queue_push (&self->tasks, &task->item);
-    nn_efd_signal (&self->efd);
-    nn_mutex_unlock (&self->sync);
+    nn_mutex_lock(&self->sync);
+    nn_queue_push(&self->tasks, &task->item);
+    nn_efd_signal(&self->efd);
+    nn_mutex_unlock(&self->sync);
 }
 
-void nn_worker_cancel (struct nn_worker *self, struct nn_worker_task *task)
+void nn_worker_cancel(struct nn_worker *self,struct nn_worker_task *task)
 {
-    nn_mutex_lock (&self->sync);
-    nn_queue_remove (&self->tasks, &task->item);
-    nn_mutex_unlock (&self->sync);
+    nn_mutex_lock(&self->sync);
+    nn_queue_remove(&self->tasks,&task->item);
+    nn_mutex_unlock(&self->sync);
 }
 
 static void nn_worker_routine (void *arg)
@@ -175,33 +175,34 @@ static void nn_worker_routine (void *arg)
     struct nn_worker_fd *fd;
     struct nn_worker_timer *timer;
     PostMessage("nn_worker_routine started\n");
-    self = (struct nn_worker*) arg;
-    while ( 1 ) //  Infinite loop. It will be interrupted only when the object is shut down.
+    self = (struct nn_worker *)arg;
+    while ( self->thread.routine != 0 ) //  Infinite loop. It will be interrupted only when the object is shut down.
     {
         // Wait for new events and/or timeouts.
-        rc = nn_poller_wait(&self->poller,nn_timerset_timeout (&self->timerset));
+        rc = nn_poller_wait(&self->poller,nn_timerset_timeout(&self->timerset));
         errnum_assert(rc == 0, -rc);
-        while ( 1 ) // Process all expired timers
+        while ( self->thread.routine != 0 ) // Process all expired timers
         {
-            rc = nn_timerset_event(&self->timerset, &thndl);
+            rc = nn_timerset_event(&self->timerset,&thndl);
             if ( rc == -EAGAIN )
                 break;
             //PostMessage("nn_worker process expired user\n");
             errnum_assert(rc == 0, -rc);
-            timer = nn_cont(thndl, struct nn_worker_timer, hndl);
+            timer = nn_cont(thndl,struct nn_worker_timer,hndl);
             nn_ctx_enter(timer->owner->ctx);
             nn_fsm_feed(timer->owner,-1,NN_WORKER_TIMER_TIMEOUT,timer);
             nn_ctx_leave(timer->owner->ctx);
         }
-        while ( 1 ) // Process all events from the poller
+        while ( self->thread.routine != 0 ) // Process all events from the poller
         {
-            rc = nn_poller_event(&self->poller,&pevent,&phndl); //  Get next poller event, such as IN or OUT
+            rc = nn_poller_event(&self->poller,&pevent,&phndl); // Get next poller event, such as IN or OUT
+            //printf("poller event.%d rc.%d phndl.%p vs %p self->efd->hndl\n",pevent,rc,phndl,&self->efd_hndl);
             if ( nn_slow(rc == -EAGAIN) )
                 break;
             //PostMessage("nn_worker process all events from the poller\n");
             if ( phndl == &self->efd_hndl ) // If there are any new incoming worker tasks, process them
             {
-                nn_assert (pevent == NN_POLLER_IN);
+                nn_assert(pevent == NN_POLLER_IN);
                 //  Make a local copy of the task queue. This way the application threads are not blocked and can post new tasks while the existing tasks are being processed. Also, new tasks can be posted from within task handlers
                 nn_mutex_lock(&self->sync);
                 nn_efd_unsignal(&self->efd);
@@ -216,11 +217,12 @@ static void nn_worker_routine (void *arg)
                     //PostMessage("nn_worker next worker task\n");
                     if ( nn_slow(item == &self->stop) ) //  If the worker thread is asked to stop, do so
                     {
+                        printf("GOT STOP EVENT.%p\n",&self->stop);
                         nn_queue_term(&tasks);
                         return;
                     }
                     // It's a user-defined task. Notify the user that it has arrived in the worker thread
-                    //PostMessage("nn_worker user defined task\n");
+                    //printf("nn_worker user defined task item.%p vs stop.%p\n",item,&self->stop);
                     task = nn_cont(item,struct nn_worker_task,item);
                     nn_ctx_enter(task->owner->ctx);
                     nn_fsm_feed(task->owner,task->src,NN_WORKER_TASK_EXECUTE,task);
@@ -229,15 +231,15 @@ static void nn_worker_routine (void *arg)
                 nn_queue_term (&tasks);
                 continue;
             }
-            PostMessage("nn_worker true i/o, invoke handler\n");
+            //printf("nn_worker true i/o, invoke handler\n");
             fd = nn_cont(phndl,struct nn_worker_fd,hndl); // It's a true I/O event. Invoke the handler
-            PostMessage("nn_worker true i/o, fd.%p\n",fd);
+            //PostMessage("nn_worker true i/o, fd.%p\n",fd);
             nn_ctx_enter(fd->owner->ctx);
-            PostMessage("nn_worker true i/o, after nn_ctx_enter\n");
+            //PostMessage("nn_worker true i/o, after nn_ctx_enter\n");
             nn_fsm_feed(fd->owner,fd->src,pevent,fd);
-            PostMessage("nn_worker true i/o, after nn_fsm_feed leave.%p\n",fd->owner->ctx);
+            //PostMessage("nn_worker true i/o, after nn_fsm_feed leave.%p\n",fd->owner->ctx);
             nn_ctx_leave(fd->owner->ctx);
-            PostMessage("nn_worker true i/o, after nn_ctx_leave\n");
+            //PostMessage("nn_worker true i/o, after nn_ctx_leave\n");
         }
     }
 }

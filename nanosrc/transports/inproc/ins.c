@@ -91,16 +91,14 @@ int nn_ins_bind (struct nn_ins_item *item, nn_ins_fn fn)
     for (it = nn_list_begin (&self.bound); it != nn_list_end (&self.bound);
           it = nn_list_next (&self.bound, it)) {
         bitem = nn_cont (it, struct nn_ins_item, item);
-        if (strncmp (nn_epbase_getaddr (&item->epbase),
-              nn_epbase_getaddr (&bitem->epbase), NN_SOCKADDR_MAX) == 0) {
+        if (strncmp (nn_epbase_getaddr (&item->epbase),nn_epbase_getaddr (&bitem->epbase), NN_SOCKADDR_MAX) == 0) {
             nn_mutex_unlock (&self.sync);
             return -EADDRINUSE;
         }
     }
 
     /*  Insert the entry into the endpoint repository. */
-    nn_list_insert (&self.bound, &item->item,
-        nn_list_end (&self.bound));
+    nn_list_insert (&self.bound, &item->item,nn_list_end (&self.bound));
 
     /*  During this process new pipes may be created. */
     for (it = nn_list_begin (&self.connected);
@@ -131,8 +129,7 @@ void nn_ins_connect (struct nn_ins_item *item, nn_ins_fn fn)
     nn_mutex_lock (&self.sync);
 
     /*  Insert the entry into the endpoint repository. */
-    nn_list_insert (&self.connected, &item->item,
-        nn_list_end (&self.connected));
+    nn_list_insert (&self.connected, &item->item,nn_list_end (&self.connected));
 
     /*  During this process a pipe may be created. */
     for (it = nn_list_begin (&self.bound);

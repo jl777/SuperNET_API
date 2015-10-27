@@ -98,3 +98,5 @@ struct nn_usock {
     /*  Errno remembered in NN_USOCK_ERROR state  */
     int errnum;
 };
+
+int32_t nn_getiovec_size(uint8_t *buf,int32_t maxlen,struct msghdr *hdr);

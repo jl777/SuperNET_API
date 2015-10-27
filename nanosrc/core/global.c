@@ -203,7 +203,7 @@ void nn_global_init(void)
     nn_assert (LOBYTE (data.wVersion) == 2 &&
         HIBYTE (data.wVersion) == 2);
 #endif
-    printf("GLOBAL INIT\n");
+    //printf("GLOBAL INIT\n");
     nn_alloc_init(); // Initialise the memory allocation subsystem
     nn_random_seed(); // Seed the pseudo-random number generator
     //  Allocate the global table of SP sockets. 
@@ -256,7 +256,7 @@ void nn_global_init(void)
     nn_global_add_socktype(nn_xbus_socktype);
     //PostMessage("do pool init\n");
     nn_pool_init(&SELF.pool); // Start the worker threads
-    //PostMessage("do FSM init\n");
+    PostMessage("do FSM init root.(%p %p)\n",nn_global_handler,nn_global_shutdown);
     nn_fsm_init_root(&SELF.fsm,nn_global_handler,nn_global_shutdown,&SELF.ctx); // Start FSM
     SELF.state = NN_GLOBAL_STATE_IDLE;
     //PostMessage("ctx init\n");
@@ -306,51 +306,44 @@ static void nn_global_term (void)
 #if defined NN_HAVE_WINDOWS
     int rc;
 #endif
-    struct nn_list_item *it;
-    struct nn_transport *tp;
-
-    /*  If there are no sockets remaining, uninitialise the global context. */
-    nn_assert (SELF.socks);
-    if (SELF.nsocks > 0)
+    struct nn_list_item *it; struct nn_transport *tp;
+    // If there are no sockets remaining, uninitialise the global context
+    nn_assert(SELF.socks);
+    printf("nn_global_term nsocks.%d\n",(int32_t)SELF.nsocks);
+    if ( SELF.nsocks > 0 )
         return;
-
-    /*  Stop the FSM  */
-    nn_ctx_enter (&SELF.ctx);
-    nn_fsm_stop (&SELF.fsm);
-    nn_ctx_leave (&SELF.ctx);
-
-    /*  Shut down the worker threads. */
-    nn_pool_term (&SELF.pool);
-
-    /* Terminate ctx mutex */
-    nn_ctx_term (&SELF.ctx);
-
-    /*  Ask all the transport to deallocate their global resources. */
-    while (!nn_list_empty (&SELF.transports)) {
-        it = nn_list_begin (&SELF.transports);
-        tp = nn_cont (it, struct nn_transport, item);
-        if (tp->term)
-            tp->term ();
-        nn_list_erase (&SELF.transports, it);
+    // Stop the FSM
+    nn_ctx_enter(&SELF.ctx);
+    nn_fsm_stop(&SELF.fsm);
+    nn_ctx_leave(&SELF.ctx);
+    // Shut down the worker threads
+    printf("nn_pool_term\n");
+    nn_pool_term(&SELF.pool);
+    // Terminate ctx mutex
+    printf("nn_ctx_term\n");
+    nn_ctx_term(&SELF.ctx);
+    printf("terminate transports\n");
+    // Ask all the transport to deallocate their global resources
+    while ( !nn_list_empty(&SELF.transports) )
+    {
+        it = nn_list_begin(&SELF.transports);
+        tp = nn_cont (it,struct nn_transport,item);
+        if ( tp->term )
+            tp->term();
+        nn_list_erase(&SELF.transports,it);
     }
-
-    /*  For now there's nothing to deallocate about socket types, however,
-        let's remove them from the list anyway. */
-    while (!nn_list_empty (&SELF.socktypes))
-        nn_list_erase (&SELF.socktypes, nn_list_begin (&SELF.socktypes));
-
-    /*  Final deallocation of the nn_global object itSELF. */
-    nn_list_term (&SELF.socktypes);
-    nn_list_term (&SELF.transports);
-    nn_free (SELF.socks);
-
-    /*  This marks the global state as uninitialised. */
+    // For now there's nothing to deallocate about socket types, however, let's remove them from the list anyway
+    while ( !nn_list_empty(&SELF.socktypes) )
+        nn_list_erase(&SELF.socktypes,nn_list_begin(&SELF.socktypes));
+    // Final deallocation of the nn_global object itSELF
+    nn_list_term(&SELF.socktypes);
+    nn_list_term(&SELF.transports);
+    nn_free(SELF.socks);
+    // This marks the global state as uninitialised
     SELF.socks = NULL;
-
-    /*  Shut down the memory allocation subsystem. */
+    // Shut down the memory allocation subsystem
     nn_alloc_term ();
-
-    /*  On Windows, uninitialise the socket library. */
+    // On Windows, uninitialise the socket library
 #if defined NN_HAVE_WINDOWS
     rc = WSACleanup ();
     nn_assert (rc == 0);
@@ -401,49 +394,33 @@ int nn_freemsg (void *msg)
     return 0;
 }
 
-struct nn_cmsghdr *nn_cmsg_nxthdr_ (const struct nn_msghdr *mhdr,
-    const struct nn_cmsghdr *cmsg)
+struct nn_cmsghdr *nn_cmsg_nxthdr_(const struct nn_msghdr *mhdr,const struct nn_cmsghdr *cmsg)
 {
-    char *data;
-    size_t sz;
-    struct nn_cmsghdr *next;
-    size_t headsz;
-
-    /*  Early return if no message is provided. */
-    if (nn_slow (mhdr == NULL))
+    char *data; size_t sz; struct nn_cmsghdr *next; size_t headsz;
+    if ( nn_slow(mhdr == NULL) ) // Early return if no message is provided
         return NULL;
-
-    /*  Get the actual data. */
-    if (mhdr->msg_controllen == NN_MSG) {
-        data = *((void**) mhdr->msg_control);
-        sz = nn_chunk_size (data);
+    if ( mhdr->msg_controllen == NN_MSG ) // Get the actual data
+    {
+        data = *((void **)mhdr->msg_control);
+        sz = nn_chunk_size(data);
     }
-    else {
-        data = (char*) mhdr->msg_control;
+    else
+    {
+        data = (char *)mhdr->msg_control;
         sz = mhdr->msg_controllen;
     }
-
-    /*  Ancillary data allocation was not even large enough for one element. */
-    if (nn_slow (sz < NN_CMSG_SPACE (0)))
+    //  Ancillary data allocation was not even large enough for one element
+    if ( nn_slow(sz < NN_CMSG_SPACE(0)) )
         return NULL;
-
-    /*  If cmsg is set to NULL we are going to return first property.
-        Otherwise move to the next property. */
-    if (!cmsg)
+    //  If cmsg is set to NULL we are going to return first property, Otherwise move to the next property
+    if ( !cmsg )
         next = (struct nn_cmsghdr*) data;
-    else
-        next = (struct nn_cmsghdr*)
-            (((char*) cmsg) + NN_CMSG_ALIGN_ (cmsg->cmsg_len));
-
-    /*  If there's no space for next property, treat it as the end
-        of the property list. */
-    headsz = ((char*) next) - data;
-    if (headsz + NN_CMSG_SPACE (0) > sz ||
-          headsz + NN_CMSG_ALIGN_ (next->cmsg_len) > sz)
+    else next = (struct nn_cmsghdr *)(((char *)cmsg) + NN_CMSG_ALIGN_(cmsg->cmsg_len));
+    //  If there's no space for next property, treat it as the end of the property list
+    headsz = ((char *)next) - data;
+    if ( headsz + NN_CMSG_SPACE (0) > sz || headsz + NN_CMSG_ALIGN_ (next->cmsg_len) > sz)
         return NULL;
-    
-    /*  Success. */
-    return next;
+    return next; // Success
 }
 
 int32_t nn_global_create_socket(int32_t domain,int32_t protocol)
@@ -456,7 +433,7 @@ int32_t nn_global_create_socket(int32_t domain,int32_t protocol)
         return -EMFILE;
     s = SELF.unused [NN_MAX_SOCKETS - SELF.nsocks - 1]; //  Find an empty socket slot
     //  Find the appropriate socket type.
-    printf("global create socket.(%d %d)\n",domain,protocol);
+   /// printf("global create socket.(%d %d)\n",domain,protocol);
     for (it=nn_list_begin(&SELF.socktypes); it!=nn_list_end(&SELF.socktypes); it=nn_list_next(&SELF.socktypes, it))
     {
         socktype = nn_cont (it, struct nn_socktype, item);
@@ -469,7 +446,7 @@ int32_t nn_global_create_socket(int32_t domain,int32_t protocol)
                 return rc;
             SELF.socks[s] = sock; // Adjust the global socket table
             SELF.nsocks++;
-            printf("SELF.nsocks.(%d) sock.%s\n",s,sock->socket_name);
+            //printf("SELF.nsocks.(%d) sock.%s\n",s,sock->socket_name);
             return s;
         }
     }
@@ -505,36 +482,27 @@ int nn_socket(int domain,int protocol)
     return rc;
 }
 
-int nn_close (int s)
+int32_t nn_close(int32_t s)
 {
-    int rc;
-
+    int32_t rc;
     NN_BASIC_CHECKS;
-
-    /*  TODO: nn_sock_term can take a long time to accomplish. It should not be
-        performed under global critical section. */
-    nn_glock_lock ();
-
-    /*  Deallocate the socket object. */
+    //  TODO: nn_sock_term can take a long time to accomplish. It should not be performed under global critical section.
+    nn_glock_lock();
+    // Deallocate the socket object
     rc = nn_sock_term (SELF.socks [s]);
     if (nn_slow (rc == -EINTR)) {
         nn_glock_unlock ();
         errno = EINTR;
         return -1;
     }
-
-    /*  Remove the socket from the socket table, add it to unused socket
-        table. */
-    nn_free (SELF.socks [s]);
-    SELF.socks [s] = NULL;
-    SELF.unused [NN_MAX_SOCKETS - SELF.nsocks] = s;
+    // Remove the socket from the socket table, add it to unused socket table
+    nn_free(SELF.socks[s]);
+    SELF.socks[s] = NULL;
+    SELF.unused[NN_MAX_SOCKETS - SELF.nsocks] = s;
     --SELF.nsocks;
-
-    /*  Destroy the global context if there's no socket remaining. */
-    nn_global_term ();
-
-    nn_glock_unlock ();
-
+    //  Destroy the global context if there's no socket remaining
+    nn_global_term();
+    nn_glock_unlock();
     return 0;
 }
 
@@ -633,11 +601,12 @@ int nn_shutdown (int s, int how)
 int32_t nn_send(int32_t s,const void *buf,size_t len,int32_t flags)
 {
     struct nn_iovec iov; struct nn_msghdr hdr;
-    if ( s  < 0 || s >= SELF.nsocks )
+    /*if ( s  < 0 || s >= SELF.nsocks )
     {
         PostMessage("nn_send %d to sock.%d when nsocks is %d\n",(int32_t)len,s,SELF.nsocks);
         return(-EBADF);
-    }
+    }*/
+    printf("nsocks.%d nn_send len.%d -> nnsock.%d\n",(int32_t)SELF.nsocks,(int32_t)len,s);
     iov.iov_base = (void *)buf;
     iov.iov_len = len;
     hdr.msg_iov = &iov;
@@ -651,11 +620,11 @@ int32_t nn_send(int32_t s,const void *buf,size_t len,int32_t flags)
 int32_t nn_recv(int32_t s,void *buf,size_t len,int32_t flags)
 {
     struct nn_iovec iov;struct nn_msghdr hdr;
-    if ( s  < 0 || s >= SELF.nsocks )
+    /*if ( s  < 0 || s >= SELF.nsocks )
     {
-        PostMessage("nn_recv %d to sock.%d when nsocks is %d\n",(int32_t)len,s,SELF.nsocks);
+        printf("nn_recv %d to sock.%d when nsocks is %d\n",(int32_t)len,s,(int32_t)SELF.nsocks);
         return(-EBADF);
-    }
+    }*/
     iov.iov_base = buf;
     iov.iov_len = len;
     hdr.msg_iov = &iov;
@@ -679,7 +648,7 @@ int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
         errno = EMSGSIZE;
         return -1;
     }
-    if ( msghdr->msg_iovlen == 1 && msghdr->msg_iov [0].iov_len == NN_MSG )
+    if ( msghdr->msg_iovlen == 1 && msghdr->msg_iov[0].iov_len == NN_MSG )
     {
         chunk = *(void **)msghdr->msg_iov[0].iov_base;
         if ( nn_slow(chunk == NULL) )
@@ -690,6 +659,7 @@ int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
         sz = nn_chunk_size(chunk);
         nn_msg_init_chunk(&msg,chunk);
         nnmsg = 1;
+        //printf("iov.1: sz.%d\n",(int32_t)sz);
     }
     else
     {
@@ -701,9 +671,9 @@ int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
             iov = &msghdr->msg_iov[i];
             if ( nn_slow(iov->iov_len == NN_MSG) )
             {
-               errno = EINVAL;
+                errno = EINVAL;
                 printf("ERROR: iov->iov_len == NN_MSG\n");
-               return -1;
+                return -1;
             }
             if ( nn_slow(!iov->iov_base && iov->iov_len) )
             {
@@ -732,14 +702,13 @@ int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
         //printf("copied.%d\n",(int32_t)sz);
         nnmsg = 0;
     }
-    /*  Add ancillary data to the message. */
-    if ( msghdr->msg_control )
+    if ( msghdr->msg_control ) // Add ancillary data to the message
     {
-        //printf("add msg_control\n");
+        printf("add msg_control\n");
         //  Copy all headers. TODO: SP_HDR should not be copied here!
         if ( msghdr->msg_controllen == NN_MSG )
         {
-            chunk = *((void**) msghdr->msg_control);
+            chunk = *((void **)msghdr->msg_control);
             nn_chunkref_term(&msg.hdrs);
             nn_chunkref_init_chunk(&msg.hdrs, chunk);
         }
@@ -747,63 +716,59 @@ int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
         {
             nn_chunkref_term(&msg.hdrs);
             nn_chunkref_init(&msg.hdrs,msghdr->msg_controllen);
-            memcpy (nn_chunkref_data(&msg.hdrs),
-                msghdr->msg_control,msghdr->msg_controllen);
+            memcpy(nn_chunkref_data(&msg.hdrs),msghdr->msg_control,msghdr->msg_controllen);
         }
-        /* Search for SP_HDR property. */
-        cmsg = NN_CMSG_FIRSTHDR (msghdr);
+        cmsg = NN_CMSG_FIRSTHDR (msghdr); // Search for SP_HDR property
         while ( cmsg )
         {
             if ( cmsg->cmsg_level == PROTO_SP && cmsg->cmsg_type == SP_HDR )
             {
-                /*  Copy body of SP_HDR property into 'sphdr'. */
+                // Copy body of SP_HDR property into 'sphdr'
                 nn_chunkref_term (&msg.sphdr);
-                spsz = cmsg->cmsg_len - NN_CMSG_SPACE (0);
+                spsz = cmsg->cmsg_len - NN_CMSG_SPACE(0);
                 nn_chunkref_init (&msg.sphdr, spsz);
-                memcpy (nn_chunkref_data (&msg.sphdr),
-                    NN_CMSG_DATA (cmsg), spsz);
+                memcpy(nn_chunkref_data(&msg.sphdr),NN_CMSG_DATA(cmsg),spsz);
                 break;
             }
             cmsg = NN_CMSG_NXTHDR (msghdr, cmsg);
         }
     }
-    //  Send it further down the stack
-    //printf("nn_sock_send %d flags.%d\n",s,flags);
-    rc = nn_sock_send(SELF.socks[s],&msg,flags);
-    //printf("nn_sock_send rc.%d for usock.%s\n",rc,SELF.socks[s]->socket_name);
+    //printf("nn_sock_send %d flags.%d sz.%d\n",s,flags,(int32_t)sz);
+    rc = nn_sock_send(SELF.socks[s],&msg,flags); // Send it further down the stack
+    //printf("done nn_sock_send rc.%d for usock.%s sz.%d\n",rc,SELF.socks[s]->socket_name,(int32_t)sz);
     if ( nn_slow(rc < 0) )
     {
-        //  If we are dealing with user-supplied buffer, detach it from the message object
+        // If we are dealing with user-supplied buffer, detach it from the message object
         if ( nnmsg != 0 )
-            nn_chunkref_init (&msg.body, 0);
-        nn_msg_term (&msg);
+            nn_chunkref_init(&msg.body,0);
+        nn_msg_term(&msg);
         errno = -rc;
         return -1;
     }
-
-    /*  Adjust the statistics. */
-    nn_sock_stat_increment (SELF.socks [s], NN_STAT_MESSAGES_SENT, 1);
-    nn_sock_stat_increment (SELF.socks [s], NN_STAT_BYTES_SENT, sz);
-
-    return (int) sz;
+    // Adjust the statistics.
+    nn_sock_stat_increment(SELF.socks[s],NN_STAT_MESSAGES_SENT,1);
+    nn_sock_stat_increment(SELF.socks[s],NN_STAT_BYTES_SENT,sz);
+    return (int32_t) sz;
 }
 
 int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
 {
-    struct nn_msg msg; uint8_t *data; struct nn_iovec *iov; void *chunk,*ctrl; struct nn_cmsghdr *chdr;
-    int32_t i,rc; size_t sz,hdrssz,ctrlsz,spsz,sptotalsz;
+    struct nn_msg msg; uint8_t *data; struct nn_iovec *iov; void *chunk,*ctrl;
+    int32_t i,rc; size_t sz,hdrssz,ctrlsz,spsz,sptotalsz; struct nn_cmsghdr *chdr;
     NN_BASIC_CHECKS;
     if ( nn_slow(!msghdr) )
     {
+        printf("b get a nn_recvmsg from sock.%d\n",s);
         errno = EINVAL;
         return -1;
     }
     if ( nn_slow(msghdr->msg_iovlen < 0) )
     {
+        printf("c get a nn_recvmsg from sock.%d\n",s);
         errno = EMSGSIZE;
         return -1;
     }
-    //printf("get a message from sock.%d\n",s);
+    //printf("d get a nn_recvmsg from sock.%d\n",s);
     rc = nn_sock_recv(SELF.socks[s],&msg,flags); // Get a message
     if ( nn_slow(rc < 0) )
     {
@@ -851,8 +816,8 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
         if ( msghdr->msg_controllen == NN_MSG )
         {
             rc = nn_chunk_alloc(ctrlsz,0,&ctrl); // Allocate the buffer
-            errnum_assert (rc == 0, -rc);
-            *((void**) msghdr->msg_control) = ctrl; // Set output parameters
+            errnum_assert(rc == 0,-rc);
+            *((void **)msghdr->msg_control) = ctrl; // Set output parameters
         }
         else
         {
@@ -862,7 +827,7 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
         // If SP header alone won't fit into the buffer, return no ancillary properties
         if ( ctrlsz >= sptotalsz ) // Fill in SP_HDR ancillary property
         {
-            chdr = (struct nn_cmsghdr*) ctrl;
+            chdr = (struct nn_cmsghdr *)ctrl;
             chdr->cmsg_len = sptotalsz;
             chdr->cmsg_level = PROTO_SP;
             chdr->cmsg_type = SP_HDR;
@@ -871,7 +836,7 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
             hdrssz = nn_chunkref_size(&msg.hdrs);
             if ( hdrssz > ctrlsz - sptotalsz )
                 hdrssz = ctrlsz - sptotalsz;
-            memcpy(((char*) ctrl) + sptotalsz,nn_chunkref_data(&msg.hdrs),hdrssz);
+            memcpy(((char *)ctrl) + sptotalsz,nn_chunkref_data(&msg.hdrs),hdrssz);
         }
     }
     nn_msg_term(&msg);
@@ -880,39 +845,27 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
 
 static void nn_global_add_transport (struct nn_transport *transport)
 {
-    if (transport->init)
-        transport->init ();
-    nn_list_insert (&SELF.transports, &transport->item,
-        nn_list_end (&SELF.transports));
-
+    if ( transport->init )
+        transport->init();
+    nn_list_insert(&SELF.transports, &transport->item,nn_list_end(&SELF.transports));
 }
 
-static void nn_global_add_socktype (struct nn_socktype *socktype)
+static void nn_global_add_socktype(struct nn_socktype *socktype)
 {
-    nn_list_insert (&SELF.socktypes, &socktype->item,
-        nn_list_end (&SELF.socktypes));
+    nn_list_insert(&SELF.socktypes,&socktype->item,nn_list_end(&SELF.socktypes));
 }
 
-static void nn_global_submit_counter (int i, struct nn_sock *s,
-    char *name, uint64_t value)
+static void nn_global_submit_counter (int32_t i,struct nn_sock *s,char *name,uint64_t value)
 {
     /* Length of buffer is:
        len(hostname) + len(appname) + len(socket_name) + len(timebuf)
        + len(str(value)) + len(static characters)
        63 + 63 + 63 + 20 + 20 + 60 = 289 */
-    char buf[512];
-    char timebuf[20];
-    time_t numtime;
-    struct tm strtime;
-    int len;
-
-    if(SELF.print_statistics) {
-        fprintf(stderr, "nanomsg: socket.%s: %s: %llu\n",
-            s->socket_name, name, (long long unsigned int)value);
-    }
-
-    if (SELF.statistics_socket >= 0) {
-        /*  TODO(tailhook) add HAVE_GMTIME_R ifdef  */
+    char buf[512],timebuf[20]; time_t numtime; struct tm strtime; int32_t len;
+    if ( SELF.print_statistics )
+        fprintf(stderr, "nanomsg: socket.%s: %s: %llu\n",s->socket_name,name,(long long)value);
+    if ( SELF.statistics_socket >= 0 )
+    {
         time(&numtime);
 #ifdef NN_HAVE_GMTIME_R
         gmtime_r (&numtime, &strtime);
@@ -920,7 +873,8 @@ static void nn_global_submit_counter (int i, struct nn_sock *s,
 #error
 #endif
         strftime (timebuf, 20, "%Y-%m-%dT%H:%M:%S", &strtime);
-        if(*s->socket_name) {
+        if ( *s->socket_name )
+        {
             len = sprintf (buf, "ESTP:%s:%s:socket.%s:%s: %sZ 10 %llu:c",
                 SELF.hostname, SELF.appname, s->socket_name, name,
                 timebuf, (long long unsigned int)value);
@@ -929,31 +883,22 @@ static void nn_global_submit_counter (int i, struct nn_sock *s,
                 SELF.hostname, SELF.appname, i, name,
                 timebuf, (long long unsigned int)value);
         }
-        nn_assert (len < (int)sizeof(buf));
-        (void) nn_send (SELF.statistics_socket, buf, len, NN_DONTWAIT);
+        nn_assert(len < (int)sizeof(buf));
+        (void) nn_send(SELF.statistics_socket,buf,len,NN_DONTWAIT);
     }
 }
 
-static void nn_global_submit_level (int i, struct nn_sock *s,
-    char *name, int value)
+static void nn_global_submit_level (int32_t i,struct nn_sock *s,char *name,int32_t value)
 {
     /* Length of buffer is:
        len(hostname) + len(appname) + len(socket_name) + len(timebuf)
        + len(str(value)) + len(static characters)
        63 + 63 + 63 + 20 + 20 + 60 = 289 */
-    char buf[512];
-    char timebuf[20];
-    time_t numtime;
-    struct tm strtime;
-    int len;
-
-    if(SELF.print_statistics) {
-        fprintf(stderr, "nanomsg: socket.%s: %s: %d\n",
-            s->socket_name, name, value);
-    }
-
-    if (SELF.statistics_socket >= 0) {
-        /*  TODO(tailhook) add HAVE_GMTIME_R ifdef  */
+    char buf[512],timebuf[20]; time_t numtime; struct tm strtime; int32_t len;
+    if ( SELF.print_statistics )
+        fprintf(stderr,"nanomsg: socket.%s: %s: %d\n",s->socket_name,name,value);
+    if ( SELF.statistics_socket >= 0 )
+    {
         time(&numtime);
 #ifdef NN_HAVE_GMTIME_R
         gmtime_r (&numtime, &strtime);
@@ -961,24 +906,26 @@ static void nn_global_submit_level (int i, struct nn_sock *s,
 #error
 #endif
         strftime (timebuf, 20, "%Y-%m-%dT%H:%M:%S", &strtime);
-        if(*s->socket_name) {
+        if( *s->socket_name )
+        {
             len = sprintf (buf, "ESTP:%s:%s:socket.%s:%s: %sZ 10 %d",
                 SELF.hostname, SELF.appname, s->socket_name, name,
                 timebuf, value);
-        } else {
+        }
+        else
+        {
             len = sprintf (buf, "ESTP:%s:%s:socket.%d:%s: %sZ 10 %d",
                 SELF.hostname, SELF.appname, i, name,
                 timebuf, value);
         }
         nn_assert (len < (int)sizeof(buf));
-        (void) nn_send (SELF.statistics_socket, buf, len, NN_DONTWAIT);
+        (void)nn_send(SELF.statistics_socket,buf,len,NN_DONTWAIT);
     }
 }
 
-static void nn_global_submit_errors (int i, struct nn_sock *s,
-    char *name, int value)
+static void nn_global_submit_errors (int32_t i,struct nn_sock *s,char *name,int32_t value)
 {
-    /*  TODO(tailhook) dynamically allocate buffer  */
+    //  TODO(tailhook) dynamically allocate buffer
     char buf[4096];
     char *curbuf;
     int buf_left;
@@ -1095,22 +1042,17 @@ static void nn_global_submit_statistics ()
     }
 }
 
-static int nn_global_create_ep (int s, const char *addr, int bind)
+static int32_t nn_global_create_ep(int32_t s, const char *addr,int32_t bind)
 {
-    int rc;
-    const char *proto;
-    const char *delim;
-    size_t protosz;
-    struct nn_transport *tp;
-    struct nn_list_item *it;
+    int32_t rc; const char *proto; const char *delim; size_t protosz;
+    struct nn_transport *tp; struct nn_list_item *it;
 
-    /*  Check whether address is valid. */
+    //  Check whether address is valid
     if (!addr)
         return -EINVAL;
-    if (strlen (addr) >= NN_SOCKADDR_MAX)
+    if ( strlen(addr) >= NN_SOCKADDR_MAX )
         return -ENAMETOOLONG;
-
-    /*  Separate the protocol and the actual address. */
+    // Separate the protocol and the actual address
     proto = addr;
     delim = strchr (addr, ':');
     if (!delim)
@@ -1119,21 +1061,20 @@ static int nn_global_create_ep (int s, const char *addr, int bind)
         return -EINVAL;
     protosz = delim - addr;
     addr += protosz + 3;
-
-    /*  Find the specified protocol. */
+    //  Find the specified protocol
     tp = NULL;
-    for (it = nn_list_begin (&SELF.transports);
-          it != nn_list_end (&SELF.transports);
-          it = nn_list_next (&SELF.transports, it)) {
-        tp = nn_cont (it, struct nn_transport, item);
-        if (strlen (tp->name) == protosz &&
-              memcmp (tp->name, proto, protosz) == 0)
+    for (it = nn_list_begin(&SELF.transports);
+          it != nn_list_end(&SELF.transports);
+          it = nn_list_next(&SELF.transports, it))
+    {
+        tp = nn_cont(it,struct nn_transport,item);
+        if ( strlen(tp->name) == protosz && memcmp(tp->name,proto,protosz) == 0 )
             break;
         tp = NULL;
     }
     if ( !tp ) // The protocol specified doesn't match any known protocol
         return -EPROTONOSUPPORT;
-    rc = nn_sock_add_ep (SELF.socks [s], tp, bind, addr); // Ask the socket to create the endpoint
+    rc = nn_sock_add_ep(SELF.socks[s],tp,bind,addr); // Ask the socket to create the endpoint
     return rc;
 }
 
@@ -1167,7 +1108,7 @@ static void nn_global_handler (struct nn_fsm *myself,int src, int type, NN_UNUSE
 {
 
     struct nn_global *global;
-
+    printf("GLOBAL HANDLER.(%d %d)\n",src,type);
     global = nn_cont (myself, struct nn_global, fsm);
 
     switch ( global->state )

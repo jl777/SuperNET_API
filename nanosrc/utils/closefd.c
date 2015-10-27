@@ -31,7 +31,7 @@
 void nn_closefd(int fd)
 {
     int rc;
-    printf("nn_closefd.(%d)\n",fd);
+    //printf("nn_closefd.(%d)\n",fd);
     rc = close (fd);
     if (nn_fast (rc == 0))
         return;

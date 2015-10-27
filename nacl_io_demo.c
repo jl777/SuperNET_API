@@ -370,6 +370,7 @@ void *HandleMessageThread(void *user_data)
 #undef mount
 #undef umount
 
+#ifdef notnow
 #include "include/ppapi/c/pp_resource.h"
 #include "include/ppapi/c/ppb_core.h"
 #include "include/ppapi/c/ppb_fullscreen.h"
@@ -672,6 +673,7 @@ PSMainFunc_t PSUserMainGet()
 {
     return(example_main);
 }
+#endif
 
 //void *bindloop(void *args);
 void init_InstantDEX(void *json);

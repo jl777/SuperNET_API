@@ -319,7 +319,61 @@ var common = (function() {
    * @param {Event} message_event A message event. message_event.data contains
    *     the data sent from the NaCl module.
    */
-  function handleMessage(message_event) {
+              function isJson(str) {
+              try {
+              JSON.parse(str);
+              } catch (e) {
+              return false;
+              }
+              return true;
+              }
+              
+              function retmsg(msg)
+              {
+              common.naclModule.postMessage(msg);
+              console.log("sent: "+msg);
+              }
+
+  function handleMessage(message_event)
+              {
+              if(isJson(message_event.data))
+              {
+              console.log("AAAA");
+              var request = JSON.parse(message_event.data);
+              console.log(request);
+              if(request.method == "NxtAPI")
+              {
+              console.log(request.requestType);
+              Jay.request(request.requestType, JSON.parse(request.params), function(ans) {
+                          retmsg(ans);
+                          })
+              }
+              else if(request.method == "status")
+              {
+              retmsg("{'status':'doing alright'}");
+              }
+              else if(request.method == "signBytes")
+              {
+              var out = converters.byteArrayToHexString(signBytes(converters.hexStringToByteArray(request.bytes), request.secretPhrase));
+              var ret = {};
+              ret.signature = out;
+              retmsg(JSON.stringify(ret));
+              }
+              else if(request.method == "createToken")
+              {
+              var out = createToken(request.data, request.secretPhrase);
+              var ret = {};
+              ret.token = out;
+              retmsg(JSON.stringify(ret));
+              }
+              else if(request.method == "parseToken")
+              {
+              var out = parseToken(request.token, request.data);
+              retmsg(JSON.stringify(out));
+              }
+              console.log(request);
+              }
+              
     if (typeof message_event.data === 'string') {
       for (var type in defaultMessageTypes) {
         if (defaultMessageTypes.hasOwnProperty(type)) {

@@ -25,7 +25,8 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
+//#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
+#define DEFAULT_SUPERNET_CONF "{\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":-1}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
@@ -584,6 +585,7 @@ void nanotests()
     int testipc_shutdown(); int testipc_stress(); int testtcp(); int testtcp_shutdown();
     int testtcpmux(); int testws(); int testpair(); int testbus();
     int testpipeline(); int testpubsub(); int testreqrep(); int testsurvey();
+    testipc();
     for (i=0; i<0; i++)
     {
         testhash();
@@ -610,25 +612,20 @@ void nanotests()
         testmsg();
         testcmsg();
         testseparation();
+        testipc();
+        testtcp();
+        testreqrep();
+        testipc_stress();
     }
     for (i=0; i<1; i++)
-        testipc();
-    printf("finished nanotest loop\n"), getchar();
-    testreqrep();
-testtcp();
-    testdevice();
- testtcpmux();
-    testipc_shutdown(); testipc_stress();  testtcp_shutdown();
+        testipc_shutdown();
+    printf("finished nanotest loop\n"), exit(0); getchar();
+ testdevice();
     testterm();
+    testtcp_shutdown();
+        testtcpmux();
 
     printf("nanotests num errs.%d\n",errs);
-    char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
-    if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
-    {
-        fprintf(stderr,"busdata.(%s)\n",str);
-        free(str);
-    }
-
     getchar();
 }
 
@@ -674,9 +671,16 @@ int SuperNET_start(char *fname,char *myip)
     void SuperNET_loop(void *_args);
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     char *strs[16],*jsonargs=0,ipaddr[256]; cJSON *json; int32_t i,n = 0; uint64_t allocsize;
-    //nanotests();
-    randombytes((void *)&i,sizeof(i));
     portable_OS_init();
+    nanotests();
+    char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
+    if ( 0 && (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+    {
+        fprintf(stderr,"busdata.(%s)\n",str);
+        free(str);
+    } else printf("null return from busdata sync.(%s)\n",jsonstr);
+    
+    randombytes((void *)&i,sizeof(i));
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     SuperNET_saveconf(DEFAULT_SUPERNET_CONF);

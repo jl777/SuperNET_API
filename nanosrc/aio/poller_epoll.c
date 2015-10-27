@@ -183,8 +183,7 @@ int nn_poller_wait (struct nn_poller *self, int timeout)
 
     /*  Wait for new events. */
     while (1) {
-        nevents = epoll_wait (self->ep, self->events,
-            NN_POLLER_MAX_EVENTS, timeout);
+        nevents = epoll_wait (self->ep, self->events,NN_POLLER_MAX_EVENTS, timeout);
         if (nn_slow (nevents == -1 && errno == EINTR))
             continue;
         break;
@@ -194,11 +193,11 @@ int nn_poller_wait (struct nn_poller *self, int timeout)
     return 0;
 }
 
-int nn_poller_event (struct nn_poller *self, int *event,
-    struct nn_poller_hndl **hndl)
+int nn_poller_event (struct nn_poller *self, int *event,struct nn_poller_hndl **hndl)
 {
-    /*  Skip over empty events. */
-    while (self->index < self->nevents) {
+    // Skip over empty events
+    while ( self->index < self->nevents )
+    {
         if (self->events [self->index].events != 0)
             break;
         ++self->index;

@@ -28,6 +28,7 @@
 #include "../utils/err.h"
 #include "../utils/attr.h"
 
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -114,6 +115,7 @@ void nn_usock_init(struct nn_usock *self,int32_t src,struct nn_fsm *owner)
 
 void nn_usock_term(struct nn_usock *self)
 {
+    //printf("nn_usock_term usock.%d\n",self->s);
     nn_assert_state(self,NN_USOCK_STATE_IDLE);
     if ( self->in.batch )
         nn_free(self->in.batch);
@@ -142,7 +144,7 @@ int32_t nn_usock_start(struct nn_usock *self,int32_t domain,int32_t type,int32_t
     type |= SOCK_CLOEXEC;
 #endif
     s = socket(domain,type,protocol); // Open the underlying socket
-    printf("start usock.%d\n",s);
+    //printf("start usock.%d\n",s);
     if (nn_slow (s < 0))
        return -errno;
     nn_usock_init_from_fd(self,s);
@@ -157,6 +159,15 @@ void nn_usock_start_fd(struct nn_usock *self,int32_t fd)
     nn_fsm_action(&self->fsm,NN_USOCK_ACTION_STARTED);
 }
 
+void nn_errno_assert(int32_t rc)
+{
+#if defined __APPLE__
+    errno_assert (rc != -1 || errno == EINVAL);
+#else
+    errno_assert (rc != -1);
+#endif
+}
+
 static void nn_usock_init_from_fd (struct nn_usock *self, int s)
 {
     int32_t rc,opt;
@@ -166,34 +177,22 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
     // Setting FD_CLOEXEC option immediately after socket creation is the second best option after using SOCK_CLOEXEC. There is a race condition here (if process is forked between socket creation and setting the option) but the problem is pretty unlikely to happen
 #if defined FD_CLOEXEC
     rc = fcntl (self->s, F_SETFD, FD_CLOEXEC);
-#if defined __APPLE__
-    errno_assert (rc != -1 || errno == EINVAL);
-#else
-    errno_assert (rc != -1);
+    nn_errno_assert(rc);
 #endif
-#endif
-    // If applicable, prevent SIGPIPE signal when writing to the connection already closed by the peer
+    // If applicable, prevent SIGPIPE signal when writing to connection already closed by the peer
 #ifdef SO_NOSIGPIPE
     opt = 1;
     rc = setsockopt(self->s,SOL_SOCKET,SO_NOSIGPIPE,&opt,sizeof(opt));
-#if defined __APPLE__
-    errno_assert (rc == 0 || errno == EINVAL);
-#else
-    errno_assert (rc == 0);
+    nn_errno_assert(rc);
 #endif
-#endif
-    // Switch the socket to the non-blocking mode. All underlying sockets are always used in the callbackhronous mode
+    // Switch socket to the non-blocking mode. All underlying sockets are used in the nonblock mode
     opt = fcntl(self->s,F_GETFL,0);
     if ( opt == -1 )
         opt = 0;
     if ( !(opt & O_NONBLOCK) )
     {
         rc = fcntl(self->s,F_SETFL,opt | O_NONBLOCK);
-#if defined __APPLE__
-        errno_assert(rc != -1 || errno == EINVAL);
-#else
-        errno_assert(rc != -1);
-#endif
+        nn_errno_assert(rc);
     }
 }
 
@@ -230,8 +229,7 @@ int32_t nn_usock_setsockopt (struct nn_usock *self,int32_t level,int32_t optname
 int32_t nn_usock_bind(struct nn_usock *self,const struct sockaddr *addr,size_t addrlen)
 {
     int32_t rc,opt;
-    // The socket can be bound only before it's connected
-    nn_assert_state(self,NN_USOCK_STATE_STARTING);
+    nn_assert_state(self,NN_USOCK_STATE_STARTING); // The socket can be bound only before connected
     opt = 1;
     rc = setsockopt(self->s,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt)); // Allow re-using the address
     errno_assert(rc == 0);
@@ -244,22 +242,18 @@ int32_t nn_usock_bind(struct nn_usock *self,const struct sockaddr *addr,size_t a
 int32_t nn_usock_listen(struct nn_usock *self,int32_t backlog)
 {
     int32_t rc;
-    //  You can start listening only before the socket is connected
-    nn_assert_state(self,NN_USOCK_STATE_STARTING);
-    // Start listening for incoming connections
-    rc = listen(self->s, backlog);
+    nn_assert_state(self,NN_USOCK_STATE_STARTING); // You can start listening only before the socket is connected
+    rc = listen(self->s, backlog); // Start listening for incoming connections
     if ( nn_slow(rc != 0))
         return -errno;
-    //  Notify the state machine
-    nn_fsm_action(&self->fsm,NN_USOCK_ACTION_LISTEN);
+    nn_fsm_action(&self->fsm,NN_USOCK_ACTION_LISTEN); //  Notify the state machine
     return 0;
 }
 
 void nn_usock_accept(struct nn_usock *self,struct nn_usock *listener)
 {
     int32_t s;
-    //  Start the actual accepting
-    if ( nn_fsm_isidle(&self->fsm) )
+    if ( nn_fsm_isidle(&self->fsm) ) //  Start the actual accepting
     {
         nn_fsm_start(&self->fsm);
         nn_fsm_action(&self->fsm,NN_USOCK_ACTION_BEING_ACCEPTED);
@@ -299,15 +293,19 @@ void nn_usock_accept(struct nn_usock *self,struct nn_usock *listener)
         return;
     }
     // Ask the worker thread to wait for the new connection
-    nn_worker_execute (listener->worker, &listener->task_accept);
+    nn_worker_execute(listener->worker,&listener->task_accept);
 }
 
-void nn_usock_activate(struct nn_usock *self) { nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ACTIVATE); }
+void nn_usock_activate(struct nn_usock *self)
+{
+    //printf("uactivate.%d\n",self->s);
+    nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ACTIVATE);
+}
 
 void nn_usock_connect(struct nn_usock *self,const struct sockaddr *addr,size_t addrlen)
 {
     int32_t rc;
-    printf("Uconnect to usock.%d\n",self->s);
+    //printf("Uconnect to usock.%d\n",self->s);
     //  Notify the state machine that we've started connecting
     nn_fsm_action (&self->fsm,NN_USOCK_ACTION_CONNECT);
     rc = connect (self->s,addr,(socklen_t)addrlen); // Do the connect itself
@@ -328,80 +326,78 @@ void nn_usock_connect(struct nn_usock *self,const struct sockaddr *addr,size_t a
 void nn_usock_send(struct nn_usock *self,const struct nn_iovec *iov,int32_t iovcnt)
 {
     int32_t rc,i,out;
-    //  Make sure that the socket is actually alive
+    // Make sure that the socket is actually alive
     nn_assert_state (self, NN_USOCK_STATE_ACTIVE);
-    //  Copy the iovecs to the socket
+    // Copy the iovecs to the socket
     nn_assert (iovcnt <= NN_USOCK_MAX_IOVCNT);
     self->out.hdr.msg_iov = self->out.iov;
     out = 0;
-    printf("%d iov: ",iovcnt);
+    //printf("%d iov: ",iovcnt);
     for (i=0; i<iovcnt; i++)
     {
         if (iov [i].iov_len == 0)
             continue;
-        self->out.iov [out].iov_base = iov[i].iov_base;
-        self->out.iov [out].iov_len = iov[i].iov_len;
-        printf("%d, ",(int32_t)iov[i].iov_len);
+        self->out.iov[out].iov_base = iov[i].iov_base;
+        self->out.iov[out].iov_len = iov[i].iov_len;
+        //printf("%d, ",(int32_t)iov[i].iov_len);
         out++;
     }
-    printf("nn_usock_send usock.%d\n",self->s);
+    //printf("nn_usock_send usock.%d\n",self->s);
     self->out.hdr.msg_iovlen = out;
-    rc = nn_usock_send_raw (self, &self->out.hdr); // Try to send the data immediately
-    if ( nn_fast(rc == 0) ) // Success
+    if ( (rc= nn_usock_send_raw(self,&self->out.hdr)) == 0 ) // Try to send the data immediately
     {
-        nn_fsm_raise (&self->fsm, &self->event_sent, NN_USOCK_SENT);
+        nn_fsm_raise(&self->fsm,&self->event_sent,NN_USOCK_SENT);
         return;
     }
     if ( nn_slow(rc != -EAGAIN) ) // Errors
     {
-        errnum_assert (rc == -ECONNRESET, -rc);
-        nn_fsm_action (&self->fsm, NN_USOCK_ACTION_ERROR);
+        errnum_assert(rc == -ECONNRESET, -rc);
+        nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ERROR);
         return;
     }
-    nn_worker_execute (self->worker, &self->task_send); // Ask the worker thread to send the remaining data
+    nn_worker_execute(self->worker,&self->task_send); // worker thread to send the remaining data
 }
 
 void nn_usock_recv(struct nn_usock *self,void *buf,size_t len,int32_t *fd)
 {
     int32_t rc; size_t nbytes;
     nn_assert_state(self,NN_USOCK_STATE_ACTIVE); // Make sure that the socket is actually alive
-    // Try to receive the data immediately
     nbytes = len;
     self->in.pfd = fd;
-    rc = nn_usock_recv_raw(self,buf,&nbytes);
+    rc = nn_usock_recv_raw(self,buf,&nbytes); // Try to receive the data immediately
     if ( nn_slow(rc < 0) )
     {
         errnum_assert(rc == -ECONNRESET,-rc);
         nn_fsm_action(&self->fsm,NN_USOCK_ACTION_ERROR);
         return;
     }
-    printf("usock.%d nn_usock_recv.[%d %d %d %d] rc.%d nbytes.%d\n",self->s,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],rc,(int32_t)nbytes);
+    //printf("usock.%d nn_usock_recv.[%d %d %d %d] rc.%d nbytes.%d\n",self->s,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],rc,(int32_t)nbytes);
     if ( nn_fast(nbytes == len) ) // Success
     {
         nn_fsm_raise(&self->fsm,&self->event_received,NN_USOCK_RECEIVED);
         return;
     }
     // There are still data to receive in the background
-    self->in.buf = ((uint8_t*) buf) + nbytes;
+    self->in.buf = ((uint8_t *)buf) + nbytes;
     self->in.len = len - nbytes;
-    //  Ask the worker thread to receive the remaining data
-    nn_worker_execute(self->worker,&self->task_recv);
+    nn_worker_execute(self->worker,&self->task_recv); // worker thread to receive the remaining data
 }
 
-static int nn_internal_tasks (struct nn_usock *usock, int src, int type)
+static int32_t nn_internal_tasks(struct nn_usock *usock,int32_t src,int32_t type)
 {
-
 /******************************************************************************/
 /*  Internal tasks sent from the user thread to the worker thread.            */
 /******************************************************************************/
-    switch (src) {
+    switch ( src )
+    {
     case NN_USOCK_SRC_TASK_SEND:
         nn_assert (type == NN_WORKER_TASK_EXECUTE);
         nn_worker_set_out (usock->worker, &usock->wfd);
         return 1;
     case NN_USOCK_SRC_TASK_RECV:
+        //printf("nn_internal_tasks: NN_USOCK_SRC_TASK_RECV type.%d\n",type);
         nn_assert (type == NN_WORKER_TASK_EXECUTE);
-        nn_worker_set_in (usock->worker, &usock->wfd);
+        nn_worker_set_in(usock->worker,&usock->wfd);
         return 1;
     case NN_USOCK_SRC_TASK_CONNECTED:
         nn_assert (type == NN_WORKER_TASK_EXECUTE);
@@ -413,21 +409,21 @@ static int nn_internal_tasks (struct nn_usock *usock, int src, int type)
         nn_worker_set_out (usock->worker, &usock->wfd);
         return 1;
     case NN_USOCK_SRC_TASK_ACCEPT:
+        //printf("nn_internal_tasks: NN_USOCK_SRC_TASK_ACCEPT type.%d\n",type);
         nn_assert (type == NN_WORKER_TASK_EXECUTE);
-        nn_worker_add_fd (usock->worker, usock->s, &usock->wfd);
-        nn_worker_set_in (usock->worker, &usock->wfd);
+        nn_worker_add_fd(usock->worker, usock->s, &usock->wfd);
+        nn_worker_set_in(usock->worker,&usock->wfd);
         return 1;
     }
-
     return 0;
 }
 
 static void nn_usock_shutdown (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     struct nn_usock *usock;
-
     usock = nn_cont(self,struct nn_usock,fsm);
-    if ( nn_internal_tasks(usock,src,type))
+    //printf("nn_usock_shutdown call internal src.%d type.%d\n",src,type);
+    if ( nn_internal_tasks(usock,src,type) )
         return;
     if ( nn_slow(src == NN_FSM_ACTION && type == NN_FSM_STOP) )
     {
@@ -479,9 +475,10 @@ finish3:
     nn_fsm_bad_state(usock->state, src, type);
 }
 
-static void nn_usock_handler (struct nn_fsm *self,int32_t src,int32_t type,NN_UNUSED void *srcptr)
+static void nn_usock_handler(struct nn_fsm *self,int32_t src,int32_t type,NN_UNUSED void *srcptr)
 {
     int32_t rc,s,sockerr; struct nn_usock *usock; size_t sz;
+    //printf("nn_usock_handler call internal src.%d type.%d\n",src,type);
     usock = nn_cont(self,struct nn_usock,fsm);
     if ( nn_internal_tasks(usock,src,type) )
         return;
@@ -650,7 +647,7 @@ static void nn_usock_handler (struct nn_fsm *self,int32_t src,int32_t type,NN_UN
             case NN_WORKER_FD_IN:
                 sz = usock->in.len;
                 rc = nn_usock_recv_raw(usock,usock->in.buf,&sz);
-                printf("NN_USOCK_STATE_ACTIVE FD_IN[%d] (%d %d %d %d) sz.%d\n",rc,usock->in.buf[0],usock->in.buf[1],usock->in.buf[2],usock->in.buf[3],(int32_t)sz);
+                //printf("NN_USOCK_STATE_ACTIVE FD_IN[%d] (%d %d %d %d) sz.%d\n",rc,usock->in.buf[0],usock->in.buf[1],usock->in.buf[2],usock->in.buf[3],(int32_t)sz);
                 if ( nn_fast(rc == 0) )
                 {
                     usock->in.len -= sz;
@@ -892,27 +889,191 @@ error:
     }
 }
 
+int32_t nn_getiovec_size(uint8_t *buf,int32_t maxlen,struct msghdr *hdr)
+{
+    int32_t i,size = 0; struct iovec *iov;
+    for (i=0; i<hdr->msg_iovlen; i++)
+    {
+        iov = &hdr->msg_iov[i];
+        if ( nn_slow(iov->iov_len == NN_MSG) )
+        {
+            errno = EINVAL;
+            printf("ERROR: iov->iov_len == NN_MSG\n");
+            return(-1);
+        }
+        if ( nn_slow(!iov->iov_base && iov->iov_len) )
+        {
+            errno = EFAULT;
+            printf("ERROR: !iov->iov_base && iov->iov_len\n");
+            return(-1);
+        }
+        if ( maxlen > 0 && nn_slow(size + iov->iov_len > maxlen) )
+        {
+            errno = EINVAL;
+            printf("ERROR: sz.%d + iov->iov_len.%d < maxlen.%d\n",(int32_t)size,(int32_t)iov->iov_len,maxlen);
+            return(-1);
+        }
+        if ( iov->iov_len > 0 )
+        {
+            if ( buf != 0 )
+                memcpy(&buf[size],iov->iov_base,iov->iov_len);
+            size += (int32_t)iov->iov_len;
+        }
+    }
+    return(size);
+}
+
+ssize_t mysendmsg(int32_t usock,struct msghdr *hdr,int32_t flags)
+{
+    ssize_t nbytes = 0; int32_t veclen,offset,clen,err = 0; uint8_t *buf,_buf[8192];
+    if ( (veclen= nn_getiovec_size(0,0,hdr)) > 0 )
+    {
+        clen = hdr->msg_controllen;
+        if ( hdr->msg_control == 0 )
+            clen = 0;
+        if ( veclen > (sizeof(_buf) - clen - 6) )
+            buf = malloc(veclen + clen + 6);
+        else buf = _buf;
+        offset = 0;
+        buf[offset++] = (veclen & 0xff);
+        buf[offset++] = ((veclen>>8) & 0xff);
+        buf[offset++] = ((veclen>>15) & 0xff);
+        buf[offset++] = (clen & 0xff);
+        buf[offset++] = ((clen>>8) & 0xff);
+        if ( clen > 0 )
+            memcpy(&buf[offset],hdr->msg_control,clen), offset += clen;
+        if ( nn_getiovec_size(&buf[offset],veclen,hdr) == veclen )
+        {
+            nbytes = send(usock,buf,offset + veclen,0);
+            printf(">>>>>>>>> send.[%d %d %d %d] (n.%d v.%d c.%d)-> usock.%d nbytes.%d\n",buf[offset],buf[offset+1],buf[offset+2],buf[offset+3],(int32_t)offset+veclen,veclen,clen,usock,(int32_t)nbytes);
+            if ( nbytes == offset + veclen )
+                nbytes = veclen;
+            else
+            {
+                printf("nbytes.%d != offset.%d veclen.%d\n",(int32_t)nbytes,(int32_t)offset,veclen);
+            }
+        }
+        else err = -errno;
+        if ( buf != _buf )
+            free(buf);
+        if ( err != 0 )
+        {
+            printf("nn_usock_send_raw errno.%d err.%d\n",errno,err);
+            return(-errno);
+        }
+    }
+    else
+    {
+        printf("nn_usock_send_raw errno.%d invalid iovec size\n",errno);
+        return(-errno);
+    }
+    return(nbytes);
+}
+
+ssize_t myrecvmsg(int32_t usock,struct msghdr *hdr,int32_t flags)
+{
+    int32_t offset,veclen,clen,cbytes,n; ssize_t nbytes; struct iovec *iov; uint8_t lens[5];
+    iov = hdr->msg_iov;
+    if ( (n= (int32_t)recv(usock,lens,sizeof(lens),0)) != sizeof(lens) )
+    {
+        printf("error getting veclen/clen n.%d vs %d from usock.%d\n",n,(int32_t)sizeof(lens),usock);
+        return(0);
+    } else printf("GOT %d bytes from usock.%d\n",n,usock);
+    offset = 0;
+    veclen = ((uint8_t *)iov->iov_base)[offset++];
+    veclen |= ((int32_t)((uint8_t *)iov->iov_base)[offset++] << 8);
+    veclen |= ((int32_t)((uint8_t *)iov->iov_base)[offset++] << 16);
+    clen = ((uint8_t *)iov->iov_base)[offset++];
+    clen |= ((int32_t)((uint8_t *)iov->iov_base)[offset++] << 8);
+    printf("veclen.%d clen.%d waiting in usock.%d\n",veclen,clen,usock);
+    if ( clen > 0 )
+    {
+        if ( (cbytes= (int32_t)recv(usock,hdr->msg_control,clen,0)) != clen )
+        {
+            printf("myrecvmsg: unexpected cbytes.%d vs clen.%d\n",cbytes,clen);
+            return(0);
+        }
+        hdr->msg_controllen = clen;
+    }
+    if ( (nbytes= (int32_t)recv(usock,iov->iov_base,veclen,0)) != veclen )
+    {
+        printf("myrecvmsg: unexpected nbytes.%d vs clen.%d\n",(int32_t)nbytes,veclen);
+        return(0);
+    }
+    printf("GOT cbytes.%d nbytes.%d\n",(int32_t)cbytes,(int32_t)nbytes);
+    if ( nbytes > 0 )
+    {
+        printf("got nbytes.%d from usock.%d [%d %d %d %d]\n",(int32_t)nbytes,usock,((uint8_t *)iov->iov_base)[0],((uint8_t *)iov->iov_base)[1],((uint8_t *)iov->iov_base)[2],((uint8_t *)iov->iov_base)[3]);
+    }
+    return(nbytes);
+}
+
 static int32_t nn_usock_send_raw(struct nn_usock *self,struct msghdr *hdr)
 {
-    ssize_t nbytes;
-    //  Try to send the data
+    ssize_t offset = 0,nbytes = 0;
+#if defined __PNACL 
+    //|| defined __APPLE__
+    int32_t veclen,clen,err = 0; uint8_t *buf,_buf[8192];
+    if ( (veclen= nn_getiovec_size(0,0,hdr)) > 0 )
+    {
+        clen = hdr->msg_controllen;
+        if ( hdr->msg_control == 0 )
+            clen = 0;
+        if ( veclen > (sizeof(_buf) - clen - 5) )
+            buf = malloc(veclen + clen + 5);
+        else buf = _buf;
+        buf[offset++] = (veclen & 0xff);
+        buf[offset++] = ((veclen>>8) & 0xff);
+        buf[offset++] = ((veclen>>15) & 0xff);
+        buf[offset++] = (clen & 0xff);
+        buf[offset++] = ((clen>>8) & 0xff);
+        if ( clen > 0 && hdr->msg_control != 0 )
+            memcpy(&buf[offset],hdr->msg_control,clen), offset += clen;
+        if ( nn_getiovec_size(&buf[offset],veclen,hdr) == veclen )
+        {
+            nbytes = send(self->s,buf,offset + veclen,0);
+            printf(">>>>>>>>> send.[%d %d %d %d] (n.%d v.%d c.%d)-> usock.%d nbytes.%d\n",buf[offset],buf[offset+1],buf[offset+2],buf[offset+3],(int32_t)offset+veclen,veclen,clen,self->s,(int32_t)nbytes);
+            if ( nbytes == offset + veclen )
+                nbytes = veclen;
+            else
+            {
+                printf("nbytes.%d != offset.%d veclen.%d\n",(int32_t)nbytes,(int32_t)offset,veclen);
+            }
+        }
+        else err = -errno;
+        if ( buf != _buf )
+            free(buf);
+        if ( err != 0 )
+        {
+            printf("nn_usock_send_raw errno.%d err.%d\n",errno,err);
+            return(-errno);
+        }
+    }
+    else
+    {
+        printf("nn_usock_send_raw errno.%d invalid iovec size\n",errno);
+        return(-errno);
+    }
+#else
 #if defined MSG_NOSIGNAL
     nbytes = sendmsg(self->s,hdr,MSG_NOSIGNAL);
 #else
     nbytes = sendmsg(self->s,hdr,0);
+#endif
 #endif
     //printf("nn_usock_send_raw nbytes.%d errno.%d for sock.%d\n",(int32_t)nbytes,errno,self->s);
     if ( nn_slow(nbytes < 0) ) // Handle errors
     {
         if ( nn_fast(errno == EAGAIN || errno == EWOULDBLOCK) )
             nbytes = 0;
-#ifdef __PNACL
+/*#ifdef __PNACL
         else if ( errno < 0 )
         {
             PostMessage("nn_usock_send_raw err.%d\n",(int32_t)nbytes);
+            printf("nn_usock_send_raw err.%d\n",(int32_t)nbytes);
             return -ECONNRESET;
         }
-#endif
+#endif*/
         else
         {
             //  If the connection fails, return ECONNRESET
@@ -920,7 +1081,7 @@ static int32_t nn_usock_send_raw(struct nn_usock *self,struct msghdr *hdr)
             return -ECONNRESET;
         }
     }
-    while ( nbytes != 0 ) //  Some bytes were sent. Adjust the iovecs accordingly
+    while ( nbytes != 0 ) // Some bytes sent. Adjust the iovecs. jl777: what to do with ctrl data?
     {
         if ( nbytes >= (ssize_t)hdr->msg_iov->iov_len )
         {
@@ -928,7 +1089,7 @@ static int32_t nn_usock_send_raw(struct nn_usock *self,struct msghdr *hdr)
             if ( !hdr->msg_iovlen )
             {
                 nn_assert(nbytes == (ssize_t)hdr->msg_iov->iov_len);
-                return 0;
+                return(0);
             }
             nbytes -= hdr->msg_iov->iov_len;
             ++hdr->msg_iov;
@@ -942,48 +1103,87 @@ static int32_t nn_usock_send_raw(struct nn_usock *self,struct msghdr *hdr)
     }
     if ( hdr->msg_iovlen > 0 )
         return -EAGAIN;
-    return 0;
+    return(0);
 }
 
-static int32_t nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
+int32_t nn_process_cmsg(struct nn_usock *self,struct msghdr *hdr)
 {
-    size_t sz,length; ssize_t nbytes; struct iovec iov; struct msghdr hdr; uint8_t ctrl[256];
+    // Extract the associated file descriptor, if any
+    int32_t retval = -1;
+#if defined NN_HAVE_MSG_CONTROL
+    struct cmsghdr *cmsg;
+    cmsg = CMSG_FIRSTHDR(hdr);
+    while ( cmsg )
+    {
+        if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS )
+        {
+            retval = *((int32_t *)CMSG_DATA(cmsg));
+            if ( self->in.pfd )
+            {
+                printf("CMSG set self->in.pfd (%d)\n",retval);
+                *self->in.pfd = retval;
+                self->in.pfd = NULL;
+            }
+            else
+            {
+                printf("CMSG nn_closefd(%d)\n",retval);
+                nn_closefd(retval);
+            }
+            break;
+        }
+        cmsg = CMSG_NXTHDR(hdr,cmsg);
+    }
+#else
+    if ( hdr->msg_accrightslen > 0 )
+    {
+        nn_assert(hdr->msg_accrightslen == sizeof(int32_t));
+        retval = *((int32_t *)hdr->msg_accrights);
+        if ( self->in.pfd )
+        {
+            *self->in.pfd = retval;
+            self->in.pfd = NULL;
+        }
+        else nn_closefd(retval);
+    }
+#endif
+    return(retval);
+}
+
+
+static int nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
+{
+    size_t sz,length; ssize_t nbytes; struct iovec iov; struct msghdr hdr; unsigned char ctrl[256];
 #if defined NN_HAVE_MSG_CONTROL
     struct cmsghdr *cmsg;
 #endif
     // If batch buffer doesn't exist, allocate it. The point of delayed deallocation to allow non-receiving sockets, such as TCP listening sockets, to do without the batch buffer
-    if ( nn_slow(!self->in.batch) )
-    {
-        self->in.batch = nn_alloc(NN_USOCK_BATCH_SIZE,"AIO batch buffer");
-        alloc_assert(self->in.batch);
+    if (nn_slow (!self->in.batch)) {
+        self->in.batch = nn_alloc (NN_USOCK_BATCH_SIZE, "AIO batch buffer");
+        alloc_assert (self->in.batch);
     }
     // Try to satisfy the recv request by data from the batch buffer
     length = *len;
     sz = self->in.batch_len - self->in.batch_pos;
-    if ( sz )
-    {
-        if ( sz > length )
+    if (sz) {
+        if (sz > length)
             sz = length;
-        memcpy(buf,self->in.batch + self->in.batch_pos,sz);
-        printf("nn_usock_recv_raw.[%d %d %d %d] sz.%d length.%d\n",((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],(int32_t)sz,(int32_t)length);
+        memcpy (buf, self->in.batch + self->in.batch_pos, sz);
         self->in.batch_pos += sz;
-        buf = ((char *)buf) + sz;
+        buf = ((char*) buf) + sz;
         length -= sz;
-        if ( !length )
+        if (!length)
             return 0;
     }
     // If recv request is greater than the batch buffer, get the data directly into the place. Otherwise, read data to the batch buffer
-    if ( length > NN_USOCK_BATCH_SIZE )
-    {
+    if (length > NN_USOCK_BATCH_SIZE) {
         iov.iov_base = buf;
         iov.iov_len = length;
     }
-    else
-    {
+    else {
         iov.iov_base = self->in.batch;
         iov.iov_len = NN_USOCK_BATCH_SIZE;
     }
-    memset(&hdr,0,sizeof(hdr));
+    memset (&hdr, 0, sizeof (hdr));
     hdr.msg_iov = &iov;
     hdr.msg_iovlen = 1;
 #if defined NN_HAVE_MSG_CONTROL
@@ -992,10 +1192,132 @@ static int32_t nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
 #else
     *((int*) ctrl) = -1;
     hdr.msg_accrights = ctrl;
-    hdr.msg_accrightslen = sizeof(int);
+    hdr.msg_accrightslen = sizeof (int);
+#endif
+    nbytes = recvmsg (self->s, &hdr, 0);
+    if ( nn_slow(nbytes <= 0) ) // Handle any possible errors
+    {
+        
+        if ( nn_slow(nbytes == 0) )
+            return -ECONNRESET;
+        if ( nn_fast(errno == EAGAIN || errno == EWOULDBLOCK) ) // Zero bytes received
+            nbytes = 0;
+        else
+        {
+            // If the peer closes the connection, return ECONNRESET
+            errno_assert (errno == ECONNRESET || errno == ENOTCONN || errno == ECONNREFUSED || errno == ETIMEDOUT || errno == EHOSTUNREACH);
+            return -ECONNRESET;
+        }
+    }
+    // Extract the associated file descriptor, if any
+    if (nbytes > 0) {
+#if defined NN_HAVE_MSG_CONTROL
+        cmsg = CMSG_FIRSTHDR (&hdr);
+        while (cmsg) {
+            if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
+                if (self->in.pfd) {
+                    *self->in.pfd = *((int*) CMSG_DATA (cmsg));
+                    self->in.pfd = NULL;
+                }
+                else {
+                    nn_closefd (*((int*) CMSG_DATA (cmsg)));
+                }
+                break;
+            }
+            cmsg = CMSG_NXTHDR (&hdr, cmsg);
+        }
+#else
+        if (hdr.msg_accrightslen > 0) {
+            nn_assert (hdr.msg_accrightslen == sizeof (int));
+            if (self->in.pfd) {
+                *self->in.pfd = *((int*) hdr.msg_accrights);
+                self->in.pfd = NULL;
+            }
+            else {
+                nn_closefd (*((int*) hdr.msg_accrights));
+            }
+        }
+#endif
+    }
+    // If the data were received directly into the place we can return straight away
+    if (length > NN_USOCK_BATCH_SIZE) {
+        length -= nbytes;
+        *len -= length;
+        return 0;
+    }
+    // New data were read to the batch buffer. Copy the requested amount of it to the user-supplied buffer
+    self->in.batch_len = nbytes;
+    self->in.batch_pos = 0;
+    if (nbytes) {
+        sz = nbytes > (ssize_t)length ? length : (size_t)nbytes;
+        memcpy (buf, self->in.batch, sz);
+        length -= sz;
+        self->in.batch_pos += sz;
+    }
+    *len -= length;
+    return 0;
+}
+
+int32_t new_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
+{
+    size_t sz,length; int32_t clen,veclen,offset = 0; ssize_t nbytes; struct iovec iov;
+    struct msghdr hdr; uint8_t ctrl[256];
+    // Try to satisfy the recv request by data from the batch buffer
+    length = *len;
+    sz = self->in.batch_len - self->in.batch_pos;
+    printf("sz.%d = batch.(%d - %d)\n",(int32_t)sz,(int32_t)self->in.batch_len,(int32_t)self->in.batch_pos);
+#if defined __PNACL || defined __APPLE__
+    nn_assert(sz == 0);
+#else
+    // If batch buffer doesn't exist, allocate it. The point of delayed deallocation to allow non-receiving sockets, such as TCP listening sockets, to do without the batch buffer
+    if ( nn_slow(!self->in.batch) )
+    {
+        self->in.batch = nn_alloc(NN_USOCK_BATCH_SIZE,"AIO batch buffer");
+        alloc_assert(self->in.batch);
+    }
+    if ( sz )
+    {
+        if ( sz > length )
+            sz = length;
+        memcpy(buf,self->in.batch + self->in.batch_pos,sz);
+        printf("nn_usock_recv_raw.[%d %d %d %d | %d %d %d %d] pos.%d len.%d sz.%d length.%d <<<<<<<<<\n",((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],((uint8_t *)buf)[4],((uint8_t *)buf)[5],((uint8_t *)buf)[6],((uint8_t *)buf)[7],(int32_t)self->in.batch_pos,(int32_t)self->in.batch_len,(int32_t)sz,(int32_t)length);
+        self->in.batch_pos += sz;
+        buf = ((char *)buf) + sz;
+        length -= sz;
+        printf("length.%d sz.%d pos.%d\n",(int32_t)length,(int32_t)sz,(int32_t)self->in.batch_pos);
+        if ( length == 0 )
+            return 0;
+    }
+    self->in.batch_pos = 0;
+    memset(&hdr,0,sizeof(hdr));
+    hdr.msg_iov = &iov;
+    hdr.msg_iovlen = 1;
+    // If recv request is greater than the batch buffer, get the data directly into the place. Otherwise, read data to the batch buffer
+    if ( length > NN_USOCK_BATCH_SIZE )
+    {
+        iov.iov_base = buf;
+        iov.iov_len = length;
+        usebuf = 1;
+    }
+    else
+    {
+        iov.iov_base = self->in.batch;
+        iov.iov_len = NN_USOCK_BATCH_SIZE;
+        self->in.batch_pos = 0;
+        usebuf = 0;
+    }
+#if defined NN_HAVE_MSG_CONTROL
+    hdr.msg_control = ctrl;
+    hdr.msg_controllen = sizeof(ctrl);
+#else
+    *((int *)ctrl) = -1;
+    hdr.msg_accrights = ctrl;
+    hdr.msg_accrightslen = sizeof(int32_t);
 #endif
     nbytes = (int32_t)recvmsg(self->s,&hdr,0);
-    //printf("RECVMSG.%d %d bytes errno.%d\n",self->s,(int32_t)nbytes,errno);
+    if ( usebuf == 0 )
+        self->in.batch_len = nbytes;
+    printf("RECVMSG.%d %d bytes errno.%d\n",self->s,(int32_t)nbytes,nbytes < 0 ? errno : 0);
     // Handle any possible errors
     if ( nn_slow(nbytes <= 0) )
     {
@@ -1006,67 +1328,65 @@ static int32_t nn_usock_recv_raw(struct nn_usock *self,void *buf,size_t *len)
         else
         {
             // If the peer closes the connection, return ECONNRESET
-            errno_assert (errno == ECONNRESET || errno == ENOTCONN ||
-                errno == ECONNREFUSED || errno == ETIMEDOUT ||
-                errno == EHOSTUNREACH);
+            errno_assert(errno == ECONNRESET || errno == ENOTCONN || errno == ECONNREFUSED || errno == ETIMEDOUT || errno == EHOSTUNREACH);
             return -ECONNRESET;
         }
-    }
-    /*  Extract the associated file descriptor, if any. */
-    if ( nbytes > 0 )
-    {
-#if defined NN_HAVE_MSG_CONTROL
-        cmsg = CMSG_FIRSTHDR(&hdr);
-        while ( cmsg )
-        {
-            if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS )
-            {
-                if ( self->in.pfd )
-                {
-                    *self->in.pfd = *((int32_t *)CMSG_DATA(cmsg));
-                    self->in.pfd = NULL;
-                }
-                else
-                {
-                    printf("cmsg nn_closefd(%d)\n",*((int32_t *)CMSG_DATA(cmsg)));
-                    nn_closefd(*((int32_t *)CMSG_DATA(cmsg)));
-                }
-                break;
-            }
-            cmsg = CMSG_NXTHDR(&hdr,cmsg);
-        }
-#else
-        if ( hdr.msg_accrightslen >  )
-        {
-            nn_assert(hdr.msg_accrightslen == sizeof(int));
-            if (self->in.pfd) {
-                *self->in.pfd = *((int32_t *)hdr.msg_accrights);
-                self->in.pfd = NULL;
-            }
-            else nn_closefd(*((int32_t *)hdr.msg_accrights));
-        }
-#endif
-    }
-    //  If the data were received directly into the place we can return straight away
-    if ( length > NN_USOCK_BATCH_SIZE )
+    } else nn_process_cmsg(self,&hdr);
+    if ( usebuf != 0 ) // If data were received directly into the place we can return straight away
     {
         length -= nbytes;
         *len -= length;
         return 0;
     }
-    // New data were read to the batch buffer. Copy the requested amount of it to the user-supplied buffer
-    self->in.batch_len = nbytes;
-    self->in.batch_pos = 0;
+    // New data were read to the batch buffer. Copy requested amount of it to the user buffer
     if ( nbytes )
     {
         sz = nbytes > (ssize_t)length ? length : (size_t)nbytes;
-        memcpy(buf,self->in.batch,sz);
+        memcpy(buf,self->in.batch + self->in.batch_pos,sz);
+        printf("%d.[%d %d %d %d] <<<<<<<< sz.%d length.%d ",(int32_t)self->in.batch_pos,((uint8_t *)buf)[0],((uint8_t *)buf)[1],((uint8_t *)buf)[2],((uint8_t *)buf)[3],(int32_t)sz,(int32_t)length);
         length -= sz;
         self->in.batch_pos += sz;
     }
     *len -= length;
-    //printf("nbytes.%d len.%d | self->in.batch_len.%d\n",(int32_t)nbytes,(int32_t)*len,(int32_t)self->in.batch_len);
+    if ( nbytes != 0 || *len != 0 || self->in.batch_pos != 0 || self->in.batch_len != 0 )
+        printf("nbytes.%d len.%d | self->in.batch_pos.%d self->in.batch_len.%d\n",(int32_t)nbytes,(int32_t)*len,(int32_t)self->in.batch_pos,(int32_t)self->in.batch_len);
     return 0;
+#endif
+#if defined __PNACL || defined __APPLE__
+    offset = 0;
+    iov.iov_base = self->in.batch;
+    iov.iov_len = NN_USOCK_BATCH_SIZE; //-2-sizeof(ctrl);
+    nbytes = (int32_t)recv(self->s,iov.iov_base,iov.iov_len,0);
+    printf("rawnbytes.%d ",(int32_t)nbytes);
+    self->in.batch_len = nbytes >= 0 ? nbytes : 0;
+    hdr.msg_controllen = 0;
+    hdr.msg_control = ctrl;
+    if ( nbytes > 0 )
+    {
+        printf("got nbytes.%d from usock.%d [%d %d %d %d]\n",(int32_t)nbytes,self->s,((uint8_t *)iov.iov_base)[0],((uint8_t *)iov.iov_base)[1],((uint8_t *)iov.iov_base)[2],((uint8_t *)iov.iov_base)[3]);
+        offset = 0;
+        veclen = ((uint8_t *)iov.iov_base)[offset++];
+        veclen |= ((int32_t)((uint8_t *)iov.iov_base)[offset++] << 8);
+        veclen |= ((int32_t)((uint8_t *)iov.iov_base)[offset++] << 16);
+        clen = ((uint8_t *)iov.iov_base)[offset++];
+        clen |= ((int32_t)((uint8_t *)iov.iov_base)[offset++] << 8);
+        if ( clen > 0 )
+        {
+            if ( clen > sizeof(ctrl) )
+            {
+                printf("too much control data.%d vs %d, truncate\n",clen,(int32_t)sizeof(ctrl));
+                memcpy(ctrl,&((uint8_t *)iov.iov_base)[offset],sizeof(ctrl));
+                errno = MSG_CTRUNC;
+            }
+            else memcpy(ctrl,&((uint8_t *)iov.iov_base)[offset],clen);
+        }
+        hdr.msg_controllen = clen;
+        nbytes -= offset;
+        printf("offset.%d nbytes.%d clen.%d\n",offset,(int32_t)nbytes,clen);
+        self->in.batch_pos = offset;
+    } else self->in.batch_pos = 0;
+    return((int32_t)nbytes);
+#endif
 }
 
 static int nn_usock_geterr (struct nn_usock *self)

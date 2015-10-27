@@ -44,9 +44,8 @@
 #define nn_assert(x) \
     do {\
         if (nn_slow (!(x))) {\
-            PostMessage("Assertion failed: %s (%s:%d)\n", #x, \
-                __FILE__, __LINE__);\
-            fflush (stderr);\
+            printf("Assertion failed: %s (%s:%d)\n", #x,__FILE__, __LINE__);\
+            PostMessage("Assertion failed: %s (%s:%d)\n", #x,__FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -54,10 +53,8 @@
 #define nn_assert_state(obj, state_name) \
     do {\
         if (nn_slow ((obj)->state != state_name)) {\
-            PostMessage( \
-                "Assertion failed: %d == %s (%s:%d)\n", \
-                (obj)->state, #state_name, \
-                __FILE__, __LINE__);\
+            printf("Assertion failed: %d == %s (%s:%d)\n",(obj)->state, #state_name,__FILE__, __LINE__);\
+            PostMessage("Assertion failed: %d == %s (%s:%d)\n",(obj)->state, #state_name,__FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -66,8 +63,8 @@
 #define alloc_assert(x) \
     do {\
         if (nn_slow (!x)) {\
-            PostMessage("Out of memory (%s:%d)\n",\
-                __FILE__, __LINE__);\
+PostMessage("Out of memory (%s:%d)\n",__FILE__, __LINE__);\
+printf("Out of memory (%s:%d)\n",__FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -76,8 +73,8 @@
 #define errno_assert(x) \
     do {\
         if (nn_slow (!(x))) {\
-            PostMessage("%s [%d] (%s:%d)\n", nn_err_strerror (errno),\
-                (int) errno, __FILE__, __LINE__);\
+PostMessage("%s [%d] (%s:%d)\n", nn_err_strerror (errno),(int) errno, __FILE__, __LINE__);\
+printf("%s [%d] (%s:%d)\n", nn_err_strerror (errno),(int) errno, __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -86,7 +83,8 @@
 #define errnum_assert(cond, err) \
     do {\
         if (nn_slow (!(cond))) {\
-            PostMessage("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE__);\
+PostMessage("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE__);\
+printf("%s [%d] (%s:%d)\n", nn_err_strerror (err),(int) (err), __FILE__, __LINE__);\
             nn_err_abort ();\
         }\
     } while (0)
@@ -118,8 +116,8 @@
 /*  Assertion-like macros for easier fsm debugging. */
 #define nn_fsm_error(message, state, src, type) \
     do {\
-        PostMessage("%s: state=%d source=%d action=%d (%s:%d)\n", \
-            message, state, src, type, __FILE__, __LINE__);\
+PostMessage("%s: state=%d source=%d action=%d (%s:%d)\n",message, state, src, type, __FILE__, __LINE__);\
+printf("%s: state=%d source=%d action=%d (%s:%d)\n",message, state, src, type, __FILE__, __LINE__);\
         nn_err_abort ();\
     } while (0)
 

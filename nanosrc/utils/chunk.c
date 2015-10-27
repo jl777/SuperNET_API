@@ -208,7 +208,7 @@ static struct nn_chunk *nn_chunk_getptr (void *p)
 {
     uint32_t off;
 
-    nn_assert (nn_getl ((uint8_t*) p - sizeof (uint32_t)) == NN_CHUNK_TAG);
+    nn_assert (nn_getl((uint8_t *) p - sizeof (uint32_t)) == NN_CHUNK_TAG);
     off = nn_getl ((uint8_t*) p - 2 * sizeof (uint32_t));
 
     return (struct nn_chunk *) ((uint8_t*) p - 2 *sizeof (uint32_t) - off -

@@ -52,7 +52,7 @@ int32_t nn_ep_init(struct nn_ep *self,int32_t src,struct nn_sock *sock,int32_t e
     self->sock = sock;
     self->eid = eid;
     self->last_errno = 0;
-    printf("ep_init.(%s) eid.%d <- %s://%s bind.%d\n",sock->socket_name,eid,transport->name,addr,bind);
+    //printf("ep_init.(%s) eid.%d <- %s://%s bind.%d\n",sock->socket_name,eid,transport->name,addr,bind);
     nn_list_item_init(&self->item);
     memcpy(&self->options,&sock->ep_template,sizeof(struct nn_ep_options));
     nn_assert(strlen (addr) <= NN_SOCKADDR_MAX); // Store the textual form of the address.

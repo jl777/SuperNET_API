@@ -1,7 +1,7 @@
 var SPNAPI = (function(SPNAPI, $, undefined) {
 
     SPNAPI.methods = {};
-    SPNAPI.pages = ["Settings", "Debug","Wallet", "Tradebots","PAX","MGW","Atomic", "Jumblr", "Pangea", "InstantDEX"];
+    SPNAPI.pages = ["Settings","Jay", "Debug","Wallet", "Tradebots","PAX","MGW","Atomic", "Jumblr", "pangea", "InstantDEX"];
     SPNAPI.pageContent = {};
     SPNAPI.page = "welcome";
 
@@ -25,6 +25,11 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
         $(".page").hide();
         $("#welcome_page").show();
+    $(".submit_api_request").on("click", function () {
+
+    if ( SPNAPI.page == "Jay" ) SPNAPI.handleJay();
+    else SPNAPI.submitRequest();
+    });
 
         $(".submit_api_request").on("click", function () {
 
@@ -54,6 +59,43 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         });
     };
 
+              
+              SPNAPI.handleJay = function(e)
+              {
+              var request = JSON.parse($(".json_submit_url").html());
+              console.log(request);
+              if(request.method == "NxtAPI")
+              {
+              console.log(request.requestType);
+              Jay.request(request.requestType, JSON.parse(request.params), function(ans) {
+                          $(".hljs").html(ans);
+                          })
+              }
+              else if(request.method == "status")
+              {
+              $(".hljs").html("{'status':'doing alright'}");
+              }
+              else if(request.method == "signBytes")
+              {
+              var out = converters.byteArrayToHexString(signBytes(converters.hexStringToByteArray(request.bytes), request.secretPhrase));
+              var ret = {};
+              ret.signature = out;
+              $(".hljs").html(JSON.stringify(ret));
+              }
+              else if(request.method == "createToken")
+              {
+              var out = createToken(request.data, request.secretPhrase);
+              var ret = {};
+              ret.token = out;
+              $(".hljs").html(JSON.stringify(ret));
+              }
+              else if(request.method == "parseToken")
+              {
+              var out = parseToken(request.token, request.data);
+              $(".hljs").html(JSON.stringify(out));
+              }
+              console.log(request);
+              }
 
     return SPNAPI;
 }(SPNAPI || {}, jQuery));

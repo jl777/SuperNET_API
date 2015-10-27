@@ -55,20 +55,25 @@ void nn_glock_unlock (void)
 #include <pthread.h>
 
 static pthread_mutex_t nn_glock_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int32_t glock_depth;
 
-void nn_glock_lock (void)
+void nn_glock_lock(void)
 {
-    int rc;
-
-    rc = pthread_mutex_lock (&nn_glock_mutex);
-    errnum_assert (rc == 0, rc);
+    int32_t rc;
+    if ( 0 && glock_depth != 0 )
+        printf("nn_glock_lock depth.%d\n",glock_depth);
+    glock_depth++;
+    rc = pthread_mutex_lock(&nn_glock_mutex);
+    errnum_assert(rc == 0, rc);
 }
 
 void nn_glock_unlock (void)
 {
-    int rc;
-
+    int32_t rc;
+    if ( 0 && glock_depth != 1 )
+        printf("nn_glock_unlock depth.%d\n",glock_depth);
     rc = pthread_mutex_unlock (&nn_glock_mutex);
+    glock_depth--;
     errnum_assert (rc == 0, rc);
 }
 

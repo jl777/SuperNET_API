@@ -53,8 +53,7 @@ static const struct nn_sockbase_vfptr nn_xrespondent_sockbase_vfptr = {
     nn_xrespondent_getopt
 };
 
-void nn_xrespondent_init (struct nn_xrespondent *self,
-    const struct nn_sockbase_vfptr *vfptr, void *hint)
+void nn_xrespondent_init (struct nn_xrespondent *self,const struct nn_sockbase_vfptr *vfptr, void *hint)
 {
     nn_sockbase_init (&self->sockbase, vfptr, hint);
 

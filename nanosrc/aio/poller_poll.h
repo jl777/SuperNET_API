@@ -30,7 +30,8 @@ struct nn_poller_hndl {
     int index;
 };
 
-struct nn_poller {
+struct nn_poller
+{
 
     /*  Actual number of elements in the pollset. */
     int size;

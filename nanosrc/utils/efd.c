@@ -38,14 +38,14 @@
 
 #include <poll.h>
 
-int nn_efd_wait (struct nn_efd *self, int timeout)
+int nn_efd_wait(struct nn_efd *self, int timeout)
 {
     int rc;
     struct pollfd pfd;
-
     pfd.fd = nn_efd_getfd (self);
     pfd.events = POLLIN;
-    rc = poll (&pfd, 1, timeout);
+    //printf("nn_efd_wait.%p [%d] timeout.%d\n",self,pfd.fd,timeout);
+    rc = poll(&pfd,1,timeout);
     if (nn_slow (rc < 0 && errno == EINTR))
         return -EINTR;
     errno_assert (rc >= 0);

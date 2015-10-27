@@ -31,12 +31,13 @@
 void nn_worker_timer_init (struct nn_worker_timer *self, struct nn_fsm *owner)
 {
     self->owner = owner;
-    nn_timerset_hndl_init (&self->hndl);
+    nn_timerset_hndl_init(&self->hndl);
 }
 
-void nn_worker_timer_term (struct nn_worker_timer *self)
+void nn_worker_timer_term(struct nn_worker_timer *self)
 {
-    nn_timerset_hndl_term (&self->hndl);
+    //printf("nn_worker_timer_term\n");
+    nn_timerset_hndl_term(&self->hndl);
 }
 
 int nn_worker_timer_isactive (struct nn_worker_timer *self)

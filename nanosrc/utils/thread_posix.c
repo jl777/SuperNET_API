@@ -28,18 +28,26 @@
 
 static void *nn_thread_main_routine(void *arg)
 {
-    struct nn_thread *self;
+    struct nn_thread *self; nn_thread_routine *func;
     self = (struct nn_thread *)arg;
     //PostMessage("nn_thread_main_routine arg.%p self->routine(%p) at %p\n",arg,self->arg,self->routine);
-    self->routine(self->arg); // Run the thread routine
+    if ( (func= self->routine) != 0 )
+    {
+        func(self->arg); // Run the thread routine
+    }
     return NULL;
 }
 
 void nn_thread_term(struct nn_thread *self)
 {
-    int32_t rc;
+    int32_t rc = 0;
+    //PostMessage("Terminate thread.%p via pthread_join(%p)\n",self,self->handle);
+    //printf("Terminate thread.%p via pthread_join(%p)\n",self,self->handle);
+    //self->routine = 0;
+    //pthread_exit(self->handle);
     rc = pthread_join(self->handle,NULL);
-    printf("Terminate thread.%p via pthread_join(%p) rc.%d\n",self,self->handle,rc);
+    //PostMessage("mark as Terminated thread.%p via pthread_join(%p) rc.%d\n",self,self->handle,rc);
+    //printf("mark as Terminated thread.%p via pthread_join(%p) rc.%d\n",self,self->handle,rc);
     errnum_assert(rc == 0,rc);
 }
 
@@ -58,19 +66,24 @@ void nn_thread_init(struct nn_thread *self,nn_thread_routine *routine,void *arg)
 
 void nn_thread_init(struct nn_thread *self,nn_thread_routine *routine, void *arg)
 {
-    int32_t rc; sigset_t new_sigmask,old_sigmask;
-    // No signals should be processed by this thread. The library doesn't use signals and thus all the signals should be delivered to application threads, not to worker threads.
+    int32_t rc; sigset_t new_sigmask,old_sigmask; //pthread_attr_t attr;
+   // No signals should be processed by this thread. The library doesn't use signals and thus all the signals should be delivered to application threads, not to worker threads.
     rc = sigfillset(&new_sigmask);
     errno_assert(rc == 0);
-    rc = pthread_sigmask(SIG_BLOCK, &new_sigmask, &old_sigmask);
+    rc = pthread_sigmask(SIG_BLOCK,&new_sigmask,&old_sigmask);
     errnum_assert(rc == 0, rc);
     self->routine = routine;
     self->arg = arg;
+	//pthread_attr_init(&attr);
+	//pthread_attr_setscope(&attr,PTHREAD_SCOPE_SYSTEM);
+	//pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
+	//pthread_attr_setstacksize(&attr,256 * 1024);
     rc = pthread_create(&self->handle,NULL,nn_thread_main_routine,(void *)self);
-    errnum_assert (rc == 0, rc);
+    errnum_assert(rc == 0, rc);
+   	//pthread_attr_destroy(&attr);
     //  Restore signal set to what it was before.
-    rc = pthread_sigmask(SIG_BLOCK, &new_sigmask, &old_sigmask);
-    errnum_assert (rc == 0, rc);
+    rc = pthread_sigmask(SIG_SETMASK,&old_sigmask,NULL);
+    errnum_assert(rc == 0, rc);
 }
 #endif
 

@@ -120,8 +120,7 @@ void *nn_chunkref_data (struct nn_chunkref *self)
 size_t nn_chunkref_size (struct nn_chunkref *self)
 {
     return self->u.ref [0] == 0xff ?
-        nn_chunk_size (((struct nn_chunkref_chunk*) self)->chunk) :
-        self->u.ref [0];
+        nn_chunk_size (((struct nn_chunkref_chunk*) self)->chunk) : self->u.ref [0];
 }
 
 void nn_chunkref_trim (struct nn_chunkref *self, size_t n)

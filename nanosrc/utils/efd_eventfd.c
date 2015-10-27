@@ -60,11 +60,9 @@ nn_fd nn_efd_getfd (struct nn_efd *self)
 
 void nn_efd_signal (struct nn_efd *self)
 {
-    const uint64_t one = 1;
-    ssize_t nbytes;
-
-    nbytes = write (self->efd, &one, sizeof (one));
-    errno_assert (nbytes == sizeof (one));
+    ssize_t nbytes; const uint64_t one = 1;
+    nbytes = write(self->efd,&one,sizeof(one));
+    errno_assert(nbytes == sizeof(one));
 }
 
 void nn_efd_unsignal (struct nn_efd *self)

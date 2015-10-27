@@ -74,7 +74,7 @@ nn_fd nn_efd_getfd (struct nn_efd *self)
     return self->r;
 }
 
-void nn_efd_signal (struct nn_efd *self)
+void nn_efd_signal(struct nn_efd *self)
 {
     ssize_t nbytes;
     char c = 101;
