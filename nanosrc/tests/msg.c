@@ -30,7 +30,7 @@
 #define SOCKET_ADDRESS "inproc://a"
 #define SOCKET_ADDRESS_TCP "tcp://127.0.0.1:9456"
 
-char longdata[NN_USOCK_BATCH_SIZE];
+char longdata[NN_USOCK_BATCH_SIZE>>1];
 
 int testmsg()
 {

@@ -212,7 +212,7 @@ const char *nn_strerror (int errnum)
 #endif
 
     /*  Check whether the library was already initialised. If so, do nothing. */
-    PostMessage("nn_global_init.%p\n",SELF.socks);
+    //PostMessage("nn_global_init.%p\n",SELF.socks);
     if ( SELF.socks )
         return;
     /*  On Windows, initialise the socket library. */
@@ -222,14 +222,14 @@ const char *nn_strerror (int errnum)
     nn_assert (LOBYTE (data.wVersion) == 2 &&
         HIBYTE (data.wVersion) == 2);
 #endif
-    PostMessage("call nn_alloc_init\n");
+    //PostMessage("call nn_alloc_init\n");
     /*  Initialise the memory allocation subsystem. */
     nn_alloc_init ();
-    PostMessage("call nn_random_seed\n");
+    //PostMessage("call nn_random_seed\n");
 
     /*  Seed the pseudo-random number generator. */
     nn_random_seed ();
-    PostMessage("call nn_alloc\n");
+    //PostMessage("call nn_alloc\n");
 
     /*  Allocate the global table of SP sockets. */
     SELF.socks = nn_alloc ((sizeof (struct nn_sock*) * NN_MAX_SOCKETS) +
@@ -540,7 +540,7 @@ int nn_global_create_socket (int domain, int protocol)
 int nn_socket (int domain, int protocol)
 {
     int rc;
-    PostMessage("nn_socket.(%d %d)\n",domain,protocol);
+    //PostMessage("nn_socket.(%d %d)\n",domain,protocol);
     nn_glock_lock ();
 
     /*  If nn_term() was already called, return ETERM. */
@@ -553,7 +553,7 @@ int nn_socket (int domain, int protocol)
 
     /*  Make sure that global state is initialised. */
     nn_global_init ();
-    PostMessage("nn_global_create_socket.(%d %d)\n",domain,protocol);
+    //PostMessage("nn_global_create_socket.(%d %d)\n",domain,protocol);
 
     rc = nn_global_create_socket (domain, protocol);
 

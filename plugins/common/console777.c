@@ -257,13 +257,29 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
 void process_userinput(char *_line)
 {
     static char *line,*line2,*match = "./BitcoinDarkd SuperNET '";
-    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; cJSON *json; int len,timeout,broadcastflag = 0;
+    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; cJSON *json; int i,j,len,timeout,broadcastflag = 0;
     len = (int32_t)strlen(match);
     if ( _line[strlen(_line)-1] == '\'' && strncmp(_line,match,len) == 0 )
     {
         _line[strlen(_line)-1] = 0;
         _line += len;
     }
+    printf("%02x %02x %02x %02x %02x\n",0xff & _line[0],0xff & _line[1],0xff & _line[2],0xff & _line[3],0xff & _line[4]);
+    for (i=j=0; _line[i]!=0; i++)
+    {
+        if ( (uint8_t)_line[i] == 0xe2 && (uint8_t)_line[i+1] == 0x80 )
+        {
+            if ( (uint8_t)_line[i+2] == 0x99 )
+                _line[j++] = '\'', i += 2;
+            else if ( (uint8_t)_line[i+2] == 0x9c || (uint8_t)_line[i+2] == 0x9d )
+                _line[j++] = '"', i += 2;
+            else _line[j++] = _line[i];
+        }
+        else _line[j++] = _line[i];
+        //else if ( (uint8_t)_line[i] == 0x9c )
+          //  _line[i] = '"';
+    }
+    _line[j++] = 0;
     if ( (json= cJSON_Parse(_line)) != 0 )
     {
         char *process_nn_message(int32_t sock,char *jsonstr);
@@ -274,7 +290,13 @@ void process_userinput(char *_line)
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
         fprintf(stderr,"console.(%s) -> (%s)\n",_line,retstr);
         return;
-    } else printf("cant parse.(%s)\n",line);
+    }
+    else
+    {
+        for (i=0; _line[i]!=0; i++)
+            printf("(%c %02x) ",_line[i],_line[i]&0xff);
+        printf("cant parse.(%s)\n",line);
+    }
     printf("[%s]\n",_line);
     if ( line == 0 )
         line = calloc(1,65536), line2 = calloc(1,65536);

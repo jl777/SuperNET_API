@@ -292,7 +292,7 @@ int nn_usock_bind (struct nn_usock *self, const struct sockaddr *addr,
     errno_assert (rc == 0);
 
     rc = bind (self->s, addr, (socklen_t) addrlen);
-    PostMessage("usock.%d -> bind rc.%d errno.%d\n",self->s,rc,errno);
+    //PostMessage("usock.%d -> bind rc.%d errno.%d\n",self->s,rc,errno);
     if (nn_slow (rc != 0))
         return -errno;
 
@@ -308,7 +308,7 @@ int nn_usock_listen (struct nn_usock *self, int backlog)
 
     /*  Start listening for incoming connections. */
     rc = listen (self->s, backlog);
-    PostMessage("usock.%d -> listen rc.%d errno.%d\n",self->s,rc,errno);
+    //PostMessage("usock.%d -> listen rc.%d errno.%d\n",self->s,rc,errno);
     if (nn_slow (rc != 0))
         return -errno;
 
@@ -335,7 +335,7 @@ void nn_usock_accept (struct nn_usock *self, struct nn_usock *listener)
 #else
     s = accept (listener->s, NULL, NULL);
 #endif
-    PostMessage("usock.%d -> accept errno.%d s.%d\n",self->s,errno,s);
+    //PostMessage("usock.%d -> accept errno.%d s.%d\n",self->s,errno,s);
 
     /*  Immediate success. */
     if (nn_fast (s >= 0)) {
@@ -395,7 +395,7 @@ void nn_usock_connect (struct nn_usock *self, const struct sockaddr *addr,
 
     /* Do the connect itself. */
     rc = connect(self->s,addr,(socklen_t)addrlen);
-    PostMessage("usock.%d <- connect (%llx) rc.%d errno.%d\n",self->s,*(long long *)addr,rc,errno);
+    //PostMessage("usock.%d <- connect (%llx) rc.%d errno.%d\n",self->s,*(long long *)addr,rc,errno);
     /* Immediate success. */
     if ( nn_fast(rc == 0) )
     {
@@ -435,9 +435,9 @@ void nn_usock_send (struct nn_usock *self, const struct nn_iovec *iov,
         self->out.iov [out].iov_base = iov [i].iov_base;
         self->out.iov [out].iov_len = iov [i].iov_len;
         out++;
-        PostMessage("{%d} ",(int)iov [i].iov_len);
+        //PostMessage("{%d} ",(int)iov [i].iov_len);
     }
-    PostMessage("iov[%d]\n",out);
+    //PostMessage("iov[%d]\n",out);
     self->out.hdr.msg_iovlen = out;
 
     /*  Try to send the data immediately. */
@@ -474,17 +474,17 @@ void nn_usock_recv (struct nn_usock *self, void *buf, size_t len, int *fd)
     rc = nn_usock_recv_raw (self, buf, &nbytes);
     if (nn_slow (rc < 0)) {
         errnum_assert (rc == -ECONNRESET, -rc);
-        PostMessage("rc.%d vs ECONNRESET\n",rc,ECONNRESET);
+        //PostMessage("rc.%d vs ECONNRESET\n",rc,ECONNRESET);
         nn_fsm_action (&self->fsm, NN_USOCK_ACTION_ERROR);
         return;
     }
-    int i;
-    for (i=0; i<16&&i<nbytes; i++)
-        PostMessage("%02x ",((uint8_t *)buf)[i]);
-    PostMessage("nn_usock_recv nbytes.%d\n",(int)nbytes);
+    //int i;
+    //for (i=0; i<16&&i<nbytes; i++)
+    //    PostMessage("%02x ",((uint8_t *)buf)[i]);
+    //PostMessage("nn_usock_recv nbytes.%d\n",(int)nbytes);
     /*  Success. */
     if (nn_fast (nbytes == len)) {
-        PostMessage("raise NN_USOCK_RECEIVED\n");
+        //PostMessage("raise NN_USOCK_RECEIVED\n");
         nn_fsm_raise (&self->fsm, &self->event_received, NN_USOCK_RECEIVED);
         return;
     }
@@ -1070,10 +1070,10 @@ ssize_t mysendmsg(int32_t usock,struct msghdr *hdr,int32_t flags)
         if ( nn_getiovec_size(&buf[offset],veclen,hdr) == veclen )
         {
             nbytes = send(usock,buf,offset + veclen,0);
-            PostMessage(">>>>>>>>> send.[%d %d %d %d] (n.%d v.%d c.%d)-> usock.%d nbytes.%d\n",buf[offset],buf[offset+1],buf[offset+2],buf[offset+3],(int32_t)offset+veclen,veclen,clen,usock,(int32_t)nbytes);
+            //PostMessage(">>>>>>>>> send.[%d %d %d %d] (n.%d v.%d c.%d)-> usock.%d nbytes.%d\n",buf[offset],buf[offset+1],buf[offset+2],buf[offset+3],(int32_t)offset+veclen,veclen,clen,usock,(int32_t)nbytes);
             if ( nbytes != offset + veclen )
             {
-                PostMessage("nbytes.%d != offset.%d veclen.%d errno.%d usock.%d\n",(int32_t)nbytes,(int32_t)offset,veclen,errno,usock);
+                //PostMessage("nbytes.%d != offset.%d veclen.%d errno.%d usock.%d\n",(int32_t)nbytes,(int32_t)offset,veclen,errno,usock);
             }
             if ( nbytes >= offset )
                 nbytes -= offset;
@@ -1114,26 +1114,25 @@ ssize_t myrecvmsg(int32_t usock,struct msghdr *hdr,int32_t flags)
     veclen |= ((int32_t)lens[offset++] << 16);
     clen = lens[offset++];
     clen |= ((int32_t)lens[offset++] << 8);
-    PostMessage("veclen.%d clen.%d waiting in usock.%d\n",veclen,clen,usock);
-    hdr->msg_controllen = clen;
+    //PostMessage("veclen.%d clen.%d waiting in usock.%d\n",veclen,clen,usock);
     if ( clen > 0 )
     {
         if ( (cbytes= (int32_t)recv(usock,hdr->msg_control,clen,0)) != clen )
         {
             PostMessage("myrecvmsg: unexpected cbytes.%d vs clen.%d\n",cbytes,clen);
-            return(0);
         }
     } else cbytes = 0;
+    hdr->msg_controllen = cbytes;
     if ( (nbytes= (int32_t)recv(usock,iov->iov_base,veclen,0)) != veclen )
     {
-        PostMessage("myrecvmsg: unexpected nbytes.%d vs veclen.%d\n",(int32_t)nbytes,veclen);
+        //PostMessage("myrecvmsg: unexpected nbytes.%d vs veclen.%d\n",(int32_t)nbytes,veclen);
         //return(0);
     }
-    PostMessage("GOT cbytes.%d nbytes.%d\n",(int32_t)cbytes,(int32_t)nbytes);
-    if ( nbytes > 0 )
+    //PostMessage("GOT cbytes.%d (clen.%d) nbytes.%d from usock.%d\n",(int32_t)cbytes,clen,(int32_t)nbytes,usock);
+    /*if ( nbytes > 0 )
     {
         PostMessage("got nbytes.%d from usock.%d [%d %d %d %d]\n",(int32_t)nbytes,usock,((uint8_t *)iov->iov_base)[0],((uint8_t *)iov->iov_base)[1],((uint8_t *)iov->iov_base)[2],((uint8_t *)iov->iov_base)[3]);
-    }
+    }*/
     return(nbytes);
 }
 
@@ -1288,6 +1287,7 @@ static int nn_usock_recv_raw (struct nn_usock *self, void *buf, size_t *len)
     if ( nn_slow(nbytes <= 0) )
     {
 #if NN_USE_MYMSG
+        //PostMessage("got nbytes.%d from recvmsg errno.%d\n",(int32_t)nbytes,errno);
 #else
         if ( nn_slow(nbytes == 0) )
             return -ECONNRESET;
@@ -1296,16 +1296,18 @@ static int nn_usock_recv_raw (struct nn_usock *self, void *buf, size_t *len)
             nbytes = 0;
         else
         {
+            printf("errno.%d\n",errno);
             // If the peer closes the connection, return ECONNRESET
             errno_assert(errno == ECONNRESET || errno == ENOTCONN || errno == ECONNREFUSED || errno == ETIMEDOUT || errno == EHOSTUNREACH
 #if NN_USE_MYMSG
-                         || errno == EADDRINUSE
+                         || errno == EADDRINUSE || errno == EINPROGRESS
 #endif
                          );
             return -ECONNRESET;
         }
-    } else nn_process_cmsg(self,&hdr);
-    PostMessage("nbytes.%d length.%d *len %d\n",(int)nbytes,(int)length,(int)*len);
+    } else if ( hdr.msg_controllen > 0 )
+        nn_process_cmsg(self,&hdr);
+    //PostMessage("nbytes.%d length.%d *len %d\n",(int)nbytes,(int)length,(int)*len);
 
     /*  If the data were received directly into the place we can return straight away. */
     if ( usebuf != 0 )

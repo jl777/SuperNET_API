@@ -59,7 +59,7 @@ void PostMessage(const char* format, ...);
 
 /*  Size of the buffer used for batch-reads of inbound data. To keep the
  performance optimal make sure that this value is larger than network MTU. */
-#define _NN_USOCK_BATCH_SIZE 65536
+#define _NN_USOCK_BATCH_SIZE (128 * 1024)
 #define NN_USOCK_BATCH_SIZE (_NN_USOCK_BATCH_SIZE - 5 - 256 - 16) // adjust for veclen/clen + sizeof(ctrl)
 
 #if defined __PNACL || defined __APPLE__

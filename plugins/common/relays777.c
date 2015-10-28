@@ -222,6 +222,7 @@ printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
+    strcpy(servers[n++],"5.9.56.103");
     strcpy(servers[n++],"5.9.102.210");
     return(n);
     strcpy(servers[n++],"89.248.160.237");
