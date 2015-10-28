@@ -146,7 +146,7 @@ int nn_chunk_realloc (size_t size, void **chunk)
 void nn_chunk_free (void *p)
 {
     struct nn_chunk *self;
-    //printf("nn_chunk_free.%p\n",p);
+
     self = nn_chunk_getptr (p);
 
     /*  Decrement the reference count. Actual deallocation happens only if

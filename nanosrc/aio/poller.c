@@ -25,11 +25,11 @@
 #if !defined NN_HAVE_WINDOWS
 
 #if defined NN_USE_POLL
-#include "poller_poll.inc"
+#include "poller_poll.c"
 #elif defined NN_USE_EPOLL
-#include "poller_epoll.inc"
+xxx #include "poller_epoll.c"
 #elif defined NN_USE_KQUEUE
-#include "poller_kqueue.inc"
+xxx #include "poller_kqueue.c"
 #endif
 
 #endif

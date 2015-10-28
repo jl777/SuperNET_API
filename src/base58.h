@@ -78,7 +78,7 @@ inline bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
     CBigNum bn58 = 58;
     CBigNum bn = 0;
     CBigNum bnChar;
-    while (isspace(*psz))
+    while (isspace((uint32_t)*psz))
         psz++;
 
     // Convert big endian string to bignum
@@ -87,7 +87,7 @@ inline bool DecodeBase58(const char* psz, std::vector<unsigned char>& vchRet)
         const char* p1 = strchr(pszBase58, *p);
         if (p1 == NULL)
         {
-            while (isspace(*p))
+            while (isspace((uint32_t)*p))
                 p++;
             if (*p != '\0')
                 return false;

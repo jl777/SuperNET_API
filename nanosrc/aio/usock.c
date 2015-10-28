@@ -23,7 +23,7 @@
 #include "usock.h"
 
 #if defined NN_HAVE_WINDOWS
-#include "usock_win.inc"
+#include "usock_win.c"
 #else
 #include "usock_posix.c"
 #endif

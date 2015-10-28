@@ -31,52 +31,42 @@
 #define NN_FSM_STATE_ACTIVE 2
 #define NN_FSM_STATE_STOPPING 3
 
-void nn_fsm_event_init (struct nn_fsm_event *self)
+void nn_fsm_event_init(struct nn_fsm_event *self)
 {
     self->fsm = NULL;
     self->src = -1;
     self->srcptr = NULL;
     self->type = -1;
-    nn_queue_item_init (&self->item);
+    nn_queue_item_init(&self->item);
 }
 
-void nn_fsm_event_term (struct nn_fsm_event *self)
-{
-    nn_queue_item_term (&self->item);
-}
+void nn_fsm_event_term(struct nn_fsm_event *self) { nn_queue_item_term(&self->item); }
 
-int nn_fsm_event_active (struct nn_fsm_event *self)
-{
-    return nn_queue_item_isinqueue (&self->item);
-}
+int nn_fsm_event_active(struct nn_fsm_event *self) { return nn_queue_item_isinqueue (&self->item); }
 
-void nn_fsm_event_process (struct nn_fsm_event *self)
+void nn_fsm_event_process(struct nn_fsm_event *self)
 {
-    int src;
-    int type;
-    void *srcptr;
-
+    int32_t src,type; void *srcptr;
+    //PostMessage("fsm_event_process.%p\n",self);
     src = self->src;
     type = self->type;
     srcptr = self->srcptr;
     self->src = -1;
     self->type = -1;
     self->srcptr = NULL;
-
-    nn_fsm_feed (self->fsm, src, type, srcptr);
+    //PostMessage("fsm_event_process call nn_fsm_feed.(%p %d).%p\n",src,type,srcptr);
+    nn_fsm_feed(self->fsm,src,type,srcptr);
 }
 
-void nn_fsm_feed (struct nn_fsm *self, int src, int type, void *srcptr)
+void nn_fsm_feed(struct nn_fsm *self,int32_t src,int32_t type,void *srcptr)
 {
-    if (nn_slow (self->state != NN_FSM_STATE_STOPPING)) {
-        self->fn (self, src, type, srcptr);
-    } else {
-        self->shutdown_fn (self, src, type, srcptr);
-    }
+    //PostMessage("nn_fsm_feed.(%d %d) state.%d vs %d,  fn.%p shutdown.%p\n",src,type,self->state,NN_FSM_STATE_STOPPING,self->fn,self->shutdown_fn);
+    if ( nn_slow(self->state != NN_FSM_STATE_STOPPING) )
+        self->fn(self,src,type,srcptr);
+    else self->shutdown_fn(self,src,type,srcptr);
 }
 
-void nn_fsm_init_root (struct nn_fsm *self, nn_fsm_fn fn,
-    nn_fsm_fn shutdown_fn, struct nn_ctx *ctx)
+void nn_fsm_init_root(struct nn_fsm *self, nn_fsm_fn fn,nn_fsm_fn shutdown_fn, struct nn_ctx *ctx)
 {
     self->fn = fn;
     self->shutdown_fn = shutdown_fn;

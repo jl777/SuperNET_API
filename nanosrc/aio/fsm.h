@@ -22,7 +22,7 @@
 
 #ifndef NN_FSM_INCLUDED
 #define NN_FSM_INCLUDED
-#include "../nn_config.h"
+
 #include "../utils/queue.h"
 
 /*  Base class for state machines. */

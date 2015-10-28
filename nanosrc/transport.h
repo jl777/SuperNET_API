@@ -109,7 +109,8 @@ void nn_epbase_getopt (struct nn_epbase *self, int level, int option,
 int nn_epbase_ispeer (struct nn_epbase *self, int socktype);
 
 /*  Notifies a monitoring system the error on this endpoint  */
-void nn_epbase_set_error(struct nn_epbase *self, int errnum);
+//void nn_epbase_set_error(struct nn_epbase *self, int errnum);
+void nn_epbase_set_error(struct nn_epbase *self,int32_t errnum,char *fname,int32_t linenum);
 
 /*  Notifies a monitoring system that error is gone  */
 void nn_epbase_clear_error(struct nn_epbase *self);

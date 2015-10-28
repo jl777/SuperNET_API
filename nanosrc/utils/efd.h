@@ -42,15 +42,6 @@
 #error
 #endif
 
-/* from socketpair
-typedef int nn_fd;
-
-struct nn_efd {
-    int r;
-    int w;
-};*/
-
-
 /*  Initialise the efd object. */
 int nn_efd_init (struct nn_efd *self);
 

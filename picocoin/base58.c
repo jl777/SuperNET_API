@@ -113,14 +113,14 @@ cstring *base58_decode(const char *s_in)
 	BN_set_word(&bn58, 58);
 	BN_set_word(&bn, 0);
 
-	while (isspace((int32_t)*s_in))
+	while (isspace((uint32_t)*s_in))
 		s_in++;
 
 	const char *p;
 	for (p = s_in; *p; p++) {
 		const char *p1 = strchr(base58_chars, *p);
 		if (!p1) {
-			while (isspace((int32_t)*p))
+			while (isspace((uint32_t)*p))
 				p++;
 			if (*p != '\0')
 				goto out;

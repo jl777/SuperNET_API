@@ -25,10 +25,12 @@
 #include "queue.h"
 #include "err.h"
 
-void nn_queue_init (struct nn_queue *self)
+void nn_queue_init(struct nn_queue *self)
 {
+    //PostMessage("nn_queue_init self.%p\n",self);
     self->head = NULL;
     self->tail = NULL;
+    //PostMessage("done nn_queue_init self.%p\n",self);
 }
 
 void nn_queue_term (struct nn_queue *self)
@@ -94,6 +96,7 @@ struct nn_queue_item *nn_queue_pop (struct nn_queue *self)
 
 void nn_queue_item_init (struct nn_queue_item *self)
 {
+    //PostMessage("nn_queue_item_init.%p\n",self);
     self->next = NN_QUEUE_NOTINQUEUE;
 }
 

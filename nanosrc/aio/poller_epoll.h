@@ -20,6 +20,9 @@
     IN THE SOFTWARE.
 */
 
+#define NN_USE_POLL
+
+
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/epoll.h>

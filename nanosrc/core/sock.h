@@ -159,9 +159,10 @@ struct nn_ctx *nn_sock_getctx (struct nn_sock *self);
     0 otherwise. */
 int nn_sock_ispeer (struct nn_sock *self, int socktype);
 
+struct nn_ep *nn_find_ep(struct nn_sock *self,int32_t eid,const char *addr,struct nn_transport *transport,int32_t bind);
+
 /*  Add new endpoint to the socket. */
-int nn_sock_add_ep (struct nn_sock *self, struct nn_transport *transport,
-    int bind, const char *addr);
+int nn_sock_add_ep (struct nn_sock *self, struct nn_transport *transport,int bind, const char *addr);
 
 /*  Remove the endpoint with the specified ID from the socket. */
 int nn_sock_rm_ep (struct nn_sock *self, int eid);
@@ -173,24 +174,22 @@ int nn_sock_send (struct nn_sock *self, struct nn_msg *msg, int flags);
 int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags);
 
 /*  Set a socket option. */
-int nn_sock_setopt (struct nn_sock *self, int level, int option,
-    const void *optval, size_t optvallen);
+int nn_sock_setopt (struct nn_sock *self, int level, int option,const void *optval, size_t optvallen);
 
 /*  Retrieve a socket option. This function is to be called from the API. */
-int nn_sock_getopt (struct nn_sock *self, int level, int option,
-    void *optval, size_t *optvallen);
+int nn_sock_getopt (struct nn_sock *self, int level, int option,void *optval, size_t *optvallen);
 
 /*  Retrieve a socket option. This function is to be called from within
     the socket. */
-int nn_sock_getopt_inner (struct nn_sock *self, int level, int option,
-    void *optval, size_t *optvallen);
+int nn_sock_getopt_inner (struct nn_sock *self, int level, int option,void *optval, size_t *optvallen);
 
 /*  Used by pipes. */
 int nn_sock_add (struct nn_sock *self, struct nn_pipe *pipe);
 void nn_sock_rm (struct nn_sock *self, struct nn_pipe *pipe);
 
 /*  Monitoring callbacks  */
-void nn_sock_report_error(struct nn_sock *self, struct nn_ep *ep,  int errnum);
+//void nn_sock_report_error(struct nn_sock *self, struct nn_ep *ep,  int errnum);
+void nn_sock_report_error(struct nn_sock *self,struct nn_ep *ep,int32_t errnum,char *fname,int32_t linenum);
 void nn_sock_stat_increment(struct nn_sock *self, int name, int64_t increment);
 
 #endif

@@ -238,7 +238,7 @@ void nn_msg_array_term (struct nn_list *msg_array)
     nn_list_term (msg_array);
 }
 
-int nn_utf8_code_point (const uint8_t *buffer, size_t len)
+ int nn_utf8_code_point (const uint8_t *buffer, size_t len)
 {
     /*  The lack of information is considered neither valid nor invalid. */
     if (!buffer || !len)
@@ -608,12 +608,10 @@ static int nn_sws_recv (struct nn_pipebase *self, struct nn_msg *msg)
 
 static void nn_sws_validate_utf8_chunk (struct nn_sws *self)
 {
-    uint8_t *pos;
-    int code_point_len;
-    int len;
+    uint8_t *pos; int32_t code_point_len,len;
 
-    len = (int)self->inmsg_current_chunk_len;
-    pos = (uint8_t *)self->inmsg_current_chunk_buf;
+    len = (int32_t)self->inmsg_current_chunk_len;
+    pos = self->inmsg_current_chunk_buf;
 
     /*  For chunked transfers, it's possible that a previous chunk was cut
         intra-code point. That partially-validated code point is reassembled
@@ -716,12 +714,9 @@ static void nn_sws_validate_utf8_chunk (struct nn_sws *self)
 
 static void nn_sws_validate_close_handshake (struct nn_sws *self)
 {
-    uint8_t *pos;
-    uint16_t close_code;
-    int code_point_len;
-    int len;
+    uint8_t *pos; uint16_t close_code; int32_t code_point_len,len;
     
-    len = (int)self->inmsg_current_chunk_len - NN_SWS_CLOSE_CODE_LEN;
+    len = (int32_t)(self->inmsg_current_chunk_len - NN_SWS_CLOSE_CODE_LEN);
     pos = self->inmsg_current_chunk_buf + NN_SWS_CLOSE_CODE_LEN;
 
     /*  As per RFC 6455 7.1.6, the Close Reason following the Close Code

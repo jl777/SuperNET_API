@@ -41,6 +41,8 @@
 /*  Maximum number of iovecs that can be passed to nn_usock_send function. */
 #define NN_USOCK_MAX_IOVCNT 3
 
+///  Size of the buffer used for batch-reads of inbound data. To keep the performance optimal make sure that this value is larger than network MTU.
+//#define NN_USOCK_BATCH_SIZE 2048
 
 #if defined NN_HAVE_WINDOWS
 #include "usock_win.h"

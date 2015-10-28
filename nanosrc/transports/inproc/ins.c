@@ -46,38 +46,36 @@ struct nn_ins {
 
 /*  Global instance of the nn_ins object. It contains the lists of all
     inproc endpoints in the current process. */
-static struct nn_ins Self;
+static struct nn_ins self;
 
-void nn_ins_item_init (struct nn_ins_item *self,
-    const struct nn_epbase_vfptr *vfptr, void *hint)
+void nn_ins_item_init (struct nn_ins_item *myself,const struct nn_epbase_vfptr *vfptr, void *hint)
 {
     size_t sz;
 
-    nn_epbase_init (&self->epbase, vfptr, hint);
-    nn_list_item_init (&self->item);
-    sz = sizeof (self->protocol);
-    nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_PROTOCOL,
-        &self->protocol, &sz);
-    nn_assert (sz == sizeof (self->protocol));
+    nn_epbase_init (&myself->epbase, vfptr, hint);
+    nn_list_item_init (&myself->item);
+    sz = sizeof (myself->protocol);
+    nn_epbase_getopt (&myself->epbase, NN_SOL_SOCKET, NN_PROTOCOL,&myself->protocol, &sz);
+    nn_assert (sz == sizeof (myself->protocol));
 }
 
-void nn_ins_item_term (struct nn_ins_item *self)
+void nn_ins_item_term (struct nn_ins_item *myself)
 {
-    nn_list_item_term (&self->item);
-    nn_epbase_term (&self->epbase);
+    nn_list_item_term (&myself->item);
+    nn_epbase_term (&myself->epbase);
 }
 
 void nn_ins_init (void)
 {
-    nn_mutex_init (&Self.sync);
-    nn_list_init (&Self.bound);
-    nn_list_init (&Self.connected);
+    nn_mutex_init (&self.sync);
+    nn_list_init (&self.bound);
+    nn_list_init (&self.connected);
 }
 void nn_ins_term (void)
 {
-    nn_list_term (&Self.connected);
-    nn_list_term (&Self.bound);
-    nn_mutex_term (&Self.sync);
+    nn_list_term (&self.connected);
+    nn_list_term (&self.bound);
+    nn_mutex_term (&self.sync);
 }
 
 int nn_ins_bind (struct nn_ins_item *item, nn_ins_fn fn)
@@ -86,28 +84,28 @@ int nn_ins_bind (struct nn_ins_item *item, nn_ins_fn fn)
     struct nn_ins_item *bitem;
     struct nn_ins_item *citem;
 
-    nn_mutex_lock (&Self.sync);
+    nn_mutex_lock (&self.sync);
 
     /*  Check whether the endpoint isn't already bound. */
     /*  TODO:  This is an O(n) algorithm! */
-    for (it = nn_list_begin (&Self.bound); it != nn_list_end (&Self.bound);
-          it = nn_list_next (&Self.bound, it)) {
+    for (it = nn_list_begin (&self.bound); it != nn_list_end (&self.bound);
+          it = nn_list_next (&self.bound, it)) {
         bitem = nn_cont (it, struct nn_ins_item, item);
         if (strncmp (nn_epbase_getaddr (&item->epbase),
               nn_epbase_getaddr (&bitem->epbase), NN_SOCKADDR_MAX) == 0) {
-            nn_mutex_unlock (&Self.sync);
+            nn_mutex_unlock (&self.sync);
             return -EADDRINUSE;
         }
     }
 
     /*  Insert the entry into the endpoint repository. */
-    nn_list_insert (&Self.bound, &item->item,
-        nn_list_end (&Self.bound));
+    nn_list_insert (&self.bound, &item->item,
+        nn_list_end (&self.bound));
 
     /*  During this process new pipes may be created. */
-    for (it = nn_list_begin (&Self.connected);
-          it != nn_list_end (&Self.connected);
-          it = nn_list_next (&Self.connected, it)) {
+    for (it = nn_list_begin (&self.connected);
+          it != nn_list_end (&self.connected);
+          it = nn_list_next (&self.connected, it)) {
         citem = nn_cont (it, struct nn_ins_item, item);
         if (strncmp (nn_epbase_getaddr (&item->epbase),
               nn_epbase_getaddr (&citem->epbase), NN_SOCKADDR_MAX) == 0) {
@@ -120,7 +118,7 @@ int nn_ins_bind (struct nn_ins_item *item, nn_ins_fn fn)
         }
     }
 
-    nn_mutex_unlock (&Self.sync);
+    nn_mutex_unlock (&self.sync);
 
     return 0;
 }
@@ -130,16 +128,16 @@ void nn_ins_connect (struct nn_ins_item *item, nn_ins_fn fn)
     struct nn_list_item *it;
     struct nn_ins_item *bitem;
 
-    nn_mutex_lock (&Self.sync);
+    nn_mutex_lock (&self.sync);
 
     /*  Insert the entry into the endpoint repository. */
-    nn_list_insert (&Self.connected, &item->item,
-        nn_list_end (&Self.connected));
+    nn_list_insert (&self.connected, &item->item,
+        nn_list_end (&self.connected));
 
     /*  During this process a pipe may be created. */
-    for (it = nn_list_begin (&Self.bound);
-          it != nn_list_end (&Self.bound);
-          it = nn_list_next (&Self.bound, it)) {
+    for (it = nn_list_begin (&self.bound);
+          it != nn_list_end (&self.bound);
+          it = nn_list_next (&self.bound, it)) {
         bitem = nn_cont (it, struct nn_ins_item, item);
         if (strncmp (nn_epbase_getaddr (&item->epbase),
               nn_epbase_getaddr (&bitem->epbase), NN_SOCKADDR_MAX) == 0) {
@@ -155,20 +153,20 @@ void nn_ins_connect (struct nn_ins_item *item, nn_ins_fn fn)
         }
     }
 
-    nn_mutex_unlock (&Self.sync);
+    nn_mutex_unlock (&self.sync);
 }
 
 void nn_ins_disconnect (struct nn_ins_item *item)
 {
-    nn_mutex_lock (&Self.sync);
-    nn_list_erase (&Self.connected, &item->item);
-    nn_mutex_unlock (&Self.sync);
+    nn_mutex_lock (&self.sync);
+    nn_list_erase (&self.connected, &item->item);
+    nn_mutex_unlock (&self.sync);
 }
 
 void nn_ins_unbind (struct nn_ins_item *item)
 {
-    nn_mutex_lock (&Self.sync);
-    nn_list_erase (&Self.bound, &item->item);
-    nn_mutex_unlock (&Self.sync);
+    nn_mutex_lock (&self.sync);
+    nn_list_erase (&self.bound, &item->item);
+    nn_mutex_unlock (&self.sync);
 }
 

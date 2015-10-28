@@ -59,8 +59,6 @@ void nn_timer_init (struct nn_timer *self, int src, struct nn_fsm *owner)
 
 void nn_timer_term (struct nn_timer *self)
 {
-    //void nn_sleep (int milliseconds);
-    //nn_sleep(100);
     nn_assert_state (self, NN_TIMER_STATE_IDLE);
 
     nn_fsm_event_term (&self->done);

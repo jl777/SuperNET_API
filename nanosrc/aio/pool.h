@@ -27,12 +27,10 @@
 
 /*  Worker thread pool. */
 
-struct nn_pool {
-    struct nn_worker worker;
-};
+struct nn_pool { struct nn_worker worker; };
 
-int nn_pool_init (struct nn_pool *self);
-void nn_pool_term (struct nn_pool *self);
+int nn_pool_init(struct nn_pool *self);
+void nn_pool_term(struct nn_pool *self);
 struct nn_worker *nn_pool_choose_worker (struct nn_pool *self);
 
 #endif

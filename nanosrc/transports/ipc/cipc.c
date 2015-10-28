@@ -39,6 +39,13 @@
 #include "../../utils/win.h"
 #else
 #include <unistd.h>
+#ifndef __PNACL
+#include <sys/uio.h>
+#include <sys/un.h>
+#else
+#include <glibc-compat/sys/uio.h>
+#include <glibc-compat/sys/un.h>
+#endif
 #endif
 
 #define NN_CIPC_STATE_IDLE 1
@@ -238,8 +245,7 @@ static void nn_cipc_handler (struct nn_fsm *self, int src, int type,
                 nn_epbase_clear_error (&cipc->epbase);
                 return;
             case NN_USOCK_ERROR:
-                nn_epbase_set_error (&cipc->epbase,
-                    nn_usock_geterrno (&cipc->usock));
+                nn_epbase_set_error (&cipc->epbase,nn_usock_geterrno (&cipc->usock),__FILE__,__LINE__);
                 nn_usock_stop (&cipc->usock);
                 cipc->state = NN_CIPC_STATE_STOPPING_USOCK;
                 nn_epbase_stat_increment (&cipc->epbase,

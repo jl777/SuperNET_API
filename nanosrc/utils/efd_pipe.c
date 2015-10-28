@@ -30,35 +30,40 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-int nn_efd_init (struct nn_efd *self)
+int nn_efd_init(struct nn_efd *self)
 {
     int rc;
     int flags;
     int p [2];
-
+    //PostMessage("inside efd_init: pipe\n");
 #if defined NN_HAVE_PIPE2
-    rc = pipe2 (p, O_NONBLOCK | O_CLOEXEC);
+    rc = pipe2(p, O_NONBLOCK | O_CLOEXEC);
 #else
-    rc = pipe (p);
+    rc = pipe(p);
 #endif
+    //PostMessage("rc efd_init: %d\n",rc);
     if (rc != 0 && (errno == EMFILE || errno == ENFILE))
         return -EMFILE;
     errno_assert (rc == 0);
-    self->r = p [0];
-    self->w = p [1];
+    self->r = p[0];
+    self->w = p[1];
 
 #if !defined NN_HAVE_PIPE2 && defined FD_CLOEXEC
     rc = fcntl (self->r, F_SETFD, FD_CLOEXEC);
-    errno_assert (rc != -1);
-    rc = fcntl (self->w, F_SETFD, FD_CLOEXEC);
-    errno_assert (rc != -1);
+    //PostMessage("pipe efd_init: F_SETFDr rc %d\n",rc);
+    errno_assert(rc != -1);
+    rc = fcntl(self->w, F_SETFD, FD_CLOEXEC);
+    //PostMessage("pipe efd_init: F_SETFDw rc %d\n",rc);
+    errno_assert(rc != -1);
 #endif
 
 #if !defined NN_HAVE_PIPE2
-    flags = fcntl (self->r, F_GETFL, 0);
-    if (flags == -1)
+    flags = fcntl(self->r, F_GETFL, 0);
+    //PostMessage("pipe efd_init: flags %d\n",flags);
+    if ( flags == -1 )
         flags = 0;
-    rc = fcntl (self->r, F_SETFL, flags | O_NONBLOCK);
+    rc = fcntl(self->r, F_SETFL, flags | O_NONBLOCK);
+    //PostMessage("pipe efd_init: rc %d flags.%d\n",rc,flags);
     errno_assert (rc != -1);
 #endif
 

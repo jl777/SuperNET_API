@@ -23,7 +23,7 @@
 #include "thread.h"
 
 #ifdef NN_HAVE_WINDOWS
-#include "thread_win.inc"
+#include "thread_win.c"
 #else
-#include "thread_posix.inc"
+#include "thread_posix.c"
 #endif

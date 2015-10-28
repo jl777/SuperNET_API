@@ -28,22 +28,23 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-int nn_efd_init (struct nn_efd *self)
+int nn_efd_init(struct nn_efd *self)
 {
     int rc;
     int flags;
-
-    self->efd = eventfd (0, EFD_CLOEXEC);
+    //PostMessage("inside efd_init eventfd\n");
+    self->efd = eventfd(0, EFD_CLOEXEC);
+    //PostMessage("self->efd: %d\n",self->efd);
     if (self->efd == -1 && (errno == EMFILE || errno == ENFILE))
         return -EMFILE;
-    errno_assert (self->efd != -1);
-
-    flags = fcntl (self->efd, F_GETFL, 0);
-    if (flags == -1)
+    errno_assert(self->efd != -1);
+    flags = fcntl(self->efd,F_GETFL,0);
+    //PostMessage("fcntl flags: %d\n",flags);
+    if ( flags == -1 )
         flags = 0;
-    rc = fcntl (self->efd, F_SETFL, flags | O_NONBLOCK);
+    rc = fcntl(self->efd, F_SETFL, flags | O_NONBLOCK);
+    //PostMessage("fcntl rc: %d\n",rc);
     errno_assert (rc != -1);
-
     return 0;
 }
 

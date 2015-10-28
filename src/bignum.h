@@ -347,7 +347,7 @@ public:
     {
         // skip 0x
         const char* psz = str.c_str();
-        while (isspace(*psz))
+        while (isspace((uint32_t)*psz))
             psz++;
         bool fNegative = false;
         if (*psz == '-')
@@ -355,7 +355,7 @@ public:
             fNegative = true;
             psz++;
         }
-        if (psz[0] == '0' && tolower(psz[1]) == 'x')
+        if (psz[0] == '0' && tolower((uint32_t)psz[1]) == 'x')
             psz += 2;
         while (isspace(*psz))
             psz++;

@@ -220,8 +220,7 @@ static void nn_atcp_handler (struct nn_fsm *self, int src, int type,
             switch (type) {
 
             case NN_USOCK_ACCEPT_ERROR:
-                nn_epbase_set_error (atcp->epbase,
-                    nn_usock_geterrno(atcp->listener));
+                nn_epbase_set_error (atcp->epbase,nn_usock_geterrno(atcp->listener),__FILE__,__LINE__);
                 nn_epbase_stat_increment (atcp->epbase,
                     NN_STAT_ACCEPT_ERRORS, 1);
                 nn_usock_accept (&atcp->usock, atcp->listener);

@@ -23,9 +23,9 @@
 #include "worker.h"
 
 #if defined NN_HAVE_WINDOWS
-#include "worker_win.inc"
+#include "worker_win.c"
 #else
-#include "worker_posix.inc"
+#include "worker_posix.c"
 #endif
 
 void nn_worker_timer_init (struct nn_worker_timer *self, struct nn_fsm *owner)

@@ -67,58 +67,52 @@ static void nn_sock_shutdown (struct nn_fsm *self, int src, int type,
     void *srcptr);
 static void nn_sock_action_zombify (struct nn_sock *self);
 
-int nn_sock_init (struct nn_sock *self, struct nn_socktype *socktype, int fd)
+int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t fd)
 {
-    int rc;
-    int i;
-
-    /* Make sure that at least one message direction is supported. */
-    nn_assert (!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) ||
-        !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV));
-
-    /*  Create the AIO context for the SP socket. */
-    nn_ctx_init (&self->ctx, nn_global_getpool (), nn_sock_onleave);
-
-    /*  Initialise the state machine. */
-    nn_fsm_init_root (&self->fsm, nn_sock_handler,
-        nn_sock_shutdown, &self->ctx);
+    int32_t i,rc;
+    // Make sure that at least one message direction is supported
+    nn_assert(!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) || !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV));
+    //  Create the AIO context for the SP socket
+    nn_ctx_init(&self->ctx,nn_global_getpool(),nn_sock_onleave);
+    //  Initialise the state machine
+    nn_fsm_init_root (&self->fsm, nn_sock_handler,nn_sock_shutdown, &self->ctx);
     self->state = NN_SOCK_STATE_INIT;
-
-    /*  Open the NN_SNDFD and NN_RCVFD efds. Do so, only if the socket type
-        supports send/recv, as appropriate. */
-    if (socktype->flags & NN_SOCKTYPE_FLAG_NOSEND)
-        memset (&self->sndfd, 0xcd, sizeof (self->sndfd));
-    else {
-        rc = nn_efd_init (&self->sndfd);
-        if (nn_slow (rc < 0))
+    // Open the NN_SNDFD and NN_RCVFD efds. Do so, only if the socket type supports send/recv, as appropriate
+    if ( socktype->flags & NN_SOCKTYPE_FLAG_NOSEND )
+        memset(&self->sndfd,0xcd,sizeof(self->sndfd));
+    else
+    {
+        rc = nn_efd_init(&self->sndfd);
+        if ( nn_slow(rc < 0) )
             return rc;
     }
-    if (socktype->flags & NN_SOCKTYPE_FLAG_NORECV)
-        memset (&self->rcvfd, 0xcd, sizeof (self->rcvfd));
-    else {
-        rc = nn_efd_init (&self->rcvfd);
-        if (nn_slow (rc < 0)) {
-            if (!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND))
-                nn_efd_term (&self->sndfd);
+    if ( socktype->flags & NN_SOCKTYPE_FLAG_NORECV )
+        memset(&self->rcvfd,0xcd,sizeof(self->rcvfd));
+    else
+    {
+        rc = nn_efd_init(&self->rcvfd);
+        if ( nn_slow(rc < 0) )
+        {
+            if ( !(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
+                nn_efd_term(&self->sndfd);
             return rc;
         }
     }
-    nn_sem_init (&self->termsem);
-    if (nn_slow (rc < 0)) {
-        if (!(socktype->flags & NN_SOCKTYPE_FLAG_NORECV))
-            nn_efd_term (&self->rcvfd);
-        if (!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND))
-            nn_efd_term (&self->sndfd);
+    nn_sem_init(&self->termsem);
+    if ( nn_slow (rc < 0) )
+    {
+        if ( !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV) )
+            nn_efd_term(&self->rcvfd);
+        if ( !(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) )
+            nn_efd_term(&self->sndfd);
         return rc;
     }
-
     self->flags = 0;
-    nn_clock_init (&self->clock);
-    nn_list_init (&self->eps);
-    nn_list_init (&self->sdeps);
+    nn_clock_init(&self->clock);
+    nn_list_init(&self->eps);
+    nn_list_init(&self->sdeps);
     self->eid = 1;
-
-    /*  Default values for NN_SOL_SOCKET options. */
+    //  Default values for NN_SOL_SOCKET options
     self->linger = 1000;
     self->sndbuf = 128 * 1024;
     self->rcvbuf = 128 * 1024;
@@ -130,8 +124,7 @@ int nn_sock_init (struct nn_sock *self, struct nn_socktype *socktype, int fd)
     self->ep_template.sndprio = 8;
     self->ep_template.rcvprio = 8;
     self->ep_template.ipv4only = 1;
-
-    /* Initialize statistic entries */
+    // Initialize statistic entries
     self->statistics.established_connections = 0;
     self->statistics.accepted_connections = 0;
     self->statistics.dropped_connections = 0;
@@ -139,35 +132,27 @@ int nn_sock_init (struct nn_sock *self, struct nn_socktype *socktype, int fd)
     self->statistics.connect_errors = 0;
     self->statistics.bind_errors = 0;
     self->statistics.accept_errors = 0;
-
     self->statistics.messages_sent = 0;
     self->statistics.messages_received = 0;
     self->statistics.bytes_sent = 0;
     self->statistics.bytes_received = 0;
-
     self->statistics.current_connections = 0;
     self->statistics.inprogress_connections = 0;
     self->statistics.current_snd_priority = 0;
     self->statistics.current_ep_errors = 0;
-
-    /*  Should be pretty much enough space for just the number  */
-    sprintf(self->socket_name, "%d", fd);
-
-    /*  The transport-specific options are not initialised immediately,
-        rather, they are allocated later on when needed. */
-    for (i = 0; i != NN_MAX_TRANSPORT; ++i)
-        self->optsets [i] = NULL;
-
-    /*  Create the specific socket type itself. */
-    rc = socktype->create ((void*) self, &self->sockbase);
-    errnum_assert (rc == 0, -rc);
+    //  Should be pretty much enough space for just the number
+    sprintf(self->socket_name,"%d",fd);
+    //  The transport-specific options are not initialised immediately, rather, they are allocated later on when needed
+    for (i=0; i<NN_MAX_TRANSPORT; i++)
+        self->optsets[i] = NULL;
+    //  Create the specific socket type itself
+    rc = socktype->create((void*)self,&self->sockbase);
+    errnum_assert(rc == 0, -rc);
     self->socktype = socktype;
-
-    /*  Launch the state machine. */
+    //  Launch the state machine
     nn_ctx_enter (&self->ctx);
     nn_fsm_start (&self->fsm);
     nn_ctx_leave (&self->ctx);
-
     return 0;
 }
 
@@ -470,81 +455,67 @@ int nn_sock_getopt_inner (struct nn_sock *self, int level,
             return -ENOPROTOOPT;
         return optset->vfptr->getopt (optset, option, optval, optvallen);
     }
-
     nn_assert (0);
 }
 
-int nn_sock_add_ep (struct nn_sock *self, struct nn_transport *transport,
-    int bind, const char *addr)
+struct nn_ep *nn_find_ep(struct nn_sock *self,int32_t eid,const char *addr,struct nn_transport *transport,int32_t bind)
 {
-    int rc;
-    struct nn_ep *ep;
-    int eid;
-
-    nn_ctx_enter (&self->ctx);
-
-    /*  Instantiate the endpoint. */
-    ep = nn_alloc (sizeof (struct nn_ep), "endpoint");
-    rc = nn_ep_init (ep, NN_SOCK_SRC_EP, self, self->eid, transport,
-        bind, addr);
-    if (nn_slow (rc < 0)) {
-        nn_free (ep);
-        nn_ctx_leave (&self->ctx);
-        return rc;
-    }
-    nn_ep_start (ep);
-
-    /*  Increase the endpoint ID for the next endpoint. */
-    eid = self->eid;
-    ++self->eid;
-
-    /*  Add it to the list of active endpoints. */
-    nn_list_insert (&self->eps, &ep->item, nn_list_end (&self->eps));
-
-    nn_ctx_leave (&self->ctx);
-
-    return eid;
-}
-
-int nn_sock_rm_ep (struct nn_sock *self, int eid)
-{
-    struct nn_list_item *it;
-    struct nn_ep *ep;
-
-    nn_ctx_enter (&self->ctx);
-
-    /*  Find the specified enpoint. */
-    ep = NULL;
-    for (it = nn_list_begin (&self->eps);
-          it != nn_list_end (&self->eps);
-          it = nn_list_next (&self->eps, it)) {
-        ep = nn_cont (it, struct nn_ep, item);
-        if (ep->eid == eid)
+    struct nn_ep *ep; struct nn_list_item *it;
+    ep = NULL; // Find the specified enpoint
+    for (it=nn_list_begin(&self->eps); it!=nn_list_end(&self->eps); it=nn_list_next(&self->eps,it))
+    {
+        ep = nn_cont(it,struct nn_ep,item);
+        if ( addr == 0 && ep->eid == eid )
+            break;
+        else if ( addr != 0 && transport != 0 && strcmp(addr,ep->addr) == 0 && ep->transport == transport && ep->bind == bind )
             break;
         ep = NULL;
     }
+    return(ep);
+}
 
-    /*  The endpoint doesn't exist. */
-    if (!ep) {
+int nn_sock_add_ep(struct nn_sock *self,struct nn_transport *transport,int32_t bind,const char *addr)
+{
+    int rc,eid; struct nn_ep *ep;
+    nn_ctx_enter (&self->ctx);
+    if ( (ep= nn_find_ep(self,0,addr,transport,bind)) == NULL ) // The endpoint doesn't exist
+    {
+        ep = nn_alloc(sizeof(struct nn_ep),"endpoint"); // Instantiate the endpoint
+        rc = nn_ep_init(ep,NN_SOCK_SRC_EP,self,self->eid,transport,bind,addr);
+        if ( nn_slow(rc < 0) )
+        {
+            nn_free(ep);
+            nn_ctx_leave(&self->ctx);
+            return rc;
+        }
+        nn_ep_start(ep);
+        //PostMessage("ep sock.(%s) started %s://(%s) bind.%d\n",self->socket_name,transport->name,addr,bind);
+        eid = self->eid++; // Increase the endpoint ID for the next endpoint
+        nn_list_insert(&self->eps,&ep->item,nn_list_end(&self->eps)); // Add to the list of active endpoints
         nn_ctx_leave (&self->ctx);
+    } else PostMessage("self->sock.(%s) %p already has (%s)\n",self->socket_name,self->sockbase->sock,addr);
+    return(ep->eid);
+}
+
+int32_t nn_sock_rm_ep(struct nn_sock *self,int32_t eid)
+{
+    struct nn_ep *ep;
+    nn_ctx_enter(&self->ctx);
+    if ( (ep= nn_find_ep(self,eid,0,0,0)) == NULL ) // The endpoint doesn't exist
+    {
+        nn_ctx_leave(&self->ctx);
         return -EINVAL;
     }
-
-    /*  Move the endpoint from the list of active endpoints to the list
-        of shutting down endpoints. */
-    nn_list_erase (&self->eps, &ep->item);
-    nn_list_insert (&self->sdeps, &ep->item, nn_list_end (&self->sdeps));
-
-    /*  Ask the endpoint to stop. Actual terminatation may be delayed
-        by the transport. */
-    nn_ep_stop (ep);
-
-    nn_ctx_leave (&self->ctx);
-
+    //  Move the endpoint from the list of active endpoints to the list of shutting down endpoints.
+    nn_list_erase(&self->eps,&ep->item);
+    nn_list_insert(&self->sdeps,&ep->item,nn_list_end(&self->sdeps));
+    //  Ask the endpoint to stop. Actual terminatation may be delayed by the transport.
+    nn_ep_stop(ep);
+    nn_ctx_leave(&self->ctx);
     return 0;
 }
 
-int nn_sock_send (struct nn_sock *self, struct nn_msg *msg, int flags)
+int nn_sock_send(struct nn_sock *self, struct nn_msg *msg, int flags)
 {
     int rc;
     uint64_t deadline;
@@ -995,20 +966,23 @@ static void nn_sock_action_zombify (struct nn_sock *self)
     }
 }
 
-void nn_sock_report_error (struct nn_sock *self, struct nn_ep *ep, int errnum)
+void nn_sock_report_error(struct nn_sock *self,struct nn_ep *ep,int32_t errnum,char *fname,int32_t linenum)
 {
-    if (!nn_global_print_errors())
+#ifndef __PNACL
+    if ( !nn_global_print_errors() )
         return;
-
-    if (errnum == 0)
+#endif
+    if ( errnum == 0 )
         return;
-
-    if(ep) {
-        fprintf(stderr, "nanomsg: socket.%s[%s]: Error: %s\n",
-            self->socket_name, nn_ep_getaddr(ep), nn_strerror(errnum));
-    } else {
-        fprintf(stderr, "nanomsg: socket.%s: Error: %s\n",
-            self->socket_name, nn_strerror(errnum));
+    if ( ep != 0 )
+    {
+        fprintf(stderr,"nanomsg: socket.%s[%s]: Error: %s\n",self->socket_name,nn_ep_getaddr(ep),nn_strerror(errnum));
+        PostMessage("nanomsg: socket.%s[%s]: [%s:%d] Error: %s\n",self->socket_name,nn_ep_getaddr(ep),fname,linenum,nn_strerror(errnum));
+    }
+    else
+    {
+        fprintf(stderr,"nanomsg: socket.%s: Error: %s\n",self->socket_name, nn_strerror(errnum));
+        PostMessage("nanomsg: socket.%s: [%s:%d] Error: %s\n",self->socket_name,fname,linenum,nn_strerror(errnum));
     }
 }
 

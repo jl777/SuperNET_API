@@ -23,13 +23,13 @@
 #include "efd.h"
 
 #if defined NN_HAVE_WINDOWS
-#include "efd_win.inc"
+#include "efd_win.c"
 #elif defined NN_HAVE_EVENTFD
-#include "efd_eventfd.inc"
+#include "efd_eventfd.c"
 #elif defined NN_HAVE_PIPE
-#include "efd_pipe.inc"
+#include "efd_pipe.c"
 #elif defined NN_HAVE_SOCKETPAIR
-#include "efd_socketpair.inc"
+#include "efd_socketpair.c"
 #else
 #error
 #endif

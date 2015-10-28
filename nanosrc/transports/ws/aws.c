@@ -230,8 +230,7 @@ static void nn_aws_handler (struct nn_fsm *self, int src, int type,
             switch (type) {
 
             case NN_USOCK_ACCEPT_ERROR:
-                nn_epbase_set_error (aws->epbase,
-                    nn_usock_geterrno (aws->listener));
+                nn_epbase_set_error (aws->epbase,nn_usock_geterrno (aws->listener),__FILE__,__LINE__);
                 nn_epbase_stat_increment (aws->epbase,
                     NN_STAT_ACCEPT_ERRORS, 1);
                 nn_usock_accept (&aws->usock, aws->listener);

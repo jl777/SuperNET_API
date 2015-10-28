@@ -28,17 +28,20 @@
 
 #include <stdlib.h>
 
-void nn_err_abort (void)
+void nn_err_abort(void)
 {
+    PostMessage("nn_err_abort\n");
+    while ( 1 )
+    {
+        void msleep(int32_t);
+        msleep(666777);
+    }
     abort ();
 }
 
-int nn_err_errno (void)
-{
-    return errno;
-}
+int32_t nn_err_errno(void) { return errno; }
 
-const char *nn_err_strerror (int errnum)
+const char *nn_err_strerror(int32_t errnum)
 {
     switch (errnum) {
 #if defined NN_HAVE_WINDOWS
@@ -106,6 +109,8 @@ const char *nn_err_strerror (int errnum)
 #pragma warning (push)
 #pragma warning (disable:4996)
 #endif
+            PostMessage("nanomsg: errno.%d\n",errnum);
+            PostMessage("nanomsg: errno.%d (%s)\n",errnum,strerror(errnum));
         return strerror (errnum);
 #if defined _MSC_VER
 #pragma warning (pop)

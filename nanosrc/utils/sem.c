@@ -24,44 +24,44 @@
 #include "err.h"
 #include "fast.h"
 
-#if defined NN_HAVE_OSX || defined __PNACL
+#if defined __APPLE__ || defined __PNACL
 
-void nn_sem_init (struct nn_sem *self)
+void nn_sem_init (struct nn_sem *myself)
 {
     int rc;
 
-    rc = pthread_mutex_init (&self->mutex, NULL);
+    rc = pthread_mutex_init (&myself->mutex, NULL);
     errnum_assert (rc == 0, rc);
-    rc = pthread_cond_init (&self->cond, NULL);
+    rc = pthread_cond_init (&myself->cond, NULL);
     errnum_assert (rc == 0, rc);
-    self->signaled = 0;
+    myself->signaled = 0;
 }
 
-void nn_sem_term (struct nn_sem *self)
+void nn_sem_term (struct nn_sem *myself)
 {
     int rc;
 
-    rc = pthread_cond_destroy (&self->cond);
+    rc = pthread_cond_destroy (&myself->cond);
     errnum_assert (rc == 0, rc);
-    rc = pthread_mutex_destroy (&self->mutex);
+    rc = pthread_mutex_destroy (&myself->mutex);
     errnum_assert (rc == 0, rc);
 }
 
-void nn_sem_post (struct nn_sem *self)
+void nn_sem_post (struct nn_sem *myself)
 {
     int rc;
 
-    rc = pthread_mutex_lock (&self->mutex);
+    rc = pthread_mutex_lock (&myself->mutex);
     errnum_assert (rc == 0, rc);
-    nn_assert (self->signaled == 0);
-    self->signaled = 1;
-    rc = pthread_cond_signal (&self->cond);
+    nn_assert (myself->signaled == 0);
+    myself->signaled = 1;
+    rc = pthread_cond_signal (&myself->cond);
     errnum_assert (rc == 0, rc);
-    rc = pthread_mutex_unlock (&self->mutex);
+    rc = pthread_mutex_unlock (&myself->mutex);
     errnum_assert (rc == 0, rc);
 }
 
-int nn_sem_wait (struct nn_sem *self)
+int nn_sem_wait (struct nn_sem *myself)
 {
     int rc;
 
@@ -70,22 +70,22 @@ int nn_sem_wait (struct nn_sem *self)
         detail of pthread_cond_wait() in Darwin kernel: It exits if signal is
         caught. Note that this behaviour is not mandated by POSIX
         and may break with future versions of Darwin. */
-    rc = pthread_mutex_lock (&self->mutex);
+    rc = pthread_mutex_lock (&myself->mutex);
     errnum_assert (rc == 0, rc);
-    if (nn_fast (self->signaled)) {
-        rc = pthread_mutex_unlock (&self->mutex);
+    if (nn_fast (myself->signaled)) {
+        rc = pthread_mutex_unlock (&myself->mutex);
         errnum_assert (rc == 0, rc);
         return 0;
     }
-    rc = pthread_cond_wait (&self->cond, &self->mutex);
+    rc = pthread_cond_wait (&myself->cond, &myself->mutex);
     errnum_assert (rc == 0, rc);
-    if (nn_slow (!self->signaled)) {
-        rc = pthread_mutex_unlock (&self->mutex);
+    if (nn_slow (!myself->signaled)) {
+        rc = pthread_mutex_unlock (&myself->mutex);
         errnum_assert (rc == 0, rc);
         return -EINTR;
     }
-    self->signaled = 0;
-    rc = pthread_mutex_unlock (&self->mutex);
+    myself->signaled = 0;
+    rc = pthread_mutex_unlock (&myself->mutex);
     errnum_assert (rc == 0, rc);
 
     return 0;
@@ -93,33 +93,33 @@ int nn_sem_wait (struct nn_sem *self)
 
 #elif defined NN_HAVE_WINDOWS
 
-void nn_sem_init (struct nn_sem *self)
+void nn_sem_init (struct nn_sem *myself)
 {
-    self->h = CreateEvent (NULL, FALSE, FALSE, NULL);
-    win_assert (self->h);
+    myself->h = CreateEvent (NULL, FALSE, FALSE, NULL);
+    win_assert (myself->h);
 }
 
-void nn_sem_term (struct nn_sem *self)
-{
-    BOOL brc;
-
-    brc = CloseHandle (self->h);
-    win_assert (brc);
-}
-
-void nn_sem_post (struct nn_sem *self)
+void nn_sem_term (struct nn_sem *myself)
 {
     BOOL brc;
 
-    brc = SetEvent (self->h);
+    brc = CloseHandle (myself->h);
     win_assert (brc);
 }
 
-int nn_sem_wait (struct nn_sem *self)
+void nn_sem_post (struct nn_sem *myself)
+{
+    BOOL brc;
+
+    brc = SetEvent (myself->h);
+    win_assert (brc);
+}
+
+int nn_sem_wait (struct nn_sem *myself)
 {
     DWORD rc;
 
-    rc = WaitForSingleObject (self->h, INFINITE);
+    rc = WaitForSingleObject (myself->h, INFINITE);
     win_assert (rc != WAIT_FAILED);
     nn_assert (rc == WAIT_OBJECT_0);
 
@@ -128,35 +128,35 @@ int nn_sem_wait (struct nn_sem *self)
 
 #elif defined NN_HAVE_SEMAPHORE
 
-void nn_sem_init (struct nn_sem *self)
+void nn_sem_init (struct nn_sem *myself)
 {
     int rc;
 
-    rc = sem_init (&self->sem, 0, 0);
+    rc = sem_init (&myself->sem, 0, 0);
     errno_assert (rc == 0);
 }
 
-void nn_sem_term (struct nn_sem *self)
+void nn_sem_term (struct nn_sem *myself)
 {
     int rc;
 
-    rc = sem_destroy (&self->sem);
+    rc = sem_destroy (&myself->sem);
     errno_assert (rc == 0);
 }
 
-void nn_sem_post (struct nn_sem *self)
+void nn_sem_post (struct nn_sem *myself)
 {
     int rc;
 
-    rc = sem_post (&self->sem);
+    rc = sem_post (&myself->sem);
     errno_assert (rc == 0);
 }
 
-int nn_sem_wait (struct nn_sem *self)
+int nn_sem_wait (struct nn_sem *myself)
 {
     int rc;
 
-    rc = sem_wait (&self->sem);
+    rc = sem_wait (&myself->sem);
     if (nn_slow (rc < 0 && errno == EINTR))
         return -EINTR;
     errno_assert (rc == 0);

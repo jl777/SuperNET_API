@@ -23,7 +23,7 @@
 
 #if defined NN_HAVE_WINDOWS
 #include "win.h"
-#elif defined NN_HAVE_OSX
+#elif defined __APPLE__
 #include <mach/mach_time.h>
 #elif defined NN_HAVE_CLOCK_MONOTONIC || defined NN_HAVE_GETHRTIME
 #include <time.h>
@@ -40,8 +40,7 @@
    it works pretty well for CPU frequencies above 500MHz. */
 #define NN_CLOCK_PRECISION 1000000
 
-#if defined NN_HAVE_OSX
-#include <mach/mach_time.h>
+#if defined __APPLE__
 static mach_timebase_info_data_t nn_clock_timebase_info = {0};
 #endif
 
@@ -82,7 +81,7 @@ static uint64_t nn_clock_time ()
     tpms = (double) (tps.QuadPart / 1000);
     return (uint64_t) (time.QuadPart / tpms);
 
-#elif defined NN_HAVE_OSX
+#elif defined __APPLE__
 
     uint64_t ticks;
 

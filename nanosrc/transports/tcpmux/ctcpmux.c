@@ -378,8 +378,7 @@ static void nn_ctcpmux_handler (struct nn_fsm *self, int src, int type,
                 ctcpmux->state = NN_CTCPMUX_STATE_SENDING_TCPMUXHDR;
                 return;
             case NN_USOCK_ERROR:
-                nn_epbase_set_error (&ctcpmux->epbase,
-                    nn_usock_geterrno (&ctcpmux->usock));
+                nn_epbase_set_error (&ctcpmux->epbase,nn_usock_geterrno (&ctcpmux->usock),__FILE__,__LINE__);
                 nn_usock_stop (&ctcpmux->usock);
                 ctcpmux->state = NN_CTCPMUX_STATE_STOPPING_USOCK;
                 nn_epbase_stat_increment (&ctcpmux->epbase,
@@ -407,8 +406,7 @@ static void nn_ctcpmux_handler (struct nn_fsm *self, int src, int type,
                 ctcpmux->state = NN_CTCPMUX_STATE_RECEIVING_TCPMUXHDR;
                 return;
             case NN_USOCK_ERROR:
-                nn_epbase_set_error (&ctcpmux->epbase,
-                    nn_usock_geterrno (&ctcpmux->usock));
+                nn_epbase_set_error (&ctcpmux->epbase,nn_usock_geterrno (&ctcpmux->usock),__FILE__,__LINE__);
                 nn_usock_stop (&ctcpmux->usock);
                 ctcpmux->state = NN_CTCPMUX_STATE_STOPPING_USOCK;
                 return;
@@ -435,8 +433,7 @@ static void nn_ctcpmux_handler (struct nn_fsm *self, int src, int type,
                     return;
                 }
             case NN_USOCK_ERROR:
-                nn_epbase_set_error (&ctcpmux->epbase,
-                    nn_usock_geterrno (&ctcpmux->usock));
+                nn_epbase_set_error (&ctcpmux->epbase,nn_usock_geterrno (&ctcpmux->usock),__FILE__,__LINE__);
                 nn_usock_stop (&ctcpmux->usock);
                 ctcpmux->state = NN_CTCPMUX_STATE_STOPPING_USOCK;
                 return;

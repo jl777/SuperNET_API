@@ -27,36 +27,32 @@
 #include "../utils/err.h"
 #include "../utils/attr.h"
 
-void nn_sockbase_init (struct nn_sockbase *self,
-    const struct nn_sockbase_vfptr *vfptr, void *hint)
+void nn_sockbase_init(struct nn_sockbase *self,const struct nn_sockbase_vfptr *vfptr,void *hint)
 {
     self->vfptr = vfptr;
     self->sock = (struct nn_sock*) hint;
 }
 
-void nn_sockbase_term (NN_UNUSED struct nn_sockbase *self)
+void nn_sockbase_term(NN_UNUSED struct nn_sockbase *self)
 {
 }
 
-void nn_sockbase_stopped (struct nn_sockbase *self)
+void nn_sockbase_stopped(struct nn_sockbase *self)
 {
-    nn_sock_stopped (self->sock);
+    nn_sock_stopped(self->sock);
 }
 
-struct nn_ctx *nn_sockbase_getctx (struct nn_sockbase *self)
+struct nn_ctx *nn_sockbase_getctx(struct nn_sockbase *self)
 {
     return nn_sock_getctx (self->sock);
 }
 
-int nn_sockbase_getopt (struct nn_sockbase *self, int option,
-    void *optval, size_t *optvallen)
+int32_t nn_sockbase_getopt(struct nn_sockbase *self,int32_t option,void *optval,size_t *optvallen)
 {
-    return nn_sock_getopt_inner (self->sock, NN_SOL_SOCKET, option,
-        optval, optvallen);
+    return nn_sock_getopt_inner(self->sock,NN_SOL_SOCKET,option,optval,optvallen);
 }
 
-void nn_sockbase_stat_increment (struct nn_sockbase *self, int name,
-    int increment)
+void nn_sockbase_stat_increment(struct nn_sockbase *self,int32_t name,int32_t increment)
 {
-    nn_sock_stat_increment (self->sock, name, increment);
+    nn_sock_stat_increment(self->sock, name, increment);
 }

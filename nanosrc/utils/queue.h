@@ -23,23 +23,20 @@
 #ifndef NN_QUEUE_INCLUDED
 #define NN_QUEUE_INCLUDED
 
-/*  Undefined value for initialising a queue item which is not
-    part of a queue. */
-#define NN_QUEUE_NOTINQUEUE ((struct nn_queue_item*) -1)
+//  Undefined value for initialising a queue item which is not part of a queue
+#define NN_QUEUE_NOTINQUEUE ((struct nn_queue_item *) -1)
 
-/*  Use for initialising a queue item statically. */
+//  Use for initialising a queue item statically
 #define NN_QUEUE_ITEM_INITIALIZER {NN_LIST_NOTINQUEUE}
 
-struct nn_queue_item {
-    struct nn_queue_item *next;
-};
+struct nn_queue_item { struct nn_queue_item *next; };
 
 struct nn_queue {
     struct nn_queue_item *head;
     struct nn_queue_item *tail;
 };
 
-/*  Initialise the queue. */
+//  Initialise the queue
 void nn_queue_init (struct nn_queue *self);
 
 /*  Terminate the queue. Note that queue must be manually emptied before the

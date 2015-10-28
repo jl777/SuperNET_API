@@ -52,20 +52,19 @@ const char *nn_epbase_getaddr (struct nn_epbase *self)
     return nn_ep_getaddr (self->ep);
 }
 
-void nn_epbase_getopt (struct nn_epbase *self, int level, int option,
-    void *optval, size_t *optvallen)
+void nn_epbase_getopt(struct nn_epbase *self,int32_t level,int32_t option,void *optval,size_t *optvallen)
 {
     nn_ep_getopt (self->ep, level, option, optval, optvallen);
 }
 
-int nn_epbase_ispeer (struct nn_epbase *self, int socktype)
+int nn_epbase_ispeer(struct nn_epbase *self,int32_t socktype)
 {
     return nn_ep_ispeer (self->ep, socktype);
 }
 
-void nn_epbase_set_error (struct nn_epbase *self, int errnum)
+void nn_epbase_set_error(struct nn_epbase *self,int32_t errnum,char *fname,int32_t linenum)
 {
-    nn_ep_set_error (self->ep, errnum);
+    nn_ep_set_error(self->ep,errnum,fname,linenum);
 }
 
 void nn_epbase_clear_error (struct nn_epbase *self)

@@ -20,6 +20,8 @@
     IN THE SOFTWARE.
 */
 
+//#define NN_HAVE_POLL
+
 /*  Base class for device. */
 struct nn_device_recipe {
 

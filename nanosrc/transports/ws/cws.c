@@ -165,7 +165,7 @@ int nn_cws_create (void *hint, struct nn_epbase **epbase)
     colon = strrchr (addr, ':');
     slash = colon ? strchr (colon, '/') : strchr (addr, '/');
     resource = slash ? slash : addr + addrlen;
-    self->remote_hostname_len = (int)(colon ? colon - hostname : resource - hostname);
+    self->remote_hostname_len = (int32_t)(colon ? colon - hostname : resource - hostname);
     
     /*  Host contains both hostname and port. */
     hostlen = resource - hostname;
@@ -421,9 +421,8 @@ static void nn_cws_handler (struct nn_fsm *self, int src, int type,
                 nn_epbase_clear_error (&cws->epbase);
                 return;
             case NN_USOCK_ERROR:
-                nn_epbase_set_error (&cws->epbase,
-                    nn_usock_geterrno (&cws->usock));
-                nn_usock_stop (&cws->usock);
+                nn_epbase_set_error (&cws->epbase,nn_usock_geterrno (&cws->usock),__FILE__,__LINE__);
+                nn_usock_stop(&cws->usock);
                 cws->state = NN_CWS_STATE_STOPPING_USOCK;
                 nn_epbase_stat_increment (&cws->epbase,
                     NN_STAT_INPROGRESS_CONNECTIONS, -1);
