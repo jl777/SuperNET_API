@@ -1699,6 +1699,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         }
         pangea_create_newtable(retbuf,sp,dp,isbot);
 #ifdef BUNDLED
+        if ( 0 )
         {
             char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
             char *str; uint32_t nonce;

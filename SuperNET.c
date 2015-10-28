@@ -704,14 +704,14 @@ int SuperNET_start(char *fname,char *myip)
     strs[n++] = SuperNET_launch_agent("kv777",jsonargs,0);
     strs[n++] = SuperNET_launch_agent("SuperNET",jsonargs,&COINS.readyflag);
     strs[n++] = SuperNET_launch_agent("relay",jsonargs,&RELAYS.readyflag);
-    sleep(3);
+    /*sleep(3);
     char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
     if ( 0 && (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
     {
         fprintf(stderr,"busdata.(%s)\n",str);
         free(str);
     } else printf("null return from busdata sync.(%s)\n",jsonstr);
-    //getchar();
+    //getchar();*/
 
     if ( SUPERNET.iamrelay == 0 )
     {
