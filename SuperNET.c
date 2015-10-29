@@ -664,9 +664,29 @@ char *SuperNET_setconf(char *field,int32_t val)
     confstr = jprint(json,1);
     if ( confstr != 0 )
         SuperNET_saveconf(confstr);
-    if ( confstr != 0 )
+    return(confstr);
+}
+
+char *SuperNET_setconfstr(char *field,char *valstr)
+{
+    char *confstr; uint64_t allocsize; cJSON *json;
+    printf("save.(\"%s\":\"%s\")\n",field,valstr);
+    if ( (confstr= loadfile(&allocsize,os_compatible_path("SuperNET.conf"))) == 0 )
+        json = cJSON_CreateObject();
+    else
+    {
+        json = cJSON_Parse(confstr);
         free(confstr);
-    return(clonestr("{\"result\":\"SuperNET.conf field replaced\"}"));
+    }
+    if ( json == 0 )
+        json = cJSON_CreateObject();
+    if ( jobj(json,field) != 0 )
+        cJSON_DeleteItemFromObject(json,field);
+    jaddstr(json,field,valstr);
+    confstr = jprint(json,1);
+    if ( confstr != 0 )
+        SuperNET_saveconf(confstr);
+    return(confstr);
 }
 
 int SuperNET_start(char *fname,char *myip)

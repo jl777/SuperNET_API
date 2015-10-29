@@ -362,6 +362,7 @@ int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *mypriv
 extern queue_t InstantDEXQ;
 
 char *SuperNET_setconf(char *,int32_t val);
+char *SuperNET_setconfstr(char *field,char *valstr);
 int32_t SuperNET_saveconf(char *);
 int32_t RS_encode(char *rsaddr,uint64_t id);
 

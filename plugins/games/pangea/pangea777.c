@@ -1879,8 +1879,10 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
         tp->threadid = threadid;
         if ( threadid != 0 )
         {
-            uint32_t tmp = threadid + 4;
+            char hexstr[65]; uint32_t tmp = threadid + 4;
             tp->nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)&tmp,sizeof(tmp));
+            init_hexbytes_noT(hexstr,pubkey.bytes,sizeof(pubkey));
+            printf("NXT.%llu pubkey.%s\n",(long long)tp->nxt64bits,hexstr);
         }
         else
         {
@@ -2076,6 +2078,20 @@ char *Pangea_bypass(uint64_t my64bits,uint8_t myprivkey[32],cJSON *json)
             if ( n >= 2 && n <= 9 )
                 retstr = SuperNET_setconf(methodstr,n);
             else return(clonestr("{\"error\":\"invalid numplayers\"}"));
+        }
+        else if ( strcmp(methodstr,"changenum") == 0 )
+        {
+            char *fieldstr;
+            if ( (fieldstr= jstr(json,"fieldname")) != 0 )
+                retstr = SuperNET_setconf(fieldstr,juint(json,"val"));
+            else return(clonestr("{\"error\":\"no fieldname\"}"));
+        }
+        else if ( strcmp(methodstr,"changefield") == 0 )
+        {
+            char *fieldstr;
+            if ( (fieldstr= jstr(json,"fieldname")) != 0 )
+                retstr = SuperNET_setconfstr(fieldstr,jstr(json,"valstr"));
+            else return(clonestr("{\"error\":\"no fieldname\"}"));
         }
         else if ( strcmp(methodstr,"notabot") == 0 )
         {
