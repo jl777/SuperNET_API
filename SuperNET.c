@@ -719,15 +719,17 @@ int SuperNET_start(char *fname,char *myip)
             if ( 0 )
                 strs[n++] = SuperNET_launch_agent("cashier",jsonargs,&CASHIER.readyflag);
             if ( 1 )
+            {
                 strs[n++] = SuperNET_launch_agent("InstantDEX",jsonargs,&INSTANTDEX.readyflag);
+                void idle(); void idle2();
+                portable_thread_create((void *)idle,myip);
+                portable_thread_create((void *)idle2,myip);
+            }
             if ( SUPERNET.peggy != 0 )
             {
                 void crypto_update();
                 PostMessage("start peggy\n");
                 portable_thread_create((void *)crypto_update,myip);
-                void idle(); void idle2();
-                portable_thread_create((void *)idle,myip);
-                portable_thread_create((void *)idle2,myip);
             }
         }
     }
