@@ -66,5 +66,7 @@ void PostMessage(const char* format, ...);
 #define NN_USE_MYMSG 1
 #endif
 
+#define nn_errstr() nn_strerror(nn_errno())
+
 #endif
 

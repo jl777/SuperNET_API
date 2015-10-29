@@ -42,6 +42,8 @@
 #include "uthash.h"
 #include "curve25519.h"
 
+#define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
+
 
 #ifdef __PNACL
 void PostMessage(const char* format, ...);

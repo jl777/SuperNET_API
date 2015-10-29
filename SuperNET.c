@@ -759,9 +759,9 @@ int SuperNET_start(char *fname,char *myip)
         free(strs[i]);
     }
     printf("num builtin plugin agents.%d\n",n);
-    //portable_thread_create((void *)SuperNET_loop,myip);
-    //portable_thread_create((void *)SuperNET_agentloop,myip);
-    //portable_thread_create((void *)SuperNET_apiloop,myip);
+    portable_thread_create((void *)SuperNET_loop,myip);
+    portable_thread_create((void *)SuperNET_agentloop,myip);
+    portable_thread_create((void *)SuperNET_apiloop,myip);
     PostMessage("free jsonargs.%p\n",jsonargs);
     if ( jsonargs != 0 )
         free(jsonargs);

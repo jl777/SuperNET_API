@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="../jquery-2.1.4.min.js" type="text/javascript"></script>
+    <title>InstantDex</title>
+</head>
+<body data-custom-load="true" data-name="SuperNET_API" data-tools="pnacl newlib glibc clang-newlib mac" data-configs="Debug Release" data-path="../{tc}/{config}">
+        <div id="listener"></div>
+        <div id="log" style="display: none;"></div>
+    <!-- PCL STUFF -->
+    <script type="text/javascript" src="../js/util.js"></script>
+    <script type="text/javascript" src="../common.js"></script>
+    <script type="text/javascript" src="../example.js"></script>
+    <script src="../js/bootstrap.js" type="text/javascript"></script>
+    <script src="../js/api.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../js/methods.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../js/sites.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../js/settings.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript">
+	function getQueryVariable(variable) {
+  	    var query = window.location.search.substring(1);
+  	    var vars = query.split('&');
+  	    for (var i = 0; i < vars.length; i++) {
+    		var pair = vars[i].split('=');
+    		if (decodeURIComponent(pair[0]) == variable) {
+      		    return decodeURIComponent(pair[1]);
+    	        }
+  	    }
+  	    console.log('Query variable %s not found', variable);
+	}
+        $(document).ready(function(){
+            var listenerDiv = document.getElementById('listener');
+            listenerDiv.addEventListener('load', function(){
+            }, true);
+        });
+        var apiHandlers = {
+            "ready": function(){
+                //self.startGame();
+            },
+            "bet": function(amount, playerId){
+                if (!amount || amount == 0) {
+                    postCall('SuperNET', '{"plugin":"pangea","method":"turn", "action":"check", "threadid":' + playerId + '}', function(){});
+                }
+                else{
+                    postCall('SuperNET', '{"plugin":"pangea","method":"turn", "action":"bet", "amount":"' + amount * 100000000 + '", "threadid":' + playerId + '}', function(){});
+                }
+            },
+            "raise": function(amount, playerId) {
+                postCall('SuperNET', '{"plugin":"pangea","method":"turn", "action":"raise", "amount":"' + amount * 100000000 + '", "threadid":' + playerId + '}', function () {
+                });
+            },
+            "fold": function(parms, playerId){
+                postCall('SuperNET', '{"plugin":"pangea","method":"turn", "action":"fold", "threadid":' + playerId + '}', function(){});
+            },
+            "status": function(parms, playerId, callback){
+                postCall('SuperNET', '{"plugin":"pangea","method":"status", "tableid":"' + parms.tableId + '", "threadid":' + playerId + '}', function(data){
+                    var action = {};
+                    action["status"] = data;
+                    callback(action);
+                });
+            }
+        };
+    </script>
+</body>
+</html>
+

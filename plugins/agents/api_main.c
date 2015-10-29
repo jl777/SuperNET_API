@@ -23,12 +23,12 @@
 #endif
 uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 long _stripwhite(char *buf,int accept);
+void randombytes(unsigned char *x,long xlen);
 #define nn_errstr() nn_strerror(nn_errno())
 #define SUPERNET_APIENDPOINT "tcp://127.0.0.1:7776"
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
 #define issue_POST(url,cmdstr) bitcoind_RPC(0,"curl",url,0,0,cmdstr)
 char *os_compatible_path(char *str);
-void randombytes(unsigned char *x,long xlen);
 
 void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
 {
