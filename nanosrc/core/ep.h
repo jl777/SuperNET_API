@@ -54,8 +54,7 @@ void nn_ep_stopped(struct nn_ep *self);
 
 struct nn_ctx *nn_ep_getctx(struct nn_ep *self);
 const char *nn_ep_getaddr(struct nn_ep *self);
-void nn_ep_getopt(struct nn_ep *self,int32_t level,int32_t option,
-    void *optval, size_t *optvallen);
+void nn_ep_getopt(struct nn_ep *self,int32_t level,int32_t option,void *optval, size_t *optvallen);
 int nn_ep_ispeer (struct nn_ep *self,int32_t socktype);
 //void nn_ep_set_error(struct nn_ep *self,int32_t errnum);
 void nn_ep_set_error(struct nn_ep *self,int32_t errnum,char *fname,int32_t linenum);

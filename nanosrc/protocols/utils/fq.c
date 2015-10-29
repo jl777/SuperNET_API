@@ -29,47 +29,52 @@
 
 void nn_fq_init (struct nn_fq *self)
 {
-    nn_priolist_init (&self->priolist);
+    printf("nn_fq_init\n");
+    nn_priolist_init(&self->priolist);
 }
 
 void nn_fq_term (struct nn_fq *self)
 {
-    nn_priolist_term (&self->priolist);
+    nn_priolist_term(&self->priolist);
 }
 
-void nn_fq_add (struct nn_fq *self, struct nn_fq_data *data,
-    struct nn_pipe *pipe, int priority)
+void nn_fq_in(struct nn_fq *self, struct nn_fq_data *data)
 {
-    nn_priolist_add (&self->priolist, &data->priodata, pipe, priority);
+    //printf("nn_fq_in.%p data.%p: call activate\n",self,data);
+    nn_priolist_activate(&self->priolist,&data->priodata);
 }
 
-void nn_fq_rm (struct nn_fq *self, struct nn_fq_data *data)
+void nn_fq_add(struct nn_fq *self, struct nn_fq_data *data,struct nn_pipe *pipe, int priority)
+{
+    //printf("nn_fq_add: priority.%d\n",priority);
+    nn_priolist_add(&self->priolist,&data->priodata,pipe,priority);
+}
+
+void nn_fq_rm(struct nn_fq *self, struct nn_fq_data *data)
 {
     nn_priolist_rm (&self->priolist, &data->priodata);
 }
 
-void nn_fq_in (struct nn_fq *self, struct nn_fq_data *data)
+int nn_fq_can_recv(struct nn_fq *self)
 {
-    nn_priolist_activate (&self->priolist, &data->priodata);
+    return nn_priolist_is_active(&self->priolist);
 }
 
-int nn_fq_can_recv (struct nn_fq *self)
-{
-    return nn_priolist_is_active (&self->priolist);
-}
-
-int nn_fq_recv (struct nn_fq *self, struct nn_msg *msg, struct nn_pipe **pipe)
+int nn_fq_recv(struct nn_fq *self, struct nn_msg *msg, struct nn_pipe **pipe)
 {
     int rc;
     struct nn_pipe *p;
 
     /*  Pipe is NULL only when there are no avialable pipes. */
-    p = nn_priolist_getpipe (&self->priolist);
-    if (nn_slow (!p))
+    p = nn_priolist_getpipe(&self->priolist);
+    if ( nn_slow(!p) )
+    {
+        //printf("nn_fq_recv: no available pipes\n");
         return -EAGAIN;
+    }
 
     /*  Receive the messsage. */
-    rc = nn_pipe_recv (p, msg);
+    rc = nn_pipe_recv(p, msg);
     errnum_assert (rc >= 0, -rc);
 
     /*  Return the pipe data to the user, if required. */

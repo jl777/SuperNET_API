@@ -27,8 +27,7 @@
 
 #include "priolist.h"
 
-/*  Fair-queuer. Retrieves messages from a set of pipes in round-robin
-    manner. */
+// Fair-queuer. Retrieves messages from a set of pipes in round-robin manner
 
 struct nn_fq_data {
     struct nn_priolist_data priodata;

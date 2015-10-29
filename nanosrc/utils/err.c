@@ -33,6 +33,8 @@ void nn_err_abort(void)
     PostMessage("nn_err_abort\n");
     while ( 1 )
     {
+        printf("exit due to error\n");
+        exit(-1);
         void msleep(int32_t);
         msleep(666777);
     }

@@ -814,7 +814,7 @@ int32_t pangea_countdown(struct cards777_pubdata *dp,int32_t player)
 cJSON *pangea_tablestatus(struct pangea_info *sp)
 {
     uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],totals[CARDS777_MAXPLAYERS],sum; char *handhist;
-    int32_t i,n,j,countdown; int64_t total; struct cards777_pubdata *dp; cJSON *bets,*item,*array,*json = cJSON_CreateObject();
+    int32_t i,n,j,countdown,iter; int64_t total; struct cards777_pubdata *dp; cJSON *bets,*item,*array,*json = cJSON_CreateObject();
     jadd64bits(json,"tableid",sp->tableid);
     jadd64bits(json,"myslot",sp->myslot);
     jadd64bits(json,"myind",pangea_ind(sp,sp->myslot));
@@ -861,7 +861,8 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     }
     jadd(json,"bets",bets);
     jaddnum(json,"totalbets",dstr(total));
-    if ( (n= pangea_sidepots(0,sidepots,dp,dp->hand.snapshot)) > 0 && n < dp->N )
+    for (iter=0; iter<2; iter++)
+        if ( (n= pangea_sidepots(0,sidepots,dp,iter == 0 ? dp->hand.snapshot : dp->hand.bets)) > 0 && n < dp->N )
     {
         array = cJSON_CreateArray();
         for (i=0; i<n; i++)
@@ -872,16 +873,16 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
             totals[i] = sum;
             jaddi(array,item);
         }
-        jadd(json,"pots",array);
+        jadd(json,iter == 0 ? "pots" : "RTpots",array);
         item = cJSON_CreateArray();
         for (sum=i=0; i<n; i++)
             jaddinum(item,dstr(totals[i])), sum += totals[i];
-        jadd(json,"potTotals",item);
-        jaddnum(json,"sum",dstr(sum));
+        jadd(json,iter == 0 ? "potTotals" : "RTpotTotals",item);
+        jaddnum(json,iter == 0 ? "sum" : "RTsum",dstr(sum));
     }
     if ( sp->priv != 0 )
     {
-        jadd64bits(json,"autoshow",sp->priv->autoshow);
+        jadd64bits(json,"automuck",sp->priv->automuck);
         jadd64bits(json,"autofold",sp->priv->autofold);
         jadd(json,"hand",pangea_handjson(&dp->hand,sp->priv->hole,sp->isbot[sp->myslot]));
     }
@@ -1170,7 +1171,7 @@ int32_t pangea_lastman(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
             printf("DUPLICATE LASTMAN!\n");
             return(1);
         }
-        if ( 0 && hn->server->H.slot == activej && priv->autoshow != 0 )
+        if ( 0 && hn->server->H.slot == activej && priv->automuck == 0 )
         {
             pangea_sendcmd(hex,hn,"faceup",-1,priv->holecards[0].bytes,sizeof(priv->holecards[0]),priv->cardis[0],priv->cardis[0] != 0xff);
             pangea_sendcmd(hex,hn,"faceup",-1,priv->holecards[1].bytes,sizeof(priv->holecards[1]),priv->cardis[1],priv->cardis[1] != 0xff);
@@ -1355,9 +1356,9 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     cardi = juint(json,"cardi");
     if ( Debuglevel > 2 )
         printf("P%d: showdown from sender.%d\n",hn->client->H.slot,senderind);
-    if ( dp->hand.betstatus[pangea_ind(dp->table,hn->client->H.slot)] != CARDS777_FOLD && ((priv->autoshow != 0 && dp->hand.actions[pangea_ind(dp->table,hn->client->H.slot)] != CARDS777_SENTCARDS) || (turni == pangea_ind(dp->table,hn->client->H.slot) && dp->hand.lastbettor == pangea_ind(dp->table,hn->client->H.slot))) )
+    if ( dp->hand.betstatus[pangea_ind(dp->table,hn->client->H.slot)] != CARDS777_FOLD && ((priv->automuck == 0 && dp->hand.actions[pangea_ind(dp->table,hn->client->H.slot)] != CARDS777_SENTCARDS) || (turni == pangea_ind(dp->table,hn->client->H.slot) && dp->hand.lastbettor == pangea_ind(dp->table,hn->client->H.slot))) )
     {
-        if ( priv->autoshow == 0 && pangea_myrank(dp,pangea_ind(dp->table,hn->client->H.slot)) < 0 )
+        if ( priv->automuck != 0 && pangea_myrank(dp,pangea_ind(dp->table,hn->client->H.slot)) < 0 )
             pangea_sendcmd(hex,hn,"action",-1,(void *)&amount,sizeof(amount),cardi,CARDS777_FOLD);
         else
         {

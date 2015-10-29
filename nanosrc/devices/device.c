@@ -358,7 +358,7 @@ int nn_device_mvmsg (struct nn_device_recipe *device,
 {
     int rc;
     void *body;
-    void *control;
+    //void *control;
     struct nn_iovec iov;
     struct nn_msghdr hdr;
 
@@ -367,8 +367,8 @@ int nn_device_mvmsg (struct nn_device_recipe *device,
     memset (&hdr, 0, sizeof (hdr));
     hdr.msg_iov = &iov;
     hdr.msg_iovlen = 1;
-    hdr.msg_control = &control;
-    hdr.msg_controllen = NN_MSG;
+    //hdr.msg_control = &control;
+    //hdr.msg_controllen = NN_MSG;
     rc = nn_recvmsg (from, &hdr, flags);
     if (nn_slow (rc < 0 && nn_errno () == ETERM))
         return -1;

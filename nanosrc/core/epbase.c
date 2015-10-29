@@ -26,8 +26,7 @@
 #include "sock.h"
 #include "../utils/attr.h"
 
-void nn_epbase_init (struct nn_epbase *self,
-    const struct nn_epbase_vfptr *vfptr, void *hint)
+void nn_epbase_init (struct nn_epbase *self,const struct nn_epbase_vfptr *vfptr, void *hint)
 {
     self->vfptr = vfptr;
     self->ep = (struct nn_ep*) hint;

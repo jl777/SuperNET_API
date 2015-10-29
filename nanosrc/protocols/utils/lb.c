@@ -48,9 +48,10 @@ void nn_lb_rm (struct nn_lb *self, struct nn_lb_data *data)
     nn_priolist_rm (&self->priolist, &data->priodata);
 }
 
-void nn_lb_out (struct nn_lb *self, struct nn_lb_data *data)
+void nn_lb_out(struct nn_lb *self, struct nn_lb_data *data)
 {
-    nn_priolist_activate (&self->priolist, &data->priodata);
+    printf("nn_lb_out.%p data.%p: call activate\n",self,data);
+    nn_priolist_activate(&self->priolist,&data->priodata);
 }
 
 int nn_lb_can_send (struct nn_lb *self)

@@ -80,7 +80,6 @@ int tcpmux_accept (int s)
     char c;
     struct iovec iov;
     struct msghdr hdr;
-    unsigned char buf [256];
     struct cmsghdr *cmsg;
 
     iov.iov_base = &c;
@@ -88,9 +87,11 @@ int tcpmux_accept (int s)
     memset (&hdr, 0, sizeof (hdr));
     hdr.msg_iov = &iov;
     hdr.msg_iovlen = 1;
+#ifndef NN_USE_MYMSG
+    unsigned char buf [256];
     hdr.msg_control = buf;
     hdr.msg_controllen = sizeof (buf);
-
+#endif
     ssz = recvmsg (s, &hdr, 0);
     if (ssz < 0)
         return -1;

@@ -60,47 +60,43 @@ const struct nn_pipebase_vfptr nn_stcp_pipebase_vfptr = {
 };
 
 /*  Private functions. */
-static void nn_stcp_handler (struct nn_fsm *self, int src, int type,
-    void *srcptr);
-static void nn_stcp_shutdown (struct nn_fsm *self, int src, int type,
-    void *srcptr);
+static void nn_stcp_handler (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_stcp_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
 
-void nn_stcp_init (struct nn_stcp *self, int src,
-    struct nn_epbase *epbase, struct nn_fsm *owner)
+void nn_stcp_init (struct nn_stcp *self, int src,struct nn_epbase *epbase, struct nn_fsm *owner)
 {
-    nn_fsm_init (&self->fsm, nn_stcp_handler, nn_stcp_shutdown,
-        src, self, owner);
+    //printf("STCP recv.%p\n",nn_stcp_recv);
+    nn_fsm_init(&self->fsm,nn_stcp_handler,nn_stcp_shutdown,src,self,owner);
     self->state = NN_STCP_STATE_IDLE;
-    nn_streamhdr_init (&self->streamhdr, NN_STCP_SRC_STREAMHDR, &self->fsm);
+    nn_streamhdr_init(&self->streamhdr,NN_STCP_SRC_STREAMHDR,&self->fsm);
     self->usock = NULL;
     self->usock_owner.src = -1;
     self->usock_owner.fsm = NULL;
-    nn_pipebase_init (&self->pipebase, &nn_stcp_pipebase_vfptr, epbase);
+    nn_pipebase_init(&self->pipebase,&nn_stcp_pipebase_vfptr,epbase);
     self->instate = -1;
-    nn_msg_init (&self->inmsg, 0);
+    nn_msg_init(&self->inmsg,0);
     self->outstate = -1;
-    nn_msg_init (&self->outmsg, 0);
-    nn_fsm_event_init (&self->done);
+    nn_msg_init(&self->outmsg,0);
+    nn_fsm_event_init(&self->done);
 }
 
-void nn_stcp_term (struct nn_stcp *self)
+void nn_stcp_term(struct nn_stcp *self)
 {
-    nn_assert_state (self, NN_STCP_STATE_IDLE);
-
-    nn_fsm_event_term (&self->done);
-    nn_msg_term (&self->outmsg);
-    nn_msg_term (&self->inmsg);
-    nn_pipebase_term (&self->pipebase);
-    nn_streamhdr_term (&self->streamhdr);
-    nn_fsm_term (&self->fsm);
+    nn_assert_state(self,NN_STCP_STATE_IDLE);
+    nn_fsm_event_term(&self->done);
+    nn_msg_term(&self->outmsg);
+    nn_msg_term(&self->inmsg);
+    nn_pipebase_term(&self->pipebase);
+    nn_streamhdr_term(&self->streamhdr);
+    nn_fsm_term(&self->fsm);
 }
 
 int nn_stcp_isidle (struct nn_stcp *self)
 {
-    return nn_fsm_isidle (&self->fsm);
+    return nn_fsm_isidle(&self->fsm);
 }
 
-void nn_stcp_start (struct nn_stcp *self, struct nn_usock *usock)
+void nn_stcp_start(struct nn_stcp *self,struct nn_usock *usock)
 {
     /*  Take ownership of the underlying socket. */
     nn_assert (self->usock == NULL && self->usock_owner.fsm == NULL);
@@ -108,12 +104,11 @@ void nn_stcp_start (struct nn_stcp *self, struct nn_usock *usock)
     self->usock_owner.fsm = &self->fsm;
     nn_usock_swap_owner (usock, &self->usock_owner);
     self->usock = usock;
-
     /*  Launch the state machine. */
     nn_fsm_start (&self->fsm);
 }
 
-void nn_stcp_stop (struct nn_stcp *self)
+void nn_stcp_stop(struct nn_stcp *self)
 {
     nn_fsm_stop (&self->fsm);
 }
@@ -133,8 +128,7 @@ static int nn_stcp_send (struct nn_pipebase *self, struct nn_msg *msg)
     nn_msg_mv (&stcp->outmsg, msg);
 
     /*  Serialise the message header. */
-    nn_putll (stcp->outhdr, nn_chunkref_size (&stcp->outmsg.sphdr) +
-        nn_chunkref_size (&stcp->outmsg.body));
+    nn_putll(stcp->outhdr,nn_chunkref_size(&stcp->outmsg.sphdr) + nn_chunkref_size(&stcp->outmsg.body));
 
     /*  Start async sending. */
     iov [0].iov_base = stcp->outhdr;
@@ -143,6 +137,7 @@ static int nn_stcp_send (struct nn_pipebase *self, struct nn_msg *msg)
     iov [1].iov_len = nn_chunkref_size (&stcp->outmsg.sphdr);
     iov [2].iov_base = nn_chunkref_data (&stcp->outmsg.body);
     iov [2].iov_len = nn_chunkref_size (&stcp->outmsg.body);
+    //printf("call nn_usock_send\n");
     nn_usock_send (stcp->usock, iov, 3);
 
     stcp->outstate = NN_STCP_OUTSTATE_SENDING;
@@ -150,10 +145,10 @@ static int nn_stcp_send (struct nn_pipebase *self, struct nn_msg *msg)
     return 0;
 }
 
-static int nn_stcp_recv (struct nn_pipebase *self, struct nn_msg *msg)
+static int nn_stcp_recv(struct nn_pipebase *self,struct nn_msg *msg)
 {
     struct nn_stcp *stcp;
-
+    //printf("nn_stcp_recv\n");
     stcp = nn_cont (self, struct nn_stcp, pipebase);
 
     nn_assert_state (stcp, NN_STCP_STATE_ACTIVE);
@@ -198,18 +193,18 @@ static void nn_stcp_shutdown (struct nn_fsm *self, int src, int type,
     nn_fsm_bad_state(stcp->state, src, type);
 }
 
-static void nn_stcp_handler (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_stcp_handler (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     int rc;
     struct nn_stcp *stcp;
     uint64_t size;
     int opt;
     size_t opt_sz = sizeof (opt);
+    //printf("nn_stcp_handler.%p src.%d type.%d\n",self,src,type);
+    stcp = nn_cont(self,struct nn_stcp,fsm);
 
-    stcp = nn_cont (self, struct nn_stcp, fsm);
-
-    switch (stcp->state) {
+    switch ( stcp->state )
+    {
 
 /******************************************************************************/
 /*  IDLE state.                                                               */
@@ -321,46 +316,38 @@ static void nn_stcp_handler (struct nn_fsm *self, int src, int type,
 
             case NN_USOCK_RECEIVED:
 
-                switch (stcp->instate) {
+                switch (stcp->instate)
+                {
                 case NN_STCP_INSTATE_HDR:
 
-                    /*  Message header was received. Check that message size
-                        is acceptable by comparing with NN_RCVMAXSIZE;
-                        if it's too large, drop the connection. */
+                    // Message header was received. Check that message size is acceptable by comparing with NN_RCVMAXSIZE; if it's too large, drop the connection
                     size = nn_getll (stcp->inhdr);
-
-                    nn_pipebase_getopt (&stcp->pipebase, NN_SOL_SOCKET,
-                        NN_RCVMAXSIZE, &opt, &opt_sz);
-
-                    if (opt != -1 && size > opt) {
+                    nn_pipebase_getopt(&stcp->pipebase,NN_SOL_SOCKET,NN_RCVMAXSIZE,&opt,&opt_sz);
+                    if ( opt != -1 && size > opt )
+                    {
+                        printf("size.%d > opt.%d NN_RCVMAXSIZE\n",(int32_t)size,(int32_t)opt);
                         stcp->state = NN_STCP_STATE_DONE;
-                        nn_fsm_raise (&stcp->fsm, &stcp->done, NN_STCP_ERROR);
+                        nn_fsm_raise(&stcp->fsm,&stcp->done,NN_STCP_ERROR);
                         return;
                     }
-
                     /*  Allocate memory for the message. */
                     nn_msg_term (&stcp->inmsg);
                     nn_msg_init (&stcp->inmsg, (size_t) size);
-
                     /*  Special case when size of the message body is 0. */
-                    if (!size) {
+                    if ( !size )
+                    {
                         stcp->instate = NN_STCP_INSTATE_HASMSG;
-                        nn_pipebase_received (&stcp->pipebase);
+                        nn_pipebase_received(&stcp->pipebase);
                         return;
                     }
-
                     /*  Start receiving the message body. */
                     stcp->instate = NN_STCP_INSTATE_BODY;
-                    nn_usock_recv (stcp->usock,
-                        nn_chunkref_data (&stcp->inmsg.body),
-                       (size_t) size, NULL);
-
+                    nn_usock_recv(stcp->usock,nn_chunkref_data(&stcp->inmsg.body),(size_t)size,NULL);
                     return;
 
                 case NN_STCP_INSTATE_BODY:
 
-                    /*  Message body was received. Notify the owner that it
-                        can receive it. */
+                    // Message body was received. Notify the owner that it can receive it
                     stcp->instate = NN_STCP_INSTATE_HASMSG;
                     nn_pipebase_received (&stcp->pipebase);
 

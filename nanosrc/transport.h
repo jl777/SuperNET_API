@@ -190,8 +190,7 @@ struct nn_pipebase {
 };
 
 /*  Initialise the pipe.  */
-void nn_pipebase_init (struct nn_pipebase *self,
-    const struct nn_pipebase_vfptr *vfptr, struct nn_epbase *epbase);
+void nn_pipebase_init (struct nn_pipebase *self,const struct nn_pipebase_vfptr *vfptr, struct nn_epbase *epbase);
 
 /*  Terminate the pipe. */
 void nn_pipebase_term (struct nn_pipebase *self);

@@ -96,7 +96,10 @@ static int NN_UNUSED test_connect_impl (char *file, int line,
         {
             nn_sleep(1000);
             if ( i == 1 )
+            {
                 nn_global_init();
+                nn_sleep(3000);
+            }
         } else break;
     }
     if ( i == 3 && rc < 0 )

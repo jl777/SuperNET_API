@@ -53,13 +53,15 @@ struct pangea_info
     struct pangea_thread *tp; struct cards777_privdata *priv; struct cards777_pubdata *dp;
 } *TABLES[100];
 
+//./BitcoinDarkd SuperNET '{"agent":"InstantDEX","method":"orderbook","exchange":"active","base":"NXT","rel":"BTC"}'
+
 struct pangea_thread
 {
     union hostnet777 hn; uint64_t nxt64bits; int32_t threadid,ishost,M,N,numcards;
 } *THREADS[_PANGEA_MAXTHREADS];
 
 int32_t PANGEA_MAXTHREADS = 0;
-int32_t Showmode=1,Autofold;
+int32_t Showmode,Autofold;
 //uint64_t Pangea_waiting,Pangea_userinput_betsize; uint32_t Pangea_userinput_starttime; int32_t Pangea_userinput_cardi; char Pangea_userinput[128];
 
 char *clonestr(char *);
@@ -1323,7 +1325,7 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
             PostMessage("pangea_create: unexpected out of memory priv\n");
             return(0);
         }
-        priv->autoshow = Showmode;
+        priv->automuck = Showmode;
         priv->autofold = Autofold;
         btc_priv2pub(sp->btcpub,tp->hn.client->H.privkey.bytes);
         init_hexbytes_noT(sp->btcpubkeystr,sp->btcpub,33);
@@ -1333,7 +1335,7 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
         sp->wiftype = coin777_wiftype(base);
         btc_priv2wip(sp->wipstr,tp->hn.client->H.privkey.bytes,sp->wiftype);
         strcpy(sp->btcpubkeys[sp->myslot],sp->btcpubkeystr);
-        PostMessage("T%d: Autoshow.%d Autofold.%d rakemillis.%d btcpubkey.(%s) (%s) addrtype.%02x p2sh.%02x wif.%02x\n",tp->hn.client->H.slot,priv->autoshow,priv->autofold,dp->rakemillis,sp->btcpubkeystr,dp->coinstr,sp->addrtype,sp->p2shtype,sp->wiftype);
+        PostMessage("T%d: Automuck.%d Autofold.%d rakemillis.%d btcpubkey.(%s) (%s) addrtype.%02x p2sh.%02x wif.%02x\n",tp->hn.client->H.slot,priv->automuck,priv->autofold,dp->rakemillis,sp->btcpubkeystr,dp->coinstr,sp->addrtype,sp->p2shtype,sp->wiftype);
         if ( (sp->timestamp= timestamp) == 0 )
             sp->timestamp = (uint32_t)time(NULL);
         sp->numaddrs = sp->numactive = numaddrs;
@@ -1699,7 +1701,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         }
         pangea_create_newtable(retbuf,sp,dp,isbot);
 #ifdef BUNDLED
-        if ( 0 )
+        if ( 1 )
         {
             char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
             char *str; uint32_t nonce;
@@ -1754,14 +1756,14 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
 char *pangea_mode(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
     struct pangea_info *sp; char *chatstr,hex[8192]; int32_t i; uint64_t pm;
-    if ( jobj(json,"autoshow") != 0 )
+    if ( jobj(json,"automuck") != 0 )
     {
         if ( tableid == 0 )
-            Showmode = juint(json,"autoshow");
+            Showmode = juint(json,"automuck");
         else if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->priv != 0 )
-            sp->priv->autoshow = juint(json,"autoshow");
-        else return(clonestr("{\"error\":\"autoshow not tableid or sp->priv\"}"));
-        return(clonestr("{\"result\":\"set autoshow mode\"}"));
+            sp->priv->automuck = juint(json,"automuck");
+        else return(clonestr("{\"error\":\"automuck not tableid or sp->priv\"}"));
+        return(clonestr("{\"result\":\"set automuck mode\"}"));
     }
     else if ( jobj(json,"autofold") != 0 )
     {

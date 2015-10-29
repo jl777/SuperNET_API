@@ -45,20 +45,15 @@
 #define NN_STREAMHDR_SRC_TIMER 2
 
 /*  Private functions. */
-static void nn_streamhdr_handler (struct nn_fsm *self, int src, int type,
-    void *srcptr);
-static void nn_streamhdr_shutdown (struct nn_fsm *self, int src, int type,
-    void *srcptr);
+static void nn_streamhdr_handler (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_streamhdr_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
 
-void nn_streamhdr_init (struct nn_streamhdr *self, int src,
-    struct nn_fsm *owner)
+void nn_streamhdr_init (struct nn_streamhdr *self, int src,struct nn_fsm *owner)
 {
-    nn_fsm_init (&self->fsm, nn_streamhdr_handler, nn_streamhdr_shutdown,
-        src, self, owner);
+    nn_fsm_init (&self->fsm, nn_streamhdr_handler, nn_streamhdr_shutdown,src, self, owner);
     self->state = NN_STREAMHDR_STATE_IDLE;
     nn_timer_init (&self->timer, NN_STREAMHDR_SRC_TIMER, &self->fsm);
     nn_fsm_event_init (&self->done);
-
     self->usock = NULL;
     self->usock_owner.src = -1;
     self->usock_owner.fsm = NULL;
@@ -68,56 +63,46 @@ void nn_streamhdr_init (struct nn_streamhdr *self, int src,
 void nn_streamhdr_term (struct nn_streamhdr *self)
 {
     nn_assert_state (self, NN_STREAMHDR_STATE_IDLE);
-
     nn_fsm_event_term (&self->done);
     nn_timer_term (&self->timer);
     nn_fsm_term (&self->fsm);
 }
 
-int nn_streamhdr_isidle (struct nn_streamhdr *self)
+int nn_streamhdr_isidle(struct nn_streamhdr *self)
 {
-    return nn_fsm_isidle (&self->fsm);
+    return nn_fsm_isidle(&self->fsm);
 }
 
-void nn_streamhdr_start (struct nn_streamhdr *self, struct nn_usock *usock,
-    struct nn_pipebase *pipebase)
+void nn_streamhdr_start(struct nn_streamhdr *self,struct nn_usock *usock,struct nn_pipebase *pipebase)
 {
-    size_t sz;
-    int protocol;
-
+    size_t sz; int protocol;
     /*  Take ownership of the underlying socket. */
     nn_assert (self->usock == NULL && self->usock_owner.fsm == NULL);
     self->usock_owner.src = NN_STREAMHDR_SRC_USOCK;
     self->usock_owner.fsm = &self->fsm;
-    nn_usock_swap_owner (usock, &self->usock_owner);
+    nn_usock_swap_owner(usock,&self->usock_owner);
     self->usock = usock;
     self->pipebase = pipebase;
-
     /*  Get the protocol identifier. */
     sz = sizeof (protocol);
-    nn_pipebase_getopt (pipebase, NN_SOL_SOCKET, NN_PROTOCOL, &protocol, &sz);
+    nn_pipebase_getopt(pipebase,NN_SOL_SOCKET,NN_PROTOCOL,&protocol,&sz);
     nn_assert (sz == sizeof (protocol));
-
     /*  Compose the protocol header. */
-    memcpy (self->protohdr, "\0SP\0\0\0\0\0", 8);
-    nn_puts (self->protohdr + 4, (uint16_t) protocol);
-
+    memcpy(self->protohdr,"\0SP\0\0\0\0\0",8);
+    nn_puts(self->protohdr + 4, (uint16_t)protocol);
     /*  Launch the state machine. */
     nn_fsm_start (&self->fsm);
 }
 
-void nn_streamhdr_stop (struct nn_streamhdr *self)
+void nn_streamhdr_stop(struct nn_streamhdr *self)
 {
     nn_fsm_stop (&self->fsm);
 }
 
-static void nn_streamhdr_shutdown (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_streamhdr_shutdown (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     struct nn_streamhdr *streamhdr;
-
     streamhdr = nn_cont (self, struct nn_streamhdr, fsm);
-
     if (nn_slow (src == NN_FSM_ACTION && type == NN_FSM_STOP)) {
         nn_timer_stop (&streamhdr->timer);
         streamhdr->state = NN_STREAMHDR_STATE_STOPPING;
@@ -133,18 +118,14 @@ static void nn_streamhdr_shutdown (struct nn_fsm *self, int src, int type,
     nn_fsm_bad_state (streamhdr->state, src, type);
 }
 
-static void nn_streamhdr_handler (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_streamhdr_handler (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     struct nn_streamhdr *streamhdr;
     struct nn_iovec iovec;
     int protocol;
-
     streamhdr = nn_cont (self, struct nn_streamhdr, fsm);
-
-
-    switch (streamhdr->state) {
-
+    switch (streamhdr->state)
+    {
 /******************************************************************************/
 /*  IDLE state.                                                               */
 /******************************************************************************/
@@ -177,8 +158,7 @@ static void nn_streamhdr_handler (struct nn_fsm *self, int src, int type,
         case NN_STREAMHDR_SRC_USOCK:
             switch (type) {
             case NN_USOCK_SENT:
-                nn_usock_recv (streamhdr->usock, streamhdr->protohdr,
-                    sizeof (streamhdr->protohdr), NULL);
+                nn_usock_recv (streamhdr->usock, streamhdr->protohdr,sizeof (streamhdr->protohdr), NULL);
                 streamhdr->state = NN_STREAMHDR_STATE_RECEIVING;
                 return;
             case NN_USOCK_SHUTDOWN:
@@ -221,7 +201,7 @@ static void nn_streamhdr_handler (struct nn_fsm *self, int src, int type,
                 if (memcmp (streamhdr->protohdr, "\0SP\0", 4) != 0)
                     goto invalidhdr;
                 protocol = nn_gets (streamhdr->protohdr + 4);
-                if (!nn_pipebase_ispeer (streamhdr->pipebase, protocol))
+                if ( !nn_pipebase_ispeer (streamhdr->pipebase, protocol))
                     goto invalidhdr;
                 nn_timer_stop (&streamhdr->timer);
                 streamhdr->state = NN_STREAMHDR_STATE_STOPPING_TIMER_DONE;
@@ -270,8 +250,7 @@ invalidhdr:
                 streamhdr->usock_owner.src = -1;
                 streamhdr->usock_owner.fsm = NULL;
                 streamhdr->state = NN_STREAMHDR_STATE_DONE;
-                nn_fsm_raise (&streamhdr->fsm, &streamhdr->done,
-                    NN_STREAMHDR_ERROR);
+                nn_fsm_raise (&streamhdr->fsm, &streamhdr->done,NN_STREAMHDR_ERROR);
                 return;
             default:
                 nn_fsm_bad_action (streamhdr->state, src, type);
@@ -295,8 +274,7 @@ invalidhdr:
                 streamhdr->usock_owner.src = -1;
                 streamhdr->usock_owner.fsm = NULL;
                 streamhdr->state = NN_STREAMHDR_STATE_DONE;
-                nn_fsm_raise (&streamhdr->fsm, &streamhdr->done,
-                    NN_STREAMHDR_OK);
+                nn_fsm_raise (&streamhdr->fsm, &streamhdr->done,NN_STREAMHDR_OK);
                 return;
             default:
                 nn_fsm_bad_action (streamhdr->state, src, type);

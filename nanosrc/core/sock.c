@@ -75,7 +75,7 @@ int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t f
     //  Create the AIO context for the SP socket
     nn_ctx_init(&self->ctx,nn_global_getpool(),nn_sock_onleave);
     //  Initialise the state machine
-    nn_fsm_init_root (&self->fsm, nn_sock_handler,nn_sock_shutdown, &self->ctx);
+    nn_fsm_init_root(&self->fsm, nn_sock_handler,nn_sock_shutdown, &self->ctx);
     self->state = NN_SOCK_STATE_INIT;
     // Open the NN_SNDFD and NN_RCVFD efds. Do so, only if the socket type supports send/recv, as appropriate
     if ( socktype->flags & NN_SOCKTYPE_FLAG_NOSEND )
@@ -114,8 +114,8 @@ int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t f
     self->eid = 1;
     //  Default values for NN_SOL_SOCKET options
     self->linger = 1000;
-    self->sndbuf = 128 * 1024;
-    self->rcvbuf = 128 * 1024;
+    self->sndbuf = NN_USOCK_BATCH_SIZE > 65536 ? NN_USOCK_BATCH_SIZE : 65536;
+    self->rcvbuf = NN_USOCK_BATCH_SIZE > 65536 ? NN_USOCK_BATCH_SIZE : 65536;
     self->rcvmaxsize = 1024 * 1024;
     self->sndtimeo = -1;
     self->rcvtimeo = -1;
@@ -593,7 +593,7 @@ int nn_sock_send(struct nn_sock *self, struct nn_msg *msg, int flags)
     }
 }
 
-int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
+int nn_sock_recv(struct nn_sock *self, struct nn_msg *msg, int flags)
 {
     int rc;
     uint64_t deadline;
@@ -603,7 +603,6 @@ int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
     /*  Some sockets types cannot be used for receiving messages. */
     if (nn_slow (self->socktype->flags & NN_SOCKTYPE_FLAG_NORECV))
         return -ENOTSUP;
-
     nn_ctx_enter (&self->ctx);
 
     /*  Compute the deadline for RCVTIMEO timer. */
@@ -623,9 +622,9 @@ int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
             nn_ctx_leave (&self->ctx);
             return -ETERM;
         }
-
         /*  Try to receive the message in a non-blocking way. */
-        rc = self->sockbase->vfptr->recv (self->sockbase, msg);
+        rc = self->sockbase->vfptr->recv(self->sockbase,msg);
+        //printf("%p inside nn_sock_recv rc.%d\n",self->sockbase->vfptr->recv,rc);
         if (nn_fast (rc == 0)) {
             nn_ctx_leave (&self->ctx);
             return 0;
@@ -662,8 +661,7 @@ int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
             self->flags |= NN_SOCK_FLAG_IN;
         }
 
-        /*  If needed, re-compute the timeout to reflect the time that have
-            already elapsed. */
+        // If needed, re-compute the timeout to reflect the time that have already elapsed
         if (self->rcvtimeo >= 0) {
             now = nn_clock_now (&self->clock);
             timeout = (int) (now > deadline ? 0 : deadline - now);
@@ -671,11 +669,10 @@ int nn_sock_recv (struct nn_sock *self, struct nn_msg *msg, int flags)
     }
 }
 
-int nn_sock_add (struct nn_sock *self, struct nn_pipe *pipe)
+int nn_sock_add(struct nn_sock *self, struct nn_pipe *pipe)
 {
     int rc;
-
-    rc = self->sockbase->vfptr->add (self->sockbase, pipe);
+    rc = self->sockbase->vfptr->add(self->sockbase,pipe);
     if (nn_slow (rc >= 0)) {
         nn_sock_stat_increment (self, NN_STAT_CURRENT_CONNECTIONS, 1);
     }
@@ -849,15 +846,15 @@ finish1:
     nn_fsm_bad_state(sock->state, src, type);
 }
 
-static void nn_sock_handler (struct nn_fsm *self, int src, int type,
-    void *srcptr)
+static void nn_sock_handler(struct nn_fsm *self,int src,int type,void *srcptr)
 {
     struct nn_sock *sock;
     struct nn_ep *ep;
 
     sock = nn_cont (self, struct nn_sock, fsm);
-
-    switch (sock->state) {
+    //printf("sock handler state.%d\n",sock->state);
+    switch ( sock->state )
+    {
 
 /******************************************************************************/
 /*  INIT state.                                                               */
@@ -899,9 +896,8 @@ static void nn_sock_handler (struct nn_fsm *self, int src, int type,
         case NN_SOCK_SRC_EP:
             switch (type) {
             case NN_EP_STOPPED:
-
-                /*  This happens when an endpoint is closed using
-                    nn_shutdown() function. */
+                    printf("NN_SOCK_SRC_EP NN_EP_STOPPED\n");
+                // This happens when an endpoint is closed using nn_shutdown() function
                 ep = (struct nn_ep*) srcptr;
                 nn_list_erase (&sock->sdeps, &ep->item);
                 nn_ep_term (ep);
@@ -914,18 +910,18 @@ static void nn_sock_handler (struct nn_fsm *self, int src, int type,
 
         default:
 
-            /*  The assumption is that all the other events come from pipes. */
-            switch (type) {
+            // The assumption is that all the other events come from pipes
+                //printf("nn_sock_handler state.%d type.%d\n",sock->state,type);
+            switch ( type )
+            {
             case NN_PIPE_IN:
-                sock->sockbase->vfptr->in (sock->sockbase,
-                    (struct nn_pipe*) srcptr);
+                sock->sockbase->vfptr->in(sock->sockbase,(struct nn_pipe *)srcptr);
                 return;
             case NN_PIPE_OUT:
-                sock->sockbase->vfptr->out (sock->sockbase,
-                    (struct nn_pipe*) srcptr);
+                sock->sockbase->vfptr->out(sock->sockbase,(struct nn_pipe *)srcptr);
                 return;
             default:
-                nn_fsm_bad_action (sock->state, src, type);
+                nn_fsm_bad_action(sock->state, src, type);
             }
         }
 

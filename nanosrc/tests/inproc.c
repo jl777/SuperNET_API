@@ -44,9 +44,9 @@ int testinproc()
     struct nn_msghdr hdr;
     struct nn_iovec iovec;
     unsigned char body [3];
-    void *control;
-    struct nn_cmsghdr *cmsg;
-    unsigned char *data;
+    //void *control;
+    //struct nn_cmsghdr *cmsg;
+    //unsigned char *data;
     printf("test inproc\n");
 
     /*  Create a simple topology. */
@@ -147,14 +147,15 @@ int testinproc()
 
     iovec.iov_base = body;
     iovec.iov_len = sizeof (body);
+    memset(&hdr,0,sizeof(hdr));
     hdr.msg_iov = &iovec;
     hdr.msg_iovlen = 1;
-    hdr.msg_control = &control;
-    hdr.msg_controllen = NN_MSG;
+    //hdr.msg_control = &control;
+    //hdr.msg_controllen = NN_MSG;
     rc = nn_recvmsg (sb, &hdr, 0);
     errno_assert (rc == 3);
 
-    cmsg = NN_CMSG_FIRSTHDR (&hdr);
+   /* cmsg = NN_CMSG_FIRSTHDR (&hdr);
     while (1) {
         nn_assert (cmsg);
         if (cmsg->cmsg_level == PROTO_SP && cmsg->cmsg_type == SP_HDR)
@@ -164,9 +165,9 @@ int testinproc()
     nn_assert (cmsg->cmsg_len == NN_CMSG_SPACE (8));
     data = NN_CMSG_DATA (cmsg);
     nn_assert (!(data[0] & 0x80));
-    nn_assert (data[4] & 0x80);
+    nn_assert (data[4] & 0x80);*/
 
-    nn_freemsg (control);
+    //nn_freemsg (control);
 
     test_close (sc);
     test_close (sb);

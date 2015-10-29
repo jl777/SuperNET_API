@@ -186,6 +186,7 @@ int32_t nn_add_lbservers(uint16_t port,uint16_t globalport,uint16_t relaysport,i
                 }
             }
         }
+        printf("added priority.%d\n",priority);
         priority++;
     } else printf("error setting priority.%d (%s)\n",priority,nn_errstr());
     return(priority);
@@ -203,10 +204,10 @@ printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
         else if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
             fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
         timeout = SUPERNET.PLUGINTIMEOUT;
-        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
+        if ( 0 && nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_RCVTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_RCVTIMEO socket %s\n",nn_errstr());
         timeout = 100;
-        if ( nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
+        if ( 0 && nn_setsockopt(lbsock,NN_SOL_SOCKET,NN_SNDTIMEO,&timeout,sizeof(timeout)) < 0 )
             printf("error setting NN_SOL_SOCKET NN_SNDTIMEO socket %s\n",nn_errstr());
         if ( num > 0 )
             priority = nn_add_lbservers(port,globalport,relaysport,priority,lbsock,servers,num);
@@ -222,8 +223,9 @@ printf("!!!!!!!!!!!! lbsock.%d !!!!!!!!!!!\n",lbsock);
 int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
 {
     int32_t n = 0;
-    strcpy(servers[n++],"5.9.56.103");
-    strcpy(servers[n++],"5.9.102.210");
+    strcpy(servers[n++],RELAY_IPADDR);
+    //strcpy(servers[n++],"5.9.56.103");
+    //strcpy(servers[n++],"5.9.102.210");
     return(n);
     strcpy(servers[n++],"89.248.160.237");
     strcpy(servers[n++],"89.248.160.238");

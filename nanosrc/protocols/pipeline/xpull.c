@@ -142,8 +142,7 @@ static void nn_xpull_in (NN_UNUSED struct nn_sockbase *self,
     nn_fq_in (&xpull->fq, &data->fq);
 }
 
-static void nn_xpull_out (NN_UNUSED struct nn_sockbase *self,
-                          NN_UNUSED struct nn_pipe *pipe)
+static void nn_xpull_out (NN_UNUSED struct nn_sockbase *self,NN_UNUSED struct nn_pipe *pipe)
 {
     /*  We are not going to send any messages, so there's no point is
         maintaining a list of pipes ready for sending. */

@@ -53,17 +53,13 @@ static const struct nn_sockbase_vfptr nn_xrep_sockbase_vfptr = {
     nn_xrep_getopt
 };
 
-void nn_xrep_init (struct nn_xrep *self, const struct nn_sockbase_vfptr *vfptr,
-    void *hint)
+void nn_xrep_init(struct nn_xrep *self, const struct nn_sockbase_vfptr *vfptr,void *hint)
 {
-    nn_sockbase_init (&self->sockbase, vfptr, hint);
-
-    /*  Start assigning keys beginning with a random number. This way there
-        are no key clashes even if the executable is re-started. */
-    nn_random_generate (&self->next_key, sizeof (self->next_key));
-
-    nn_hash_init (&self->outpipes);
-    nn_fq_init (&self->inpipes);
+    nn_sockbase_init(&self->sockbase,vfptr,hint);
+    // Start assigning keys beginning with a random number. This way there are no key clashes even if the executable is re-started
+    nn_random_generate(&self->next_key,sizeof(self->next_key));
+    nn_hash_init(&self->outpipes);
+    nn_fq_init(&self->inpipes);
 }
 
 void nn_xrep_term (struct nn_xrep *self)
@@ -92,8 +88,8 @@ int nn_xrep_add (struct nn_sockbase *self, struct nn_pipe *pipe)
 
     xrep = nn_cont (self, struct nn_xrep, sockbase);
 
-    sz = sizeof (rcvprio);
-    nn_pipe_getopt (pipe, NN_SOL_SOCKET, NN_RCVPRIO, &rcvprio, &sz);
+    sz = sizeof(rcvprio);
+    nn_pipe_getopt(pipe,NN_SOL_SOCKET,NN_RCVPRIO,&rcvprio,&sz);
     nn_assert (sz == sizeof (rcvprio));
     nn_assert (rcvprio >= 1 && rcvprio <= 16);
 
@@ -102,8 +98,7 @@ int nn_xrep_add (struct nn_sockbase *self, struct nn_pipe *pipe)
     data->pipe = pipe;
     nn_hash_item_init (&data->outitem);
     data->flags = 0;
-    nn_hash_insert (&xrep->outpipes, xrep->next_key & 0x7fffffff,
-        &data->outitem);
+    nn_hash_insert (&xrep->outpipes, xrep->next_key & 0x7fffffff,&data->outitem);
     ++xrep->next_key;
     nn_fq_add (&xrep->inpipes, &data->initem, pipe, rcvprio);
     nn_pipe_setdata (pipe, data);
@@ -126,15 +121,13 @@ void nn_xrep_rm (struct nn_sockbase *self, struct nn_pipe *pipe)
     nn_free (data);
 }
 
-void nn_xrep_in (struct nn_sockbase *self, struct nn_pipe *pipe)
+void nn_xrep_in(struct nn_sockbase *self,struct nn_pipe *pipe)
 {
-    struct nn_xrep *xrep;
-    struct nn_xrep_data *data;
-
-    xrep = nn_cont (self, struct nn_xrep, sockbase);
-    data = nn_pipe_getdata (pipe);
-
-    nn_fq_in (&xrep->inpipes, &data->initem);
+    struct nn_xrep *xrep; struct nn_xrep_data *data;
+    printf("xrep_in.%p pipe.%p\n",self,pipe);
+    xrep = nn_cont(self,struct nn_xrep,sockbase);
+    data = nn_pipe_getdata(pipe);
+    nn_fq_in(&xrep->inpipes,&data->initem);
 }
 
 void nn_xrep_out (NN_UNUSED struct nn_sockbase *self, struct nn_pipe *pipe)
@@ -198,7 +191,6 @@ int nn_xrep_recv (struct nn_sockbase *self, struct nn_msg *msg)
     struct nn_xrep_data *pipedata;
 
     xrep = nn_cont (self, struct nn_xrep, sockbase);
-
     rc = nn_fq_recv (&xrep->inpipes, msg, &pipe);
     if (nn_slow (rc < 0))
         return rc;
@@ -253,22 +245,19 @@ int nn_xrep_setopt (NN_UNUSED struct nn_sockbase *self,
     return -ENOPROTOOPT;
 }
 
-int nn_xrep_getopt (NN_UNUSED struct nn_sockbase *self,
-    NN_UNUSED int level, NN_UNUSED int option,
-    NN_UNUSED void *optval, NN_UNUSED size_t *optvallen)
+int nn_xrep_getopt (NN_UNUSED struct nn_sockbase *self,NN_UNUSED int level, NN_UNUSED int option,NN_UNUSED void *optval, NN_UNUSED size_t *optvallen)
 {
     return -ENOPROTOOPT;
 }
 
-static int nn_xrep_create (void *hint, struct nn_sockbase **sockbase)
+static int nn_xrep_create(void *hint, struct nn_sockbase **sockbase)
 {
     struct nn_xrep *self;
-
-    self = nn_alloc (sizeof (struct nn_xrep), "socket (xrep)");
-    alloc_assert (self);
-    nn_xrep_init (self, &nn_xrep_sockbase_vfptr, hint);
+    printf("nn_xrep_create\n");
+    self = nn_alloc(sizeof(struct nn_xrep),"socket (xrep)");
+    alloc_assert(self);
+    nn_xrep_init(self,&nn_xrep_sockbase_vfptr,hint);
     *sockbase = &self->sockbase;
-
     return 0;
 }
 

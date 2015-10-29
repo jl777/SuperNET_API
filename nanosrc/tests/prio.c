@@ -75,13 +75,11 @@ int testprio()
     test_bind (push2, SOCKET_ADDRESS_B);
     pull1 = test_socket (AF_SP, NN_PULL);
     rcvprio = 2;
-    rc = nn_setsockopt (pull1, NN_SOL_SOCKET, NN_RCVPRIO,
-        &rcvprio, sizeof (rcvprio));
+    rc = nn_setsockopt (pull1, NN_SOL_SOCKET, NN_RCVPRIO,&rcvprio, sizeof (rcvprio));
     errno_assert (rc == 0);
     test_connect (pull1, SOCKET_ADDRESS_A);
     rcvprio = 1;
-    rc = nn_setsockopt (pull1, NN_SOL_SOCKET, NN_RCVPRIO,
-        &rcvprio, sizeof (rcvprio));
+    rc = nn_setsockopt (pull1, NN_SOL_SOCKET, NN_RCVPRIO,&rcvprio, sizeof (rcvprio));
     errno_assert (rc == 0);
     test_connect (pull1, SOCKET_ADDRESS_B);
 

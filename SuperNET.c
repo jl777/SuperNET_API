@@ -25,8 +25,6 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
-//#define DEFAULT_SUPERNET_CONF "{\"transport\":\"inproc\",\"secret\":\"randvals\",\"pangeatest\":\"9\",\"notabot\":-1}"
 int32_t numxmit,Totalxmit;
 
 #ifdef INSIDE_MGW
@@ -588,10 +586,14 @@ void nanotests(int32_t numiters)
     //testmsg();
     //testcmsg();
     //printf("testmsg and testcmsg done\n");
+    //testreqrep(); getchar();
+    //return;
     for (i=0; i<numiters; i++)
     {
         printf("nanotest iter.%d\n",i);
-
+        testmsg();
+        //testcmsg();
+        
         testhash();
         testtrie();
         testlist();
@@ -620,16 +622,12 @@ void nanotests(int32_t numiters)
         testinproc_shutdown();
         testipc();
         testipc_stress();
-        testipc_shutdown();
+        //testipc_shutdown();
         testtcp();
-        testtcp_shutdown();
-        testws();
-        
-        testmsg();
-        testcmsg();
-        
-         if ( 0 && i == 0 ) // since myrecvmsg uses multiple packets, assumption is violated
-            testtcpmux(i);
+        //testtcp_shutdown();
+        //testws();
+        // if ( i == 0 ) // since myrecvmsg uses multiple packets, assumption is violated
+         //   testtcpmux(i);
     }
     printf("finished nanotests\n");
 }
@@ -698,21 +696,23 @@ int SuperNET_start(char *fname,char *myip)
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
     printf("SuperNET_start.(%s) myip.(%s) -> ipaddr.(%s) SUPERNET.port %d\n",jsonargs,myip!=0?myip:"",ipaddr,SUPERNET.port);
-    init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);
     busdata_init(10,1,0);
+    if ( 0 )
+    {
+        sleep(3);
+        char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
+        if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+        {
+            fprintf(stderr,"busdata.(%s)\n",str);
+            free(str);
+        } else printf("null return from busdata sync.(%s)\n",jsonstr);
+        getchar();exit(1);
+    }
+    init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);
     strs[n++] = SuperNET_launch_agent("SuperNET",jsonargs,&SUPERNET.readyflag);
     strs[n++] = SuperNET_launch_agent("kv777",jsonargs,0);
-    strs[n++] = SuperNET_launch_agent("SuperNET",jsonargs,&COINS.readyflag);
+    strs[n++] = SuperNET_launch_agent("coins",jsonargs,&COINS.readyflag);
     strs[n++] = SuperNET_launch_agent("relay",jsonargs,&RELAYS.readyflag);
-    /*sleep(3);
-    char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
-    if ( 0 && (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
-    {
-        fprintf(stderr,"busdata.(%s)\n",str);
-        free(str);
-    } else printf("null return from busdata sync.(%s)\n",jsonstr);
-    //getchar();*/
-
     if ( SUPERNET.iamrelay == 0 )
     {
         if ( 0 )
@@ -729,7 +729,7 @@ int SuperNET_start(char *fname,char *myip)
                 strs[n++] = SuperNET_launch_agent("teleport",jsonargs,&TELEPORT.readyflag);
             if ( 0 )
                 strs[n++] = SuperNET_launch_agent("cashier",jsonargs,&CASHIER.readyflag);
-            if ( 0 )
+            if ( 1 )
                 strs[n++] = SuperNET_launch_agent("InstantDEX",jsonargs,&INSTANTDEX.readyflag);
             if ( SUPERNET.peggy != 0 )
             {
@@ -759,9 +759,9 @@ int SuperNET_start(char *fname,char *myip)
         free(strs[i]);
     }
     printf("num builtin plugin agents.%d\n",n);
-    portable_thread_create((void *)SuperNET_loop,myip);
-    portable_thread_create((void *)SuperNET_agentloop,myip);
-    portable_thread_create((void *)SuperNET_apiloop,myip);
+    //portable_thread_create((void *)SuperNET_loop,myip);
+    //portable_thread_create((void *)SuperNET_agentloop,myip);
+    //portable_thread_create((void *)SuperNET_apiloop,myip);
     PostMessage("free jsonargs.%p\n",jsonargs);
     if ( jsonargs != 0 )
         free(jsonargs);

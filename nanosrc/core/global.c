@@ -508,13 +508,9 @@ int nn_socket(int domain,int protocol)
 int nn_close (int s)
 {
     int rc;
-
     NN_BASIC_CHECKS;
-
-    /*  TODO: nn_sock_term can take a long time to accomplish. It should not be
-        performed under global critical section. */
+    // TODO: nn_sock_term can take a long time to accomplish. It should not be performed under global critical section
     nn_glock_lock ();
-
     /*  Deallocate the socket object. */
     rc = nn_sock_term (SELF.socks [s]);
     if (nn_slow (rc == -EINTR)) {
@@ -522,9 +518,7 @@ int nn_close (int s)
         errno = EINTR;
         return -1;
     }
-
-    /*  Remove the socket from the socket table, add it to unused socket
-        table. */
+    // Remove the socket from the socket table, add it to unused socket table
     nn_free (SELF.socks [s]);
     SELF.socks [s] = NULL;
     SELF.unused [NN_MAX_SOCKETS - SELF.nsocks] = s;
@@ -538,8 +532,7 @@ int nn_close (int s)
     return 0;
 }
 
-int nn_setsockopt (int s, int level, int option, const void *optval,
-    size_t optvallen)
+int nn_setsockopt (int s, int level, int option, const void *optval,size_t optvallen)
 {
     int rc;
 
@@ -560,8 +553,7 @@ int nn_setsockopt (int s, int level, int option, const void *optval,
     return 0;
 }
 
-int nn_getsockopt (int s, int level, int option, void *optval,
-    size_t *optvallen)
+int nn_getsockopt (int s, int level, int option, void *optval,size_t *optvallen)
 {
     int rc;
 
@@ -633,11 +625,6 @@ int nn_shutdown (int s, int how)
 int32_t nn_send(int32_t s,const void *buf,size_t len,int32_t flags)
 {
     struct nn_iovec iov; struct nn_msghdr hdr;
-    /*if ( s  < 0 || s >= SELF.nsocks )
-    {
-        PostMessage("nn_send %d to sock.%d when nsocks is %d\n",(int32_t)len,s,(int32_t)SELF.nsocks);
-        return(-EBADF);
-    }*/
     iov.iov_base = (void*) buf;
     iov.iov_len = len;
     hdr.msg_iov = &iov;
@@ -650,11 +637,6 @@ int32_t nn_send(int32_t s,const void *buf,size_t len,int32_t flags)
 int32_t nn_recv(int32_t s,void *buf,size_t len,int32_t flags)
 {
     struct nn_iovec iov;struct nn_msghdr hdr;
-    /*if ( s  < 0 || s >= SELF.nsocks )
-    {
-        PostMessage("nn_recv %d to sock.%d when nsocks is %d\n",(int32_t)len,s,(int32_t)SELF.nsocks);
-        return(-EBADF);
-    }*/
     iov.iov_base = buf;
     iov.iov_len = len;
     hdr.msg_iov = &iov;
@@ -664,9 +646,149 @@ int32_t nn_recv(int32_t s,void *buf,size_t len,int32_t flags)
     return nn_recvmsg(s,&hdr,flags);
 }
 
+#ifdef NN_USE_MYMSG
+
+int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
+{
+    int32_t rc,i,nnmsg; size_t sz; struct nn_iovec *iov; struct nn_msg msg; void *chunk;
+    //PostMessage("nn_sendmsg.(%d) \n",s);
+    NN_BASIC_CHECKS;
+    if ( nn_slow(!msghdr) )
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if ( nn_slow(msghdr->msg_iovlen < 0) )
+    {
+        errno = EMSGSIZE;
+        return -1;
+    }
+    if ( msghdr->msg_iovlen == 1 && msghdr->msg_iov[0].iov_len == NN_MSG )
+    {
+        chunk = *(void **)msghdr->msg_iov[0].iov_base;
+        if ( nn_slow(chunk == NULL) )
+        {
+            errno = EFAULT;
+            return -1;
+        }
+        sz = nn_chunk_size(chunk);
+        nn_msg_init_chunk(&msg,chunk);
+        nnmsg = 1;
+    }
+    else
+    {
+        // Compute the total size of the message
+        for (sz=i=0; i<msghdr->msg_iovlen; i++)
+        {
+            iov = &msghdr->msg_iov[i];
+            if ( nn_slow(iov->iov_len == NN_MSG) )
+            {
+                errno = EINVAL;
+                return -1;
+            }
+            if ( nn_slow(!iov->iov_base && iov->iov_len) )
+            {
+                errno = EFAULT;
+                return -1;
+            }
+            if ( nn_slow(sz + iov->iov_len < sz) )
+            {
+                errno = EINVAL;
+                return -1;
+            }
+            sz += iov->iov_len;
+        }
+        //  Create a message object from the supplied scatter array
+        nn_msg_init(&msg,sz);
+        for (sz=i=0; i<msghdr->msg_iovlen; i++)
+        {
+            iov = &msghdr->msg_iov[i];
+            memcpy(((uint8_t *)nn_chunkref_data(&msg.body)) + sz,iov->iov_base,iov->iov_len);
+            sz += iov->iov_len;
+        }
+        nnmsg = 0;
+    }
+    nn_assert(msghdr->msg_control == 0); // cant support msgs until sendmsg()/recvmsg() native to pnacl
+    rc = nn_sock_send(SELF.socks[s],&msg,flags); // Send it further down the stack
+    if ( nn_slow(rc < 0) )
+    {
+        // If we are dealing with user-supplied buffer, detach it from the message object
+        if ( nnmsg )
+            nn_chunkref_init(&msg.body,0);
+        nn_msg_term (&msg);
+        errno = -rc;
+        return -1;
+    }
+    // Adjust the statistics
+    nn_sock_stat_increment(SELF.socks[s],NN_STAT_MESSAGES_SENT,1);
+    nn_sock_stat_increment(SELF.socks[s],NN_STAT_BYTES_SENT,sz);
+    return (int) sz;
+}
+
+int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
+{
+    struct nn_msg msg; uint8_t *data; struct nn_iovec *iov; void *chunk; int32_t i,rc; size_t sz;
+    NN_BASIC_CHECKS;
+    if ( nn_slow(!msghdr) )
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if ( nn_slow(msghdr->msg_iovlen < 0) )
+    {
+        errno = EMSGSIZE;
+        return -1;
+    }
+    rc = nn_sock_recv(SELF.socks[s],&msg,flags); // Get a message
+    if ( nn_slow(rc < 0) )
+    {
+        errno = -rc;
+        return -1;
+    }
+    //printf("got nn_sock_recv rc.%d\n",rc);
+    if ( msghdr->msg_iovlen == 1 && msghdr->msg_iov[0].iov_len == NN_MSG )
+    {
+        chunk = nn_chunkref_getchunk(&msg.body);
+        *(void **)(msghdr->msg_iov[0].iov_base) = chunk;
+        sz = nn_chunk_size(chunk);
+        //PostMessage("got message -> iov_base.%p sz.%d\n",msghdr->msg_iov[0].iov_base,(int32_t)sz);
+    }
+    else // Copy the message content into the supplied gather array
+    {
+        data = nn_chunkref_data(&msg.body);
+        sz = nn_chunkref_size(&msg.body);
+        //PostMessage("got message -> data.%p sz.%d\n",data,(int32_t)sz);
+        for (i=0; i!=msghdr->msg_iovlen; i++)
+        {
+            iov = &msghdr->msg_iov[i];
+            if ( nn_slow(iov->iov_len == NN_MSG) )
+            {
+                nn_msg_term(&msg);
+                errno = EINVAL;
+                return -1;
+            }
+            if ( iov->iov_len > sz )
+            {
+                memcpy(iov->iov_base,data,sz);
+                break;
+            }
+            memcpy(iov->iov_base,data,iov->iov_len);
+            data += iov->iov_len;
+            sz -= iov->iov_len;
+        }
+        sz = nn_chunkref_size(&msg.body);
+    }
+    nn_assert(msghdr->msg_control == 0); // cant support msgs until sendmsg()/recvmsg() native to pnacl
+    nn_msg_term(&msg);
+    return (int32_t)sz;
+}
+
+#else
+
 int32_t nn_sendmsg(int32_t s,const struct nn_msghdr *msghdr,int32_t flags)
 {
     int32_t rc,i,nnmsg; size_t sz,spsz; struct nn_iovec *iov; struct nn_msg msg; void *chunk; struct nn_cmsghdr *cmsg;
+    //PostMessage("nn_sendmsg.(%d) \n",s);
     NN_BASIC_CHECKS;
     if ( nn_slow(!msghdr) )
     {
@@ -785,6 +907,7 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
 {
     struct nn_msg msg; uint8_t *data; struct nn_iovec *iov; void *chunk,*ctrl; struct nn_cmsghdr *chdr;
     int32_t i,rc; size_t sz,hdrssz,ctrlsz,spsz,sptotalsz;
+    //PostMessage("nn_recvmsg.(%d) \n",s);
     NN_BASIC_CHECKS;
     if ( nn_slow(!msghdr) )
     {
@@ -814,7 +937,7 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
     {
         data = nn_chunkref_data(&msg.body);
         sz = nn_chunkref_size (&msg.body);
-        PostMessage("got message -> data.%p sz.%d\n",data,(int32_t)sz);
+        //PostMessage("got message -> data.%p sz.%d\n",data,(int32_t)sz);
         for (i=0; i!=msghdr->msg_iovlen; i++)
         {
             iov = &msghdr->msg_iov[i];
@@ -870,6 +993,7 @@ int32_t nn_recvmsg(int32_t s,struct nn_msghdr *msghdr,int32_t flags)
     nn_msg_term(&msg);
     return (int32_t)sz;
 }
+#endif
 
 static void nn_global_add_transport (struct nn_transport *transport)
 {
@@ -1112,7 +1236,16 @@ static int nn_global_create_ep (int s, const char *addr, int bind)
         return -EINVAL;
     protosz = delim - addr;
     addr += protosz + 3;
-
+#ifdef NN_USE_MYMSG
+    if ( strncmp("inproc",proto,strlen("inproc")) != 0 && strncmp("ipc",proto,strlen("ipc")) != 0 && strncmp("tcp",proto,strlen("tcp")) != 0 )
+    {
+        PostMessage("only ipc, inproc and tcp transport is supported\n");
+        printf("only ipc, inproc and tcp transport is supported\n");
+        fprintf(stderr,"only ipc, inproc and tcp transport is supported\n");
+        exit(-1);
+        return -EPROTONOSUPPORT;
+    }
+#endif
     /*  Find the specified protocol. */
     tp = NULL;
     for (it = nn_list_begin (&SELF.transports);

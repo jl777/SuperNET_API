@@ -54,12 +54,11 @@ static const struct nn_sockbase_vfptr nn_xreq_sockbase_vfptr = {
     nn_xreq_getopt
 };
 
-void nn_xreq_init (struct nn_xreq *self, const struct nn_sockbase_vfptr *vfptr,
-    void *hint)
+void nn_xreq_init(struct nn_xreq *self,const struct nn_sockbase_vfptr *vfptr,void *hint)
 {
-    nn_sockbase_init (&self->sockbase, vfptr, hint);
-    nn_lb_init (&self->lb);
-    nn_fq_init (&self->fq);
+    nn_sockbase_init(&self->sockbase,vfptr,hint);
+    nn_lb_init(&self->lb);
+    nn_fq_init(&self->fq);
 }
 
 void nn_xreq_term (struct nn_xreq *self)
@@ -79,16 +78,14 @@ static void nn_xreq_destroy (struct nn_sockbase *self)
     nn_free (xreq);
 }
 
-int nn_xreq_add (struct nn_sockbase *self, struct nn_pipe *pipe)
+int nn_xreq_add(struct nn_sockbase *self, struct nn_pipe *pipe)
 {
     struct nn_xreq *xreq;
     struct nn_xreq_data *data;
     int sndprio;
     int rcvprio;
     size_t sz;
-
     xreq = nn_cont (self, struct nn_xreq, sockbase);
-
     sz = sizeof (sndprio);
     nn_pipe_getopt (pipe, NN_SOL_SOCKET, NN_SNDPRIO, &sndprio, &sz);
     nn_assert (sz == sizeof (sndprio));
@@ -99,11 +96,11 @@ int nn_xreq_add (struct nn_sockbase *self, struct nn_pipe *pipe)
     nn_assert (sz == sizeof (rcvprio));
     nn_assert (rcvprio >= 1 && rcvprio <= 16);
 
-    data = nn_alloc (sizeof (struct nn_xreq_data), "pipe data (req)");
-    alloc_assert (data);
-    nn_pipe_setdata (pipe, data);
-    nn_lb_add (&xreq->lb, &data->lb, pipe, sndprio);
-    nn_fq_add (&xreq->fq, &data->fq, pipe, rcvprio);
+    data = nn_alloc(sizeof(struct nn_xreq_data),"pipe data (req)");
+    alloc_assert(data);
+    nn_pipe_setdata(pipe,data);
+    nn_lb_add(&xreq->lb,&data->lb,pipe,sndprio);
+    nn_fq_add(&xreq->fq,&data->fq,pipe,rcvprio);
 
     return 0;
 }

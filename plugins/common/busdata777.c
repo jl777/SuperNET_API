@@ -1123,7 +1123,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
 char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr)
 {
     struct applicant_info apply,*ptr; int32_t sentflag,datalen,sendlen = 0; struct destbuf plugin,destplugin; char *data,*retstr,*submethod; cJSON *json;
-    //printf("BUSDATA_SYNC.(%s)\n",jsonstr);
+    printf("BUSDATA_SYNC.(%s)\n",jsonstr);
     json = cJSON_Parse(jsonstr);
     if ( json == 0 )
     {
@@ -1142,7 +1142,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     //fprintf(stderr,"start busdata\n");
     if ( (data= create_busdata(&sentflag,noncep,&datalen,jsonstr,broadcastmode,destNXTaddr)) != 0 )
     {
-        //fprintf(stderr,"created busdata\n");
+        fprintf(stderr,"created busdata\n");
         if ( SUPERNET.iamrelay != 0 )
         {
             if ( broadcastmode != 0 && json != 0 )
@@ -1168,7 +1168,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                         free_json(json);
                         return(clonestr("{\"error\":\"couldnt send to allnodes\"}"));
                     }
-                    //printf("broadcast packet.(%s)\n",data);
+                    printf("broadcast sendlen.%d packet.(%s)\n",sendlen,data);
                     sentflag = 1;
                 }
             }
@@ -1204,7 +1204,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                 }
                 else
                 {
-                    if ( Debuglevel > 2 )
+                    //if ( Debuglevel > 2 )
                         printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                     submethod = cJSON_str(cJSON_GetObjectItem(json,"submethod"));
@@ -1264,7 +1264,7 @@ int32_t busdata_poll()
             {
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
-                if ( Debuglevel > 2 )
+                //if ( Debuglevel > 2 )
                     printf("RECV.%d (%s) len.%d\n",sock,jsonstr,(int32_t)strlen(jsonstr));
                 n++;
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )

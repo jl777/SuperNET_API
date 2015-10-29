@@ -17,7 +17,14 @@
 #ifndef crypto777_portable777_h
 #define crypto777_portable777_h
 
-#define TEST_TRANSPORT "inproc"
+#define TEST_TRANSPORT "tcp"
+#define RELAY_IPADDR "5.9.56.103"
+#define DEFAULT_SUPERNET_CONF "{\"NXTAPIURL\":\"http://76.176.202.107:7876/nxt\",\"secret\":\"randvals\",\"pangeatest\":\"2\",\"notabot\":0}"
+/*#ifdef __APPLE__
+#define DEFAULT_SUPERNET_CONF "{\"secret\":\"randvals\",\"pangeatest\":\"9\",\"notabot\":-1}"
+#else
+#define DEFAULT_SUPERNET_CONF "{\"secret\":\"randvals\",\"pangeatest\":\"9\",\"notabot\":-1}"
+#endif*/
 
 #include <stdint.h>
 #include <pthread.h>

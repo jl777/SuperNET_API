@@ -112,8 +112,7 @@ static void nn_tcp_optset_destroy (struct nn_optset *self)
     nn_free (optset);
 }
 
-static int nn_tcp_optset_setopt (struct nn_optset *self, int option,
-    const void *optval, size_t optvallen)
+static int nn_tcp_optset_setopt (struct nn_optset *self, int option,const void *optval, size_t optvallen)
 {
     struct nn_tcp_optset *optset;
     int val;

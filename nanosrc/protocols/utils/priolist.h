@@ -73,8 +73,7 @@ void nn_priolist_term (struct nn_priolist *self);
 
 /*  Add a new pipe to the list with a particular priority level. The pipe
     is not active at this point. Use nn_priolist_activate to activate it. */
-void nn_priolist_add (struct nn_priolist *self, struct nn_priolist_data *data,
-    struct nn_pipe *pipe, int priority);
+void nn_priolist_add (struct nn_priolist *self, struct nn_priolist_data *data,struct nn_pipe *pipe, int priority);
 
 /*  Remove the pipe from the list. */
 void nn_priolist_rm (struct nn_priolist *self, struct nn_priolist_data *data);

@@ -40,66 +40,58 @@
 #define NN_ATCP_SRC_LISTENER 3
 
 /*  Private functions. */
-static void nn_atcp_handler (struct nn_fsm *self, int src, int type,
-    void *srcptr);
-static void nn_atcp_shutdown (struct nn_fsm *self, int src, int type,
-    void *srcptr);
+static void nn_atcp_handler (struct nn_fsm *self, int src, int type,void *srcptr);
+static void nn_atcp_shutdown (struct nn_fsm *self, int src, int type,void *srcptr);
 
-void nn_atcp_init (struct nn_atcp *self, int src,
-    struct nn_epbase *epbase, struct nn_fsm *owner)
+void nn_atcp_init (struct nn_atcp *self, int src,struct nn_epbase *epbase, struct nn_fsm *owner)
 {
-    nn_fsm_init (&self->fsm, nn_atcp_handler, nn_atcp_shutdown,
-        src, self, owner);
+    nn_fsm_init(&self->fsm,nn_atcp_handler,nn_atcp_shutdown,src,self,owner);
     self->state = NN_ATCP_STATE_IDLE;
     self->epbase = epbase;
-    nn_usock_init (&self->usock, NN_ATCP_SRC_USOCK, &self->fsm);
+    nn_usock_init(&self->usock,NN_ATCP_SRC_USOCK,&self->fsm);
     self->listener = NULL;
     self->listener_owner.src = -1;
     self->listener_owner.fsm = NULL;
-    nn_stcp_init (&self->stcp, NN_ATCP_SRC_STCP, epbase, &self->fsm);
-    nn_fsm_event_init (&self->accepted);
-    nn_fsm_event_init (&self->done);
-    nn_list_item_init (&self->item);
+    nn_stcp_init(&self->stcp,NN_ATCP_SRC_STCP,epbase,&self->fsm);
+    nn_fsm_event_init(&self->accepted);
+    nn_fsm_event_init(&self->done);
+    nn_list_item_init(&self->item);
 }
 
-void nn_atcp_term (struct nn_atcp *self)
+void nn_atcp_term(struct nn_atcp *self)
+{
+    nn_assert_state(self,NN_ATCP_STATE_IDLE);
+    nn_list_item_term(&self->item);
+    nn_fsm_event_term(&self->done);
+    nn_fsm_event_term(&self->accepted);
+    nn_stcp_term(&self->stcp);
+    nn_usock_term(&self->usock);
+    nn_fsm_term(&self->fsm);
+}
+
+int nn_atcp_isidle(struct nn_atcp *self)
+{
+    return nn_fsm_isidle(&self->fsm);
+}
+
+void nn_atcp_start(struct nn_atcp *self,struct nn_usock *listener)
 {
     nn_assert_state (self, NN_ATCP_STATE_IDLE);
-
-    nn_list_item_term (&self->item);
-    nn_fsm_event_term (&self->done);
-    nn_fsm_event_term (&self->accepted);
-    nn_stcp_term (&self->stcp);
-    nn_usock_term (&self->usock);
-    nn_fsm_term (&self->fsm);
-}
-
-int nn_atcp_isidle (struct nn_atcp *self)
-{
-    return nn_fsm_isidle (&self->fsm);
-}
-
-void nn_atcp_start (struct nn_atcp *self, struct nn_usock *listener)
-{
-    nn_assert_state (self, NN_ATCP_STATE_IDLE);
-
     /*  Take ownership of the listener socket. */
     self->listener = listener;
     self->listener_owner.src = NN_ATCP_SRC_LISTENER;
     self->listener_owner.fsm = &self->fsm;
-    nn_usock_swap_owner (listener, &self->listener_owner);
-
+    nn_usock_swap_owner(listener, &self->listener_owner);
     /*  Start the state machine. */
     nn_fsm_start (&self->fsm);
 }
 
-void nn_atcp_stop (struct nn_atcp *self)
+void nn_atcp_stop(struct nn_atcp *self)
 {
     nn_fsm_stop (&self->fsm);
 }
 
-static void nn_atcp_shutdown (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_atcp_shutdown (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     struct nn_atcp *atcp;
 
@@ -107,8 +99,7 @@ static void nn_atcp_shutdown (struct nn_fsm *self, int src, int type,
 
     if (nn_slow (src == NN_FSM_ACTION && type == NN_FSM_STOP)) {
         if (!nn_stcp_isidle (&atcp->stcp)) {
-            nn_epbase_stat_increment (atcp->epbase,
-                NN_STAT_DROPPED_CONNECTIONS, 1);
+            nn_epbase_stat_increment (atcp->epbase,NN_STAT_DROPPED_CONNECTIONS, 1);
             nn_stcp_stop (&atcp->stcp);
         }
         atcp->state = NN_ATCP_STATE_STOPPING_STCP_FINAL;

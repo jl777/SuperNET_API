@@ -30,11 +30,12 @@
 
 #include <stddef.h>
 
-void nn_priolist_init (struct nn_priolist *self)
+void nn_priolist_init(struct nn_priolist *self)
 {
     int i;
-
-    for (i = 0; i != NN_PRIOLIST_SLOTS; ++i) {
+    printf("nn_priolist_init.%p\n",self);
+    for (i = 0; i != NN_PRIOLIST_SLOTS; ++i)
+    {
         nn_list_init (&self->slots [i].pipes);
         self->slots [i].current = NULL;
     }
@@ -49,11 +50,11 @@ void nn_priolist_term (struct nn_priolist *self)
         nn_list_term (&self->slots [i].pipes);
 }
 
-void nn_priolist_add (NN_UNUSED struct nn_priolist *self,
-    struct nn_priolist_data *data, struct nn_pipe *pipe, int priority)
+void nn_priolist_add(struct nn_priolist *self,struct nn_priolist_data *data, struct nn_pipe *pipe, int priority)
 {
     data->pipe = pipe;
     data->priority = priority;
+    printf("nn_priolist_add.%p data.%p priority.%d\n",self,data,priority);
     nn_list_item_init (&data->item);
 }
 
@@ -90,8 +91,7 @@ void nn_priolist_rm (struct nn_priolist *self, struct nn_priolist_data *data)
     if (self->current != data->priority)
         return;
 
-    /*  Otherwise, the current slot may have become empty and we have switch
-        to lower priority slots. */
+    // Otherwise, the current slot may have become empty and we have switch to lower priority slots
     while (nn_list_empty (&self->slots [self->current - 1].pipes)) {
         ++self->current;
         if (self->current > NN_PRIOLIST_SLOTS) {
@@ -101,37 +101,30 @@ void nn_priolist_rm (struct nn_priolist *self, struct nn_priolist_data *data)
     }
 }
 
-void nn_priolist_activate (struct nn_priolist *self,
-    struct nn_priolist_data *data)
+void nn_priolist_activate(struct nn_priolist *self,struct nn_priolist_data *data)
 {
     struct nn_priolist_slot *slot;
-
+    //printf("nn_priolist_activate.%p data.%p\n",self,data);
     slot = &self->slots [data->priority - 1];
-
-    /*  If there are already some elements in this slot, current pipe is not
-        going to change. */
+    // If there are already some elements in this slot, current pipe is not going to change
     if (!nn_list_empty (&slot->pipes)) {
         nn_list_insert (&slot->pipes, &data->item, nn_list_end (&slot->pipes));
         return;
     }
-
-    /*  Add first pipe into the slot. If there are no pipes in priolist at all
-        this slot becomes current. */
+    // Add first pipe into the slot. If there are no pipes in priolist at all this slot becomes current
     nn_list_insert (&slot->pipes, &data->item, nn_list_end (&slot->pipes));
     slot->current = data;
     if (self->current == -1) {
         self->current = data->priority;
         return;
     }
-
-    /*  If the current priority is lower than the one of the newly activated
-        pipe, this slot becomes current. */
-    if (self->current > data->priority) {
+    // If the current priority is lower than the one of the newly activated pipe, this slot becomes current
+    if ( self->current > data->priority )
+    {
         self->current = data->priority;
         return;
     }
-
-    /*  Current doesn't change otherwise. */
+    // Current doesn't change otherwise
 }
 
 int nn_priolist_is_active (struct nn_priolist *self)
@@ -139,11 +132,15 @@ int nn_priolist_is_active (struct nn_priolist *self)
     return self->current == -1 ? 0 : 1;
 }
 
-struct nn_pipe *nn_priolist_getpipe (struct nn_priolist *self)
+struct nn_pipe *nn_priolist_getpipe(struct nn_priolist *self)
 {
-    if (nn_slow (self->current == -1))
+    if ( nn_slow(self->current == -1) )
+    {
+        //printf("nn_priolist_getpipe.%p -1 current it is\n",self);
         return NULL;
-    return self->slots [self->current - 1].current->pipe;
+    }
+    //printf("nn_priolist_getpipe.%p current.%d slot.%p\n",self,self->current,self->slots[self->current - 1].current->pipe);
+    return self->slots[self->current - 1].current->pipe;
 }
 
 void nn_priolist_advance (struct nn_priolist *self, int release)

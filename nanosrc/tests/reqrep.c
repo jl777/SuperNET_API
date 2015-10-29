@@ -96,8 +96,7 @@ int testreqrep()
     req1 = test_socket (AF_SP, NN_REQ);
     test_connect (req1, SOCKET_ADDRESS);
     resend_ivl = 100;
-    rc = nn_setsockopt (req1, NN_REQ, NN_REQ_RESEND_IVL,
-        &resend_ivl, sizeof (resend_ivl));
+    rc = nn_setsockopt (req1, NN_REQ, NN_REQ_RESEND_IVL,&resend_ivl, sizeof (resend_ivl));
     errno_assert (rc == 0);
 
     test_send (req1, "ABC");
