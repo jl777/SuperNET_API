@@ -50,7 +50,7 @@ void nn_lb_rm (struct nn_lb *self, struct nn_lb_data *data)
 
 void nn_lb_out(struct nn_lb *self, struct nn_lb_data *data)
 {
-    printf("nn_lb_out.%p data.%p: call activate\n",self,data);
+    //printf("nn_lb_out.%p data.%p: call activate\n",self,data);
     nn_priolist_activate(&self->priolist,&data->priodata);
 }
 

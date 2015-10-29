@@ -84,8 +84,10 @@ int32_t supported_exchange(char *exchangestr)
 void idle()
 {
     char *jsonstr,*str; cJSON *json; int32_t n = 0; uint32_t nonce;
+    printf("INSTANTDEX.readyflag.%d\n",INSTANTDEX.readyflag);
     while ( INSTANTDEX.readyflag == 0 )
         sleep(1);
+    printf("INSTANTDEX.readyflag.%d\n",INSTANTDEX.readyflag);
     while ( 1 )
     {
         if ( n == 0 )
@@ -93,9 +95,9 @@ void idle()
         n = 0;
         if ( (jsonstr= queue_dequeue(&InstantDEXQ,1)) != 0 )
         {
+            printf("Dequeued InstantDEX.(%s)\n",jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                //printf("Dequeued InstantDEX.(%s)\n",jsonstr);
                 //fprintf(stderr,"dequeued\n");
                 if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
                 {
@@ -703,6 +705,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         //update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
+        printf("INIT INSTANTDEX readyflag.%p\n",&INSTANTDEX.readyflag);
         plugin->sleepmillis = 500;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");
     }

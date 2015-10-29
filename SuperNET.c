@@ -696,19 +696,8 @@ int SuperNET_start(char *fname,char *myip)
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
     printf("SuperNET_start.(%s) myip.(%s) -> ipaddr.(%s) SUPERNET.port %d\n",jsonargs,myip!=0?myip:"",ipaddr,SUPERNET.port);
-    busdata_init(10,1,0);
-    if ( 0 )
-    {
-        sleep(3);
-        char *str,*jsonstr = clonestr("{\"plugin\":\"relay\",\"method\":\"busdata\"}"); uint32_t nonce;
-        if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
-        {
-            fprintf(stderr,"busdata.(%s)\n",str);
-            free(str);
-        } else printf("null return from busdata sync.(%s)\n",jsonstr);
-        getchar();exit(1);
-    }
     init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);
+    busdata_init(10,1,0);
     strs[n++] = SuperNET_launch_agent("SuperNET",jsonargs,&SUPERNET.readyflag);
     strs[n++] = SuperNET_launch_agent("kv777",jsonargs,0);
     strs[n++] = SuperNET_launch_agent("coins",jsonargs,&COINS.readyflag);

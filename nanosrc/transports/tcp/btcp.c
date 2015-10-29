@@ -500,7 +500,7 @@ static void nn_btcp_start_accepting (struct nn_btcp *self)
     nn_atcp_init (self->atcp, NN_BTCP_SRC_ATCP, &self->epbase, &self->fsm);
 
     /*  Start waiting for a new incoming connection. */
-    printf("call nn_atcp_start\n");
+    //printf("call nn_atcp_start\n");
     nn_atcp_start (self->atcp, &self->usock);
 }
 

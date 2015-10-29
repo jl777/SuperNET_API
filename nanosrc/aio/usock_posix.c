@@ -167,7 +167,7 @@ int nn_usock_start (struct nn_usock *self, int domain, int type, int protocol)
     s = socket (domain, type, protocol);
     if (nn_slow (s < 0))
        return -errno;
-
+    //PostMessage("got socket s.%d\n",s);
     nn_usock_init_from_fd (self, s);
 
     /*  Start the state machine. */
@@ -188,8 +188,7 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
     int rc;
     int opt;
 
-    nn_assert (self->state == NN_USOCK_STATE_IDLE ||
-        NN_USOCK_STATE_BEING_ACCEPTED);
+    nn_assert (self->state == NN_USOCK_STATE_IDLE || NN_USOCK_STATE_BEING_ACCEPTED);
 
     /*  Store the file descriptor. */
     nn_assert (self->s == -1);
@@ -208,8 +207,7 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
 #endif
 #endif
 
-    /* If applicable, prevent SIGPIPE signal when writing to the connection
-        already closed by the peer. */
+    // If applicable, prevent SIGPIPE signal when writing to the connection already closed by the peer
 #ifdef SO_NOSIGPIPE
     opt = 1;
     rc = setsockopt (self->s, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof (opt));
@@ -220,13 +218,13 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
 #endif
 #endif
 
-    /* Switch the socket to the non-blocking mode. All underlying sockets
-        are always used in the callbackhronous mode. */
-    opt = fcntl (self->s, F_GETFL, 0);
-    if (opt == -1)
+    // Switch the socket to the non-blocking mode. All underlying sockets are always used in the callbackhronous mode
+    opt = fcntl(self->s, F_GETFL, 0);
+    if ( opt == -1 )
         opt = 0;
-    if (!(opt & O_NONBLOCK)) {
-        rc = fcntl (self->s, F_SETFL, opt | O_NONBLOCK);
+    if ( !(opt & O_NONBLOCK) )
+    {
+        rc = fcntl(self->s, F_SETFL, opt | O_NONBLOCK);
 #if defined NN_HAVE_OSX
         errno_assert (rc != -1 || errno == EINVAL);
 #else

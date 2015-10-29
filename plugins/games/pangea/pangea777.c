@@ -54,6 +54,9 @@ struct pangea_info
 } *TABLES[100];
 
 //./BitcoinDarkd SuperNET '{"agent":"InstantDEX","method":"orderbook","exchange":"active","base":"NXT","rel":"BTC"}'
+// ./SNapi "{\"agent\":\"InstantDEX\",\"method\":\"orderbook\",\"exchange\":\"pangea\",\"base\":\"NXT\"}"
+
+// ./SNapi "{\"agent\":\"InstantDEX\",\"method\":\"placebid\",\"exchange\":\"pangea\",\"base\":\"NXT\"}"
 
 struct pangea_thread
 {

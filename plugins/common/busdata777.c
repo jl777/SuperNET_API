@@ -210,7 +210,7 @@ int32_t validate_token(struct destbuf *forwarder,struct destbuf *pubkey,struct d
             {
                 timeval = get_cJSON_int(firstitem,"time");
                 diff = (timeval - time(NULL));
-                if ( diff < -60 )
+                if ( diff < -60 || diff > 60 )
                     retcode = -6;
                 else if ( diff > strictflag )
                 {

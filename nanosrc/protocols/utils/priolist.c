@@ -33,7 +33,7 @@
 void nn_priolist_init(struct nn_priolist *self)
 {
     int i;
-    printf("nn_priolist_init.%p\n",self);
+    //printf("nn_priolist_init.%p\n",self);
     for (i = 0; i != NN_PRIOLIST_SLOTS; ++i)
     {
         nn_list_init (&self->slots [i].pipes);
@@ -54,7 +54,7 @@ void nn_priolist_add(struct nn_priolist *self,struct nn_priolist_data *data, str
 {
     data->pipe = pipe;
     data->priority = priority;
-    printf("nn_priolist_add.%p data.%p priority.%d\n",self,data,priority);
+    //printf("nn_priolist_add.%p data.%p priority.%d\n",self,data,priority);
     nn_list_item_init (&data->item);
 }
 

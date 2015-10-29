@@ -29,7 +29,7 @@
 
 void nn_fq_init (struct nn_fq *self)
 {
-    printf("nn_fq_init\n");
+    //printf("nn_fq_init\n");
     nn_priolist_init(&self->priolist);
 }
 
