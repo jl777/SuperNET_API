@@ -11,7 +11,7 @@ function createWindow(url) {
   chrome.app.window.create(url, {
     width: 1024,
     height: 800,
-    frame: 'none'
+    frame: 'window'
   });
 }
 
