@@ -456,7 +456,7 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
         }
         free(argjson);
     }
-    dp->daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)3) ^ *(int32_t *)plugin;
+    dp->daemonid = (uint64_t)(milliseconds() * 1000000) & ((~(uint64_t)3) ^ *(int32_t *)plugin);
     //memset(&dp->perm,0xff,sizeof(dp->perm));
     //memset(&dp->wss,0xff,sizeof(dp->wss));
     dp->jsonargs = (arg != 0 && arg[0] != 0) ? clonestr(arg) : 0;

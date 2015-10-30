@@ -85,7 +85,10 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retso
         {
             if ( Debuglevel > 2 )
                 printf("dp.%p %s slot.%d <- tag.%llu dest.%p\n",dp,dp->name,i,(long long)tag,dest);
-            SUPERNET.tags[i][0] = tag, SUPERNET.tags[i][1] = (uint64_t)dest, SUPERNET.tags[i][2] = (uint64_t)retsock;
+            SUPERNET.tags[i][0] = tag;
+            SUPERNET.tags[i][1] = 0;
+            memcpy(&SUPERNET.tags[i][1],&dest,sizeof(dest));
+            SUPERNET.tags[i][2] = (uint64_t)retsock;
             return(i);
         }
     }
@@ -101,7 +104,7 @@ char **get_tagstr(int32_t *retsockp,struct daemon_info *dp,uint64_t tag)
     {
         if ( SUPERNET.tags[i][0] == tag )
         {
-            dest = (char **)SUPERNET.tags[i][1];
+            memcpy(&dest,&SUPERNET.tags[i][1],sizeof(dest));
             if ( SUPERNET.tags[i][2] != 0 )
                 *retsockp = (int32_t)SUPERNET.tags[i][2];
             SUPERNET.tags[i][0] = SUPERNET.tags[i][1] = SUPERNET.tags[i][2] = 0;

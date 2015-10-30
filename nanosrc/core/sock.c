@@ -69,7 +69,7 @@ static void nn_sock_action_zombify (struct nn_sock *self);
 
 int32_t nn_sock_init(struct nn_sock *self,struct nn_socktype *socktype,int32_t fd)
 {
-    int32_t i,rc;
+    int32_t i,rc = 0;
     // Make sure that at least one message direction is supported
     nn_assert(!(socktype->flags & NN_SOCKTYPE_FLAG_NOSEND) || !(socktype->flags & NN_SOCKTYPE_FLAG_NORECV));
     //  Create the AIO context for the SP socket

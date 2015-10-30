@@ -14,15 +14,26 @@ NACL_SDK_ROOT ?= $(abspath $(CURDIR))
 TARGET = SuperNET_API
 
 
+#ifneq (,$(or $(findstring pnacl,$(TOOLCHAIN)),$(findstring Release,$(CONFIG))))
+EXTRA= -D__PNACL
+EXTRALIBS= nacl_io
+NONPORTABLE=   plugins/nonportable/newos/random.c  plugins/nonportable/newos/files.c
+
+#else
+#EXTRA= -I/usr/include -L/usr/local/opt/curl/include
+#LDFLAGS = -L/usr/lib -L/usr/local/opt/curl/lib
+#EXTRALIBS=
+#NONPORTABLE=   plugins/nonportable/Darwin/random.c  plugins/nonportable/Darwin/files.c
+#endif
+
 include $(NACL_SDK_ROOT)/tools/common.mk
 
 CHROME_ARGS += --allow-nacl-socket-api=localhost
 
 DEPS = nacl_io
-LIBS = curl z pthread ssl crypto ppapi nacl_io 
-#LDFLAGS = -L $(NACL_SDK_ROOT)/toolchain/pnacl/usr/lib
+LIBS = curl z pthread ssl crypto ppapi $(EXTRALIBS)
 
-CFLAGS = -Wall -Ipicocoin/include -D STANDALONE  -D __PNACL -DNN_HAVE_POLL=1 -DNN_HAVE_SEMAPHORE=1 -DNN_HAVE_PIPE=1 -DNN_USE_POLL=1 -DNN_DISABLE_GETADDRINFO_A=1 -DNN_USE_LITERAL_IFADDR=1 -DNN_HAVE_STDINT=1 -DNN_HAVE_MSG_CONTROL=1 -DNN_USE_MYMSG
+CFLAGS = -Wall -fno-strict-aliasing -Ipicocoin/include -D STANDALONE  -DNN_HAVE_POLL=1 -DNN_HAVE_SEMAPHORE=1 -DNN_HAVE_PIPE=1 -DNN_USE_POLL=1 -DNN_DISABLE_GETADDRINFO_A=1 -DNN_USE_LITERAL_IFADDR=1 -DNN_HAVE_STDINT=1 -DNN_HAVE_MSG_CONTROL=1 -DNN_USE_MYMSG $(EXTRA)
 
 #    nanosrc/core/ep.h \
 #    nanosrc/core/global.h \
@@ -393,8 +404,7 @@ SOURCES = handlers.c \
   picocoin/cstr.c \
   SuperNET.c \
   libjl777.c \
-  plugins/nonportable/newos/random.c \
-  plugins/nonportable/newos/files.c \
+  $(NONPORTABLE) \
   plugins/peggy/quotes777.c \
   plugins/peggy/peggy777.c \
   plugins/coins/coins777_main.c \

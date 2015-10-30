@@ -155,7 +155,7 @@ static void nn_tcpmuxd_routine (void *arg)
     int conn;
     int pos;
     char service [256];
-    struct nn_tcpmuxd_conn *tc;
+    struct nn_tcpmuxd_conn *tc = 0;
     size_t sz;
     ssize_t ssz;
     int i;
@@ -239,6 +239,7 @@ static void nn_tcpmuxd_routine (void *arg)
             }
             errno_assert (ssz >= 0);
             nn_assert (ssz == 3);
+            nn_assert (tc != 0);
 
             /*  Pass the file descriptor to the listening process. */
             rc = nn_tcpmuxd_send_fd (tc->fd, conn);

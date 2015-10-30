@@ -119,6 +119,7 @@ void *accts777_key(union peggy_addr *addr,int32_t type)
         case PEGGY_ADDRCREATE: key = &addr->newunit.sha256; break;
         case PEGGY_ADDRUNIT: key = &addr->sha256; break;
         case PEGGY_ADDRPUBKEY: key = &addr->sha256; break;
+        default: key = 0; break;
     }
     return(key);
 }

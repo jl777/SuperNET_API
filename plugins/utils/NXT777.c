@@ -834,7 +834,7 @@ int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *ra
             randombytes(bits,sizeof(bits));
             for (i=0; i<sizeof(bits); i++)
                 printf("%02x ", bits[i]);
-            printf("write.%ld -> %p\n",sizeof(bits),bits);
+            printf("write.%d -> %p\n",(int32_t)sizeof(bits),bits);
             //sprintf(buf,"dd if=/dev/random count=%d bs=1 > %s",randchars*8,fname);
             //printf("cmd.(%s)\n",buf);
             //if ( system(buf) != 0 )

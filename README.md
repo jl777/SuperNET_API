@@ -16,3 +16,13 @@ gcc -o SNapi SNapi.c plugins/utils/cJSON.c -lnanomsg
 
 You can change any of the html or JS files and just refresh to test it. After the first clone, just a git pull and refresh the page.
 
+To recompile the pexe files from scratch, you need to setup a nacl_sdk toolchain (https://developer.chrome.com/native-client/sdk/download) and copy the toolchain directory into the SuperNET_API directory. From there make will recompile, make serve will recompile and launch httpd.py localhost server.
+
+There are three levels of accessing the SuperNET_API:
+	a) via JS function bindings that will send JSON to SuperNET core and get a JSON return back
+	b) via SNapi to send in a JSON request to SuperNET core and it will print to stdout the JSON return
+	c) via C code that is linked into the SuperNET_API itself
+
+I am working on supporting SuperNET agents within the pnacl framework, along with service providers
+
+James

@@ -732,7 +732,7 @@ int SuperNET_start(char *fname,char *myip)
             strs[n++] = SuperNET_launch_agent("dcnet",jsonargs,0);
         if ( SUPERNET.gatewayid < 0 )
         {
-            if ( 0 )
+            if ( 1 )
                 strs[n++] = SuperNET_launch_agent("prices",jsonargs,&PRICES.readyflag);
             if ( 0 )
                 strs[n++] = SuperNET_launch_agent("teleport",jsonargs,&TELEPORT.readyflag);

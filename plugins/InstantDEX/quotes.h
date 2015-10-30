@@ -353,7 +353,7 @@ char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
 cJSON *InstantDEX_specialorders(uint64_t *quoteidp,uint64_t nxt64bits,char *base,char *special,uint64_t baseamount,int32_t addrtype)
 {
     struct InstantDEX_quote *iQ,*tmp; int32_t exchangeid; uint32_t i,n,now,duration,ismine = 0;
-    uint64_t basebits; cJSON *item=0,*array = 0; char *coinaddr,*pubkey,checkaddr[128]; 
+    uint64_t basebits; cJSON *item=0,*array = 0; char *coinaddr=0,*pubkey,checkaddr[128];
     now = (uint32_t)time(NULL);
     basebits = stringbits(base);
     if ( special == 0 || find_exchange(&exchangeid,special) == 0 )
@@ -454,7 +454,7 @@ cJSON *prices777_orderjson(struct InstantDEX_quote *iQ)
 
 cJSON *InstantDEX_orderbook(struct prices777 *prices)
 {
-    struct InstantDEX_quote *ptr,iQ,*tmp,*askvals,*bidvals; cJSON *json,*bids,*asks; uint32_t now,duration;
+    struct InstantDEX_quote *ptr,iQ,*tmp,*askvals=0,*bidvals=0; cJSON *json,*bids,*asks; uint32_t now,duration;
     int32_t i,isask,iter,n,m,numbids,numasks,invert;
     json = cJSON_CreateObject(), bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
     now = (uint32_t)time(NULL);

@@ -141,7 +141,7 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
     encoded[NXT_TOKEN_LEN] = ftoken[NXT_TOKEN_LEN] = 0;
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
-    else if ( NXTACCTSECRET == GENESIS_SECRET )
+    else if ( strcmp(NXTACCTSECRET,GENESIS_SECRET) == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,GENESISACCT,broadcaststr);
     else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s%s}]",cmdjson,encoded,SUPERNET.NXTADDR,ftokenstr,broadcaststr);
     return((int32_t)strlen(tokenized)+1);
@@ -744,7 +744,7 @@ int32_t busdata_validate(struct destbuf *forwarder,struct destbuf *sender,uint32
             *datalenp = (int32_t)strlen((char *)databuf) + 1;
             return(1);
         }
-    } else printf("busdata_validate not array (%s)\n",msg);
+    } else printf("busdata_validate not array (%s)\n",(char *)msg);
     return(-1);
 }
 
@@ -1053,7 +1053,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
             }
             sprintf(endpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,port);
             cJSON_ReplaceItemInObject(json,"endpoint",cJSON_CreateString(endpoint));
-            if ( secret != GENESIS_SECRET && SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
+            if ( strcmp(secret,GENESIS_SECRET) != 0 && SUPERNET.SERVICESECRET[0] != 0 && issue_generateToken(servicetoken,endpoint,SUPERNET.SERVICESECRET) == 0 )
             {
                 cJSON_AddItemToObject(json,"servicetoken",cJSON_CreateString(servicetoken));
                 secret = SUPERNET.SERVICESECRET;
@@ -1086,7 +1086,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         if ( key.buf[0] != 0 )
             cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key.buf));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
-        if ( secret != GENESIS_SECRET )
+        if ( strcmp(secret,GENESIS_SECRET) != 0 )
         {
             cJSON_AddItemToObject(datajson,"method",cJSON_CreateString("busdata"));
             if ( SUPERNET.SERVICESECRET[0] != 0 )

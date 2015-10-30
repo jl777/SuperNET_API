@@ -294,7 +294,7 @@ ifeq (,$(2))
 else
 	+$(MAKE) -C $(2) STAMPDIR=$(abspath $(STAMPDIR)) $(abspath $(STAMPDIR)/$(1).stamp) $(3)
 endif
-	cp pnacl/Release/*.pexe pnacl/Release/SuperNET_API.nmf Release
+	cp pnacl/Release/*.pexe pnacl/Release/*.bc pnacl/Release/SuperNET_API.nmf Release
 
 all: rebuild_$(1)
 $(STAMPDIR)/$(1).stamp: rebuild_$(1)

@@ -603,8 +603,8 @@ struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct pe
 {
     //struct peggy_limits limits = { { PERCENTAGE(10), PERCENTAGE(25), PERCENTAGE(33), PERCENTAGE(50) }, SATOSHIDEN * 10000, SATOSHIDEN * 1000, { 0, 30, 90, 180 }, 4 };
     char name[64],base[64],rel[64]; uint8_t opret[1024]; struct peggy_tx Ptx; struct peggy *PEG;
-    struct price_resolution mindenom,spread,price; uint64_t len; long offset; uint64_t maxsupply,maxnetbalance;
-    int32_t i,c,baseid,relid,peggymils,signedcount,datalen,n=0,maxmargin,numprices,err=-1; uint32_t pval;
+    struct price_resolution mindenom,spread,price; uint64_t len; long offset; uint64_t maxsupply=0,maxnetbalance=0;
+    int32_t i,c,baseid,relid,peggymils=0,signedcount,datalen,n=0,maxmargin=0,numprices,err=-1; uint32_t pval = 0;
     numprices = 1;
     datalen = (int32_t)strlen(opreturnstr) / 2;
     decode_hex(opret,datalen,opreturnstr);
@@ -630,6 +630,7 @@ struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct pe
                     lookbacks[0] = 0, lookbacks[1] = 1000;
                     if ( PEGS == 0 )
                     {
+                        spread.Pval = PERCENTAGE(1);
                         PEGS = peggy_init(path,PEGGY_MAXLOCKDAYS,"BTCD",SATOSHIDEN/100,1,1,spread,PEGGY_RATE_777,40,10,2,5,2,Ptx.timestamp,Ptx.details.price.feed[0]);
                         PEGS->accts = accts777_init(path,0);
                         PEGS->genesis = opreturnstr, opreturnstr = 0;
@@ -1044,6 +1045,7 @@ int32_t peggy_init_contexts(struct txinds777_info *opreturns,uint32_t RTblocknum
         exit(-1);
     }
     peggy_dailyrates();
+    spread.Pval = PERCENTAGE(1);
     if ( (PEGS= peggy_lchain(opreturns,"opreturns")) == 0 )
         PEGS = peggy_init(path,PEGGY_MAXLOCKDAYS,"BTCD",SATOSHIDEN/100,100,10,spread,PEGGY_RATE_777,40,10,2,5,2,0,0);
     globals[0] = PEGS;

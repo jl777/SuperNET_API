@@ -12,12 +12,16 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 #include "coredefs.h"
 #include "util.h"
+#include "clist.h"
 #include "compat.h"		/* for mkstemp */
+
+int file_seq_open(const char *filename);
 
 void bu_reverse_copy(unsigned char *dst, const unsigned char *src, size_t len)
 {
@@ -66,8 +70,7 @@ void bu_Hash160(unsigned char *md160, const void *data, size_t data_len)
 	RIPEMD160(md1, SHA256_DIGEST_LENGTH, md160);
 }
 
-bool bu_read_file(const char *filename, void **data_, size_t *data_len_,
-	       size_t max_file_len)
+bool bu_read_file(const char *filename, void **data_, size_t *data_len_,size_t max_file_len)
 {
 	void *data;
 	struct stat st;

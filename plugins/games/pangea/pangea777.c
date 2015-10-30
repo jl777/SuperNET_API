@@ -1041,7 +1041,7 @@ int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
 
 void pangea_chat(uint64_t senderbits,void *buf,int32_t len,int32_t senderind)
 {
-    PostMessage(">>>>>>>>>>> CHAT FROM.%d %llu: (%s)\n",senderind,(long long)senderbits,buf);
+    PostMessage(">>>>>>>>>>> CHAT FROM.%d %llu: (%s)\n",senderind,(long long)senderbits,(char *)buf);
 }
 
 int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 *hn)
@@ -1416,8 +1416,8 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
 char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 privkey,bits256 pubkey,char *transport,char *ipaddr,uint16_t port,uint32_t minbuyin,uint32_t maxbuyin,int32_t hostrake)
 {
     int32_t createdflag,num,i,myind= -1; uint64_t tableid,addrs[CARDS777_MAXPLAYERS],isbot[CARDS777_MAXPLAYERS];
-    struct pangea_info *sp; cJSON *array; struct pangea_thread *tp; char *base,*str,*hexstr,*endpoint,hex[1024]; uint32_t timestamp;
-    struct cards777_pubdata *dp; struct hostnet777_server *srv;
+    struct pangea_info *sp; cJSON *array; struct pangea_thread *tp=0; char *base,*str,*hexstr,*endpoint,hex[1024]; uint32_t timestamp;
+    struct cards777_pubdata *dp; struct hostnet777_server *srv=0;
     str = jprint(json,0);
     PostMessage("T%d NEWTABLE.(%s)\n",threadid,str);
     free(str);
@@ -1844,7 +1844,7 @@ char *pangea_univ(uint8_t *mypriv,cJSON *json)
 void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigblind,int64_t ante,int32_t rakemillis)
 {
     char retbuf[65536]; bits256 privkey,pubkey; int32_t i,slot,threadid; struct pangea_thread *tp; struct hostnet777_client **clients;
-    struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
+    struct hostnet777_server *srv=0; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
     //msleep(5000);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
     numthreads = 9; bigblind = SATOSHIDEN; ante = 0*SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;

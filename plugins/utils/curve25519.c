@@ -62,11 +62,11 @@ static inline uint64_t force_inline load_limb(uint8_t *in)
 bits320 fexpand(bits256 basepoint)
 {
     bits320 out;
-    out.ulongs[0] = load_limb(basepoint.bytes) & 0x7ffffffffffff;
-    out.ulongs[1] = (load_limb(basepoint.bytes+6) >> 3) & 0x7ffffffffffff;
-    out.ulongs[2] = (load_limb(basepoint.bytes+12) >> 6) & 0x7ffffffffffff;
-    out.ulongs[3] = (load_limb(basepoint.bytes+19) >> 1) & 0x7ffffffffffff;
-    out.ulongs[4] = (load_limb(basepoint.bytes+24) >> 12) & 0x7ffffffffffff;
+    out.ulongs[0] = load_limb(basepoint.bytes) & 0x7ffffffffffffLL;
+    out.ulongs[1] = (load_limb(basepoint.bytes+6) >> 3) & 0x7ffffffffffffLL;
+    out.ulongs[2] = (load_limb(basepoint.bytes+12) >> 6) & 0x7ffffffffffffLL;
+    out.ulongs[3] = (load_limb(basepoint.bytes+19) >> 1) & 0x7ffffffffffffLL;
+    out.ulongs[4] = (load_limb(basepoint.bytes+24) >> 12) & 0x7ffffffffffffLL;
     return(out);
 }
 
@@ -79,11 +79,11 @@ static inline bits320 force_inline fscalar_product(const bits320 in,const uint64
 {
     int32_t i; uint128_t a = 0; bits320 output;
     a = ((uint128_t)in.ulongs[0]) * scalar;
-    output.ulongs[0] = ((uint64_t)a) & 0x7ffffffffffff;
+    output.ulongs[0] = ((uint64_t)a) & 0x7ffffffffffffLL;
     for (i=1; i<5; i++)
     {
         a = ((uint128_t)in.ulongs[i]) * scalar + ((uint64_t) (a >> 51));
-        output.ulongs[i] = ((uint64_t)a) & 0x7ffffffffffff;
+        output.ulongs[i] = ((uint64_t)a) & 0x7ffffffffffffLL;
     }
     output.ulongs[0] += (a >> 51) * 19;
     return(output);
@@ -107,13 +107,13 @@ bits320 fmul(const bits320 in2,const bits320 in)
     t[1] += ((uint128_t) r4) * s2 + ((uint128_t) r2) * s4 + ((uint128_t) r3) * s3;
     t[2] += ((uint128_t) r4) * s3 + ((uint128_t) r3) * s4;
     t[3] += ((uint128_t) r4) * s4;
-    r0 = (uint64_t)t[0] & 0x7ffffffffffff; c = (uint64_t)(t[0] >> 51);
-    t[1] += c;      r1 = (uint64_t)t[1] & 0x7ffffffffffff; c = (uint64_t)(t[1] >> 51);
-    t[2] += c;      r2 = (uint64_t)t[2] & 0x7ffffffffffff; c = (uint64_t)(t[2] >> 51);
-    t[3] += c;      r3 = (uint64_t)t[3] & 0x7ffffffffffff; c = (uint64_t)(t[3] >> 51);
-    t[4] += c;      r4 = (uint64_t)t[4] & 0x7ffffffffffff; c = (uint64_t)(t[4] >> 51);
-    r0 +=   c * 19; c = r0 >> 51; r0 = r0 & 0x7ffffffffffff;
-    r1 +=   c;      c = r1 >> 51; r1 = r1 & 0x7ffffffffffff;
+    r0 = (uint64_t)t[0] & 0x7ffffffffffffLL; c = (uint64_t)(t[0] >> 51);
+    t[1] += c;      r1 = (uint64_t)t[1] & 0x7ffffffffffffLL; c = (uint64_t)(t[1] >> 51);
+    t[2] += c;      r2 = (uint64_t)t[2] & 0x7ffffffffffffLL; c = (uint64_t)(t[2] >> 51);
+    t[3] += c;      r3 = (uint64_t)t[3] & 0x7ffffffffffffLL; c = (uint64_t)(t[3] >> 51);
+    t[4] += c;      r4 = (uint64_t)t[4] & 0x7ffffffffffffLL; c = (uint64_t)(t[4] >> 51);
+    r0 +=   c * 19; c = r0 >> 51; r0 = r0 & 0x7ffffffffffffLL;
+    r1 +=   c;      c = r1 >> 51; r1 = r1 & 0x7ffffffffffffLL;
     r2 +=   c;
     out.ulongs[0] = r0, out.ulongs[1] = r1, out.ulongs[2] = r2, out.ulongs[3] = r3, out.ulongs[4] = r4;
     return(out);
@@ -136,13 +136,13 @@ inline bits320 force_inline fsquare_times(const bits320 in,uint64_t count)
         t[3] = ((uint128_t) d0) * r3 + ((uint128_t) d1) * r2 + (((uint128_t) r4) * (d419   ));
         t[4] = ((uint128_t) d0) * r4 + ((uint128_t) d1) * r3 + (((uint128_t) r2) * (r2     ));
         
-        r0 = (uint64_t)t[0] & 0x7ffffffffffff; c = (uint64_t)(t[0] >> 51);
-        t[1] += c;      r1 = (uint64_t)t[1] & 0x7ffffffffffff; c = (uint64_t)(t[1] >> 51);
-        t[2] += c;      r2 = (uint64_t)t[2] & 0x7ffffffffffff; c = (uint64_t)(t[2] >> 51);
-        t[3] += c;      r3 = (uint64_t)t[3] & 0x7ffffffffffff; c = (uint64_t)(t[3] >> 51);
-        t[4] += c;      r4 = (uint64_t)t[4] & 0x7ffffffffffff; c = (uint64_t)(t[4] >> 51);
-        r0 +=   c * 19; c = r0 >> 51; r0 = r0 & 0x7ffffffffffff;
-        r1 +=   c;      c = r1 >> 51; r1 = r1 & 0x7ffffffffffff;
+        r0 = (uint64_t)t[0] & 0x7ffffffffffffLL; c = (uint64_t)(t[0] >> 51);
+        t[1] += c;      r1 = (uint64_t)t[1] & 0x7ffffffffffffLL; c = (uint64_t)(t[1] >> 51);
+        t[2] += c;      r2 = (uint64_t)t[2] & 0x7ffffffffffffLL; c = (uint64_t)(t[2] >> 51);
+        t[3] += c;      r3 = (uint64_t)t[3] & 0x7ffffffffffffL; c = (uint64_t)(t[3] >> 51);
+        t[4] += c;      r4 = (uint64_t)t[4] & 0x7ffffffffffffLL; c = (uint64_t)(t[4] >> 51);
+        r0 +=   c * 19; c = r0 >> 51; r0 = r0 & 0x7ffffffffffffLL;
+        r1 +=   c;      c = r1 >> 51; r1 = r1 & 0x7ffffffffffffLL;
         r2 +=   c;
     } while( --count );
     out.ulongs[0] = r0, out.ulongs[1] = r1, out.ulongs[2] = r2, out.ulongs[3] = r3, out.ulongs[4] = r4;
@@ -151,7 +151,7 @@ inline bits320 force_inline fsquare_times(const bits320 in,uint64_t count)
 
 static inline void force_inline fcontract_iter(uint128_t t[5],int32_t flag)
 {
-    int32_t i; uint64_t mask = 0x7ffffffffffff;
+    int32_t i; uint64_t mask = 0x7ffffffffffffLL;
     for (i=0; i<4; i++)
         t[i+1] += t[i] >> 51, t[i] &= mask;
     if ( flag != 0 )

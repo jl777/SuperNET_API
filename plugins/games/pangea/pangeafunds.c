@@ -174,7 +174,7 @@ void pangea_summary(union hostnet777 *hn,struct cards777_pubdata *dp,uint8_t typ
     if ( card.txid != 0 && memcmp(card.bytes,arg1,sizeof(card)) != 0 )
         printf("pangea_summary: parse error card mismatch %llx != %llx\n",(long long)card.txid,*(long long *)arg1);
     else if ( card.txid == 0 && memcmp(arg1,bits64,size1) != 0 )
-        printf("pangea_summary: parse error bits64 %llx != %llx\n",(long long)bits64,*(long long *)arg0);
+        printf("pangea_summary: parse error bits64 %llx != %llx\n",(long long)bits64[0],*(long long *)arg0);
     if ( 1 && hn->client->H.slot == pangea_slotA(dp->table) )
     {
         if ( (item= pangea_handitem(&cardi,&pitem,type,valA,bits64,card,dp->N)) != 0 )
@@ -1390,7 +1390,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
 
 char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
-    char *actionstr; uint64_t sum,amount=0; int32_t action,num,threadid; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
+    char *actionstr; uint64_t sum,amount=0; int32_t action=0,num,threadid; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
     threadid = juint(json,"threadid");
     if ( (sp= pangea_threadtables(&num,threadid,tableid)) == 0 )
         return(clonestr("{\"error\":\"you are not playing on any tables\"}"));

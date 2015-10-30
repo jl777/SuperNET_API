@@ -833,6 +833,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
     int32_t i,j,groupsize,slot; uint64_t baseids[MAX_GROUPS*2];
     double basevols[MAX_GROUPS*2],relvols[MAX_GROUPS*2],baseratio,relratio,a,av,b,bv,gap,bid,ask,minvol,bidvol,askvol,hbla = 0.;
     struct prices777_basketinfo OB; uint32_t timestamp; struct prices777 *feature; struct prices777_orderentry *gp;
+    a = av = b = bv = 0;
     timestamp = (uint32_t)time(NULL);
     memset(&OB,0,sizeof(OB));
     memset(baseids,0,sizeof(baseids));

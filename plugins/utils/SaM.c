@@ -32,7 +32,7 @@
 #define SAM_NUMBER_OF_ROUNDS 9
 #define SAM_DELTA 254
 
-#define SAMHIT_LIMIT 7625597484987 // 3 ** 27
+#define SAMHIT_LIMIT 7625597484987LL // 3 ** 27
 #define MAX_CRYPTO777_HIT ((1LL << 62) / 1000)
 
 #include "bits777.c"

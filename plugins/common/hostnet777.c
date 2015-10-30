@@ -196,7 +196,7 @@ int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
             if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
                 break;
             if ( numerrs++ < 100 )
-                printf("numerrs.%d retry.%d for sock.%d len.%d vs sendlen.%d (%s) (%s)\n",numerrs,j,sock,len,sendlen,len<512?ptr:"",nn_err_strerror(nn_err_errno()));
+                printf("numerrs.%d retry.%d for sock.%d len.%d vs sendlen.%d (%s) (%s)\n",numerrs,j,sock,len,sendlen,(char *)(len<512?ptr:""),nn_err_strerror(nn_err_errno()));
             msleep(100);
         }
         //printf("hostnet777_send.%d j.%d len.%d sendlen.%d\n",sock,j,len,sendlen);
@@ -764,7 +764,7 @@ void hostnet777_msg(uint64_t destbits,bits256 destpub,union hostnet777 *src,int3
 
 int32_t hostnet777_init(union hostnet777 *hn,bits256 *privkeys,int32_t num,int32_t launchflag)
 {
-    bits256 pubkey; int32_t slot,threadid; struct hostnet777_server *srv;
+    bits256 pubkey; int32_t slot,threadid; struct hostnet777_server *srv=0;
     for (threadid=0; threadid<num; threadid++)
     {
         pubkey = acct777_pubkey(privkeys[threadid]);
@@ -993,7 +993,7 @@ int32_t hostnet777_testresult(struct hostnet777_server *srv,struct hostnet777_cl
     {
         for (i=1; i<numclients; i++)
             printf("%llu ",(long long)clients[i]->H.nxt64bits);
-        printf("<<<<<<<<<<<<<<< srv.%llu ERROR.(%s)\n\n",(long long)srv->H.nxt64bits,buf);
+        printf("<<<<<<<<<<<<<<< srv.%llu ERROR.(%s)\n\n",(long long)srv->H.nxt64bits,(char *)buf);
     }// else printf("<<<<<<<<<<<<<<< PASS\n\n");
     return(retval);
 }

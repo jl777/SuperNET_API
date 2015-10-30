@@ -10,6 +10,11 @@
 #include "util.h"
 #include "cstr.h"
 
+void bu_reverse_copy(unsigned char *dst,const unsigned char *src,size_t len);
+void bu_Hash4(unsigned char *md32,const void *data,size_t data_len);
+cstring *bn_getvch(const BIGNUM *v);
+void bn_setvch(BIGNUM *vo,const void *data_,size_t data_len);
+
 static const char base58_chars[] =
 	"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 

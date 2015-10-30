@@ -13,6 +13,8 @@
  *                                                                            *
  ******************************************************************************/
 
+// ./SNapi "{\"method\":\"orderbook\",\"base\":\"NXT\",\"allfields\":\"1\",\"exchange\":\"active\",\"rel\":\"BTC\",\"agent\":\"InstantDEX\"}"
+
 #define BUNDLED
 #define PLUGINSTR "InstantDEX"
 #define PLUGNAME(NAME) InstantDEX ## NAME
@@ -539,7 +541,7 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
                 }
                 else (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
             } else retstr = clonestr("{\"error\":\"cant find exchange\"}");
-            printf("%s ptr%.p trade.%p\n",exchangestr.buf,exchange,exchange!=0?exchange->trade:0);
+            printf("%s ptr.%p trade.%p\n",exchangestr.buf,exchange,exchange!=0?exchange->trade:0);
         }
         else if ( strcmp(method.buf,"tradesequence") == 0 )
         {

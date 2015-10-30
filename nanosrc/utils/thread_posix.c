@@ -39,7 +39,6 @@ void nn_thread_term(struct nn_thread *self)
 {
     int32_t rc;
     rc = pthread_join(self->handle,NULL);
-    PostMessage("Terminate thread.%p via pthread_join(%p) rc.%d\n",self,self->handle,rc);
     errnum_assert(rc == 0,rc);
 }
 

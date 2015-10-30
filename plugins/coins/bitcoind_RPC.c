@@ -131,7 +131,7 @@ try_again:
   	curl_easy_setopt(curl_handle,CURLOPT_USERAGENT,"mozilla/4.0");//"Mozilla/4.0 (compatible; )");
     curl_easy_setopt(curl_handle,CURLOPT_HTTPHEADER,	headers);
     curl_easy_setopt(curl_handle,CURLOPT_URL,		url);
-    curl_easy_setopt(curl_handle,CURLOPT_WRITEFUNCTION,	accumulate); 		// send all data to this function
+    curl_easy_setopt(curl_handle,CURLOPT_WRITEFUNCTION,	(void *)accumulate); 		// send all data to this function
     curl_easy_setopt(curl_handle,CURLOPT_WRITEDATA,		&s); 			// we pass our 's' struct to the callback
     curl_easy_setopt(curl_handle,CURLOPT_NOSIGNAL,		1L);   			// supposed to fix "Alarm clock" and long jump crash
 	curl_easy_setopt(curl_handle,CURLOPT_NOPROGRESS,	1L);			// no progress callback

@@ -23,6 +23,7 @@
 
 /* cJSON */
 /* JSON parser in C. */
+#include <math.h>
 
 #include "../includes/cJSON.h"
 #define DEFINES_ONLY

@@ -5,7 +5,10 @@
 #include "picocoin-config.h"
 
 #include <openssl/bn.h>
+#include "cstr.h"
 #include "util.h"
+
+void bu_reverse_copy(unsigned char *dst,const unsigned char *src,size_t len);
 
 void bn_setvch(BIGNUM *vo, const void *data_, size_t data_len)
 {
@@ -39,8 +42,7 @@ cstring *bn_getvch(const BIGNUM *v)
 	unsigned int le_sz = sz - 4;
 	cstring *s_le = cstr_new_sz(le_sz);
 	cstr_resize(s_le, le_sz);
-	bu_reverse_copy((unsigned char *)s_le->str,
-			(unsigned char *)s_be->str + 4, le_sz);
+	bu_reverse_copy((unsigned char *)s_le->str,(unsigned char *)s_be->str + 4, le_sz);
 
 	cstr_free(s_be, true);
 

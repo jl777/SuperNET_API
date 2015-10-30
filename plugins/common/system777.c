@@ -313,9 +313,10 @@ static uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 
 
 void *myaligned_alloc(uint64_t allocsize)
 {
-    void *ptr,*realptr;
+    void *ptr,*realptr; uint64_t tmp;
     realptr = calloc(1,allocsize + 16 + sizeof(realptr));
-    ptr = (void *)_align16((uint64_t)realptr + sizeof(ptr));
+    tmp = _align16((long)realptr + sizeof(ptr));
+    memcpy(&ptr,&tmp,sizeof(ptr));
     memcpy((void *)((long)ptr - sizeof(realptr)),&realptr,sizeof(realptr));
     printf("aligned_alloc(%llu) realptr.%p -> ptr.%p, diff.%ld\n",(long long)allocsize,realptr,ptr,((long)ptr - (long)realptr));
     return(ptr);

@@ -155,7 +155,7 @@ uint64_t poloniex_trade(char **retstrp,struct exchange_info *exchange,char *base
 
 int32_t cny_flip(char *market,char *coinname,char *base,char *rel,int32_t dir,double *pricep,double *volumep)
 {
-    char pairstr[512],lbase[16],lrel[16],*refstr;
+    char pairstr[512],lbase[16],lrel[16],*refstr=0;
     strcpy(lbase,base), tolowercase(lbase), strcpy(lrel,rel), tolowercase(lrel);
     if ( strcmp(lbase,"cny") == 0 || strcmp(lrel,"cny") == 0 )
     {

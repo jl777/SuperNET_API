@@ -455,11 +455,11 @@ static void nn_btcp_start_listening (struct nn_btcp *self)
 
     /*  Combine the port and the address. */
     if (ss.ss_family == AF_INET) {
-        ((struct sockaddr_in*) &ss)->sin_port = htons (port);
+        ((struct sockaddr_in *)&ss)->sin_port = htons(port);
         sslen = sizeof (struct sockaddr_in);
     }
     else if (ss.ss_family == AF_INET6) {
-        ((struct sockaddr_in6*) &ss)->sin6_port = htons (port);
+        ((struct sockaddr_in6 *)&ss)->sin6_port = htons(port);
         sslen = sizeof (struct sockaddr_in6);
     }
     else

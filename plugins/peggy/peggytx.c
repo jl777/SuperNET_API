@@ -568,8 +568,9 @@ int64_t peggy_process(void *_PEGS,int32_t flags,void *fca,uint64_t fundedvalue,u
     if ( stakedblock != 0 )
     {
         uint64_t sums[PEGGY_MAXPRICEDPEGS]; struct price_resolution price,aveprice; struct peggy_time T;
-        uint32_t key[2],nonz[PEGGY_MAXPRICEDPEGS],i,j,block,numprices,n,*feed; double startmilli;
+        uint32_t key[2],nonz[PEGGY_MAXPRICEDPEGS],i,j,block,numprices=0,n,*feed; double startmilli;
         struct peggy_vote vote;//{ struct price_resolution price,tolerance; uint64_t nxt64bits,weight; };
+        price.Pval = 0;
         memset(sums,0,sizeof(sums)), memset(nonz,0,sizeof(nonz));
         if ( blocknum <= PEGGY_NUMCOEFFS )
             block = 1;

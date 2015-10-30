@@ -1172,7 +1172,8 @@ static int nn_usock_send_raw (struct nn_usock *self, struct msghdr *hdr)
             ++hdr->msg_iov;
         }
         else {
-            *((uint8_t**) &(hdr->msg_iov->iov_base)) += nbytes;
+            hdr->msg_iov->iov_base = &((uint8_t *)hdr->msg_iov->iov_base)[nbytes];
+            //*((uint8_t **)&(hdr->msg_iov->iov_base)) += nbytes;
             hdr->msg_iov->iov_len -= nbytes;
             return -EAGAIN;
         }
@@ -1195,7 +1196,7 @@ int32_t nn_process_cmsg(struct nn_usock *self,struct msghdr *hdr)
     {
         if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS )
         {
-            retval = *((int32_t *)CMSG_DATA(cmsg));
+            memcpy(&retval,(int32_t *)CMSG_DATA(cmsg),sizeof(int32_t));
             if ( self->in.pfd )
             {
                 PostMessage("CMSG set self->in.pfd (%d)\n",retval);
