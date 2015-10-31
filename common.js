@@ -328,9 +328,9 @@ var common = (function() {
               return true;
               }
               
-              function retmsg(msg)
+              function retmsg(msg, cb)
               {
-              common.naclModule.postMessage(msg);
+              postCall(cb, msg, undefined);
               console.log("sent: "+msg);
               }
 
@@ -340,38 +340,43 @@ var common = (function() {
               {
               console.log("AAAA");
               var request = JSON.parse(message_event.data);
+              var cb = request.callback;
               console.log(request);
               if(request.method == "NxtAPI")
               {
               console.log(request.requestType);
               Jay.request(request.requestType, JSON.parse(request.params), function(ans) {
-                          retmsg(ans);
+                          retmsg(ans, cb);
                           })
               }
               else if(request.method == "status")
               {
-              retmsg("{'status':'doing alright'}");
+              retmsg("{'status':'doing alright'}", cb);
               }
               else if(request.method == "signBytes")
               {
               var out = converters.byteArrayToHexString(signBytes(converters.hexStringToByteArray(request.bytes), request.secretPhrase));
               var ret = {};
               ret.signature = out;
-              retmsg(JSON.stringify(ret));
+              retmsg(JSON.stringify(ret), cb);
               }
               else if(request.method == "createToken")
               {
               var out = createToken(request.data, request.secretPhrase);
               var ret = {};
               ret.token = out;
-              retmsg(JSON.stringify(ret));
+              retmsg(JSON.stringify(ret), cb);
               }
               else if(request.method == "parseToken")
               {
               var out = parseToken(request.token, request.data);
-              retmsg(JSON.stringify(out));
+              retmsg(JSON.stringify(out), cb);
               }
               console.log(request);
+              }
+              else
+              {
+                retmsg('{"error":"method not found"}');
               }
               
     if (typeof message_event.data === 'string') {
@@ -464,6 +469,8 @@ var common = (function() {
     hideModule: hideModule,
     removeModule: removeModule,
     logMessage: logMessage,
+    postMessage: postMessage,
+    handleMessage: handleMessage,
     updateStatus: updateStatus
   };
 

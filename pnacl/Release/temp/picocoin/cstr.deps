@@ -1,0 +1,6 @@
+# Updated by fix_deps.py
+pnacl/Debug/picocoin/cstr.o: picocoin/cstr.c \
+  picocoin/include/picocoin-config.h picocoin/include/cstr.h
+picocoin/cstr.c:
+picocoin/include/picocoin-config.h:
+picocoin/include/cstr.h:

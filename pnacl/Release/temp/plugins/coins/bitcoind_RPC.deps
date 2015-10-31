@@ -1,0 +1,42 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/coins/bitcoind_RPC.o: plugins/coins/bitcoind_RPC.c \
+  plugins/coins/../includes/cJSON.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/coins/../common/system777.c \
+  plugins/coins/../common/../includes/uthash.h \
+  plugins/coins/../common/../utils/utils777.c \
+  plugins/coins/../common/../utils/bits777.c \
+  plugins/coins/../common/../utils/../includes/portable777.h \
+  plugins/coins/../includes/mutex.h plugins/coins/../includes/nn.h \
+  plugins/coins/../includes/sha256.h \
+  plugins/coins/../includes/curve25519.h \
+  plugins/coins/../includes/InstantDEX_quote.h \
+  plugins/coins/../common/../utils/../common/system777.c \
+  plugins/coins/../common/../utils/inet.c \
+  plugins/coins/../common/../utils/../includes/nonportable.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/coins/../common/../includes/utlist.h \
+  plugins/coins/../utils/utils777.c
+plugins/coins/bitcoind_RPC.c:
+plugins/coins/../includes/cJSON.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/coins/../common/system777.c:
+plugins/coins/../common/../includes/uthash.h:
+plugins/coins/../common/../utils/utils777.c:
+plugins/coins/../common/../utils/bits777.c:
+plugins/coins/../common/../utils/../includes/portable777.h:
+plugins/coins/../includes/mutex.h:
+plugins/coins/../includes/nn.h:
+plugins/coins/../includes/sha256.h:
+plugins/coins/../includes/curve25519.h:
+plugins/coins/../includes/InstantDEX_quote.h:
+plugins/coins/../common/../utils/../common/system777.c:
+plugins/coins/../common/../utils/inet.c:
+plugins/coins/../common/../utils/../includes/nonportable.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/coins/../common/../includes/utlist.h:
+plugins/coins/../utils/utils777.c:

@@ -1,0 +1,66 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/KV/kv777.o: plugins/KV/kv777.c \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  plugins/KV/../includes/mutex.h plugins/KV/../includes/nn.h \
+  plugins/KV/../includes/uthash.h plugins/KV/../utils/NXT777.c \
+  plugins/KV/../utils/../includes/cJSON.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/KV/../utils/../utils/bits777.c \
+  plugins/KV/../utils/../includes/portable777.h \
+  plugins/KV/../includes/sha256.h plugins/KV/../includes/curve25519.h \
+  plugins/KV/../includes/InstantDEX_quote.h \
+  plugins/KV/../utils/../utils/utils777.c plugins/KV/../utils/bits777.c \
+  plugins/KV/../utils/../common/system777.c \
+  plugins/KV/../utils/../common/../utils/utils777.c \
+  plugins/KV/../utils/../common/../utils/inet.c \
+  plugins/KV/../utils/../includes/nonportable.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/KV/../utils/../common/../includes/utlist.h \
+  plugins/KV/../utils/../coins/coins777.c \
+  plugins/KV/../utils/../coins/../utils/huffstream.c \
+  plugins/KV/../utils/../coins/../common/system777.c \
+  plugins/KV/../utils/../coins/../KV/kv777.c \
+  plugins/KV/../utils/../coins/../utils/files777.c \
+  plugins/KV/../utils/utils777.c \
+  plugins/KV/../utils/../coins/../utils/utils777.c \
+  plugins/KV/../utils/../coins/../utils/bits777.c \
+  plugins/KV/../utils/../coins/gen1.c \
+  plugins/KV/../utils/../coins/cointx.c \
+  plugins/KV/../utils/../includes/tweetnacl.h \
+  plugins/KV/../utils/files777.c plugins/KV/../common/system777.c
+plugins/KV/kv777.c:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+plugins/KV/../includes/mutex.h:
+plugins/KV/../includes/nn.h:
+plugins/KV/../includes/uthash.h:
+plugins/KV/../utils/NXT777.c:
+plugins/KV/../utils/../includes/cJSON.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/KV/../utils/../utils/bits777.c:
+plugins/KV/../utils/../includes/portable777.h:
+plugins/KV/../includes/sha256.h:
+plugins/KV/../includes/curve25519.h:
+plugins/KV/../includes/InstantDEX_quote.h:
+plugins/KV/../utils/../utils/utils777.c:
+plugins/KV/../utils/bits777.c:
+plugins/KV/../utils/../common/system777.c:
+plugins/KV/../utils/../common/../utils/utils777.c:
+plugins/KV/../utils/../common/../utils/inet.c:
+plugins/KV/../utils/../includes/nonportable.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/KV/../utils/../common/../includes/utlist.h:
+plugins/KV/../utils/../coins/coins777.c:
+plugins/KV/../utils/../coins/../utils/huffstream.c:
+plugins/KV/../utils/../coins/../common/system777.c:
+plugins/KV/../utils/../coins/../KV/kv777.c:
+plugins/KV/../utils/../coins/../utils/files777.c:
+plugins/KV/../utils/utils777.c:
+plugins/KV/../utils/../coins/../utils/utils777.c:
+plugins/KV/../utils/../coins/../utils/bits777.c:
+plugins/KV/../utils/../coins/gen1.c:
+plugins/KV/../utils/../coins/cointx.c:
+plugins/KV/../utils/../includes/tweetnacl.h:
+plugins/KV/../utils/files777.c:
+plugins/KV/../common/system777.c:

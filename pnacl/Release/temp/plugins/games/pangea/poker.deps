@@ -1,0 +1,3 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/games/pangea/poker.o: plugins/games/pangea/poker.c
+plugins/games/pangea/poker.c:

@@ -1,0 +1,24 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/utils/ramcoder.o: plugins/utils/ramcoder.c \
+  plugins/utils/bits777.c plugins/utils/../includes/portable777.h \
+  plugins/utils/../includes/mutex.h plugins/utils/../includes/nn.h \
+  plugins/utils/../includes/sha256.h plugins/utils/../includes/cJSON.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/utils/../includes/uthash.h \
+  plugins/utils/../includes/curve25519.h \
+  plugins/utils/../includes/InstantDEX_quote.h \
+  plugins/utils/huffstream.c
+plugins/utils/ramcoder.c:
+plugins/utils/bits777.c:
+plugins/utils/../includes/portable777.h:
+plugins/utils/../includes/mutex.h:
+plugins/utils/../includes/nn.h:
+plugins/utils/../includes/sha256.h:
+plugins/utils/../includes/cJSON.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/utils/../includes/uthash.h:
+plugins/utils/../includes/curve25519.h:
+plugins/utils/../includes/InstantDEX_quote.h:
+plugins/utils/huffstream.c:

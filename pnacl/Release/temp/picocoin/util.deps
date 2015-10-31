@@ -1,0 +1,12 @@
+# Updated by fix_deps.py
+pnacl/Debug/picocoin/util.o: picocoin/util.c \
+  picocoin/include/picocoin-config.h picocoin/include/coredefs.h \
+  picocoin/include/util.h picocoin/include/cstr.h \
+  picocoin/include/clist.h picocoin/include/compat.h
+picocoin/util.c:
+picocoin/include/picocoin-config.h:
+picocoin/include/coredefs.h:
+picocoin/include/util.h:
+picocoin/include/cstr.h:
+picocoin/include/clist.h:
+picocoin/include/compat.h:

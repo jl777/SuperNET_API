@@ -1,0 +1,9 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/nonportable/newos/files.o: \
+  plugins/nonportable/newos/files.c \
+  plugins/nonportable/newos/../../includes/mutex.h \
+  plugins/nonportable/newos/../../includes/nn.h
+:
+plugins/nonportable/newos/files.c:
+plugins/nonportable/newos/../../includes/mutex.h:
+plugins/nonportable/newos/../../includes/nn.h:

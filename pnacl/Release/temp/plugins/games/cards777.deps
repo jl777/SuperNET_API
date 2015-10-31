@@ -1,0 +1,33 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/games/cards777.o: plugins/games/cards777.c \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  plugins/games/../utils/bits777.c \
+  plugins/games/../utils/../includes/portable777.h \
+  plugins/games/../utils/../includes/mutex.h \
+  plugins/games/../utils/../includes/nn.h \
+  plugins/games/../utils/../includes/sha256.h \
+  plugins/games/../utils/../includes/cJSON.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/games/../utils/../includes/uthash.h \
+  plugins/games/../utils/../includes/curve25519.h \
+  plugins/games/../utils/../includes/InstantDEX_quote.h \
+  plugins/games/../common/hostnet777.c \
+  plugins/games/../common/../utils/bits777.c \
+  plugins/games/../common/../utils/ramcoder.c \
+  plugins/games/../utils/huffstream.c
+plugins/games/cards777.c:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+plugins/games/../utils/bits777.c:
+plugins/games/../utils/../includes/portable777.h:
+plugins/games/../utils/../includes/mutex.h:
+plugins/games/../utils/../includes/nn.h:
+plugins/games/../utils/../includes/sha256.h:
+plugins/games/../utils/../includes/cJSON.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/games/../utils/../includes/uthash.h:
+plugins/games/../utils/../includes/curve25519.h:
+plugins/games/../utils/../includes/InstantDEX_quote.h:
+plugins/games/../common/hostnet777.c:
+plugins/games/../common/../utils/bits777.c:
+plugins/games/../common/../utils/ramcoder.c:
+plugins/games/../utils/huffstream.c:

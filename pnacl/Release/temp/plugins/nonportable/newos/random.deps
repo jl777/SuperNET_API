@@ -1,0 +1,9 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/nonportable/newos/random.o: \
+  plugins/nonportable/newos/random.c \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h
+:
+plugins/nonportable/newos/random.c:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:

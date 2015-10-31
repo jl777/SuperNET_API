@@ -1,0 +1,31 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/common/hostnet777.o: plugins/common/hostnet777.c \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  plugins/common/../utils/bits777.c \
+  plugins/common/../utils/../includes/portable777.h \
+  plugins/common/../utils/../includes/mutex.h \
+  plugins/common/../utils/../includes/nn.h \
+  plugins/common/../utils/../includes/sha256.h \
+  plugins/common/../utils/../includes/cJSON.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/common/../utils/../includes/uthash.h \
+  plugins/common/../utils/../includes/curve25519.h \
+  plugins/common/../utils/../includes/InstantDEX_quote.h \
+  plugins/common/../utils/ramcoder.c \
+  plugins/common/../utils/huffstream.c \
+  plugins/common/../includes/tweetnacl.h
+plugins/common/hostnet777.c:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+plugins/common/../utils/bits777.c:
+plugins/common/../utils/../includes/portable777.h:
+plugins/common/../utils/../includes/mutex.h:
+plugins/common/../utils/../includes/nn.h:
+plugins/common/../utils/../includes/sha256.h:
+plugins/common/../utils/../includes/cJSON.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/common/../utils/../includes/uthash.h:
+plugins/common/../utils/../includes/curve25519.h:
+plugins/common/../utils/../includes/InstantDEX_quote.h:
+plugins/common/../utils/ramcoder.c:
+plugins/common/../utils/huffstream.c:
+plugins/common/../includes/tweetnacl.h:

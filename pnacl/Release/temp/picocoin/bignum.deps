@@ -1,0 +1,9 @@
+# Updated by fix_deps.py
+pnacl/Debug/picocoin/bignum.o: picocoin/bignum.c \
+  picocoin/include/picocoin-config.h picocoin/include/util.h \
+  picocoin/include/cstr.h picocoin/include/clist.h
+picocoin/bignum.c:
+picocoin/include/picocoin-config.h:
+picocoin/include/util.h:
+picocoin/include/cstr.h:
+picocoin/include/clist.h:

@@ -1,0 +1,29 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/agents/_dcnet/dcnet777.o: \
+  plugins/agents/_dcnet/dcnet777.c \
+  plugins/agents/_dcnet/../../utils/huffstream.c \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  plugins/agents/_dcnet/../../includes/portable777.h \
+  plugins/agents/_dcnet/../../includes/mutex.h \
+  plugins/agents/_dcnet/../../includes/nn.h \
+  plugins/agents/_dcnet/../../includes/sha256.h \
+  plugins/agents/_dcnet/../../includes/cJSON.h \
+  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/agents/_dcnet/../../includes/uthash.h \
+  plugins/agents/_dcnet/../../includes/curve25519.h \
+  plugins/agents/_dcnet/../../includes/InstantDEX_quote.h \
+  plugins/agents/_dcnet/../plugin777.c
+:
+plugins/agents/_dcnet/dcnet777.c:
+plugins/agents/_dcnet/../../utils/huffstream.c:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+plugins/agents/_dcnet/../../includes/portable777.h:
+plugins/agents/_dcnet/../../includes/mutex.h:
+plugins/agents/_dcnet/../../includes/nn.h:
+plugins/agents/_dcnet/../../includes/sha256.h:
+plugins/agents/_dcnet/../../includes/cJSON.h:
+/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/agents/_dcnet/../../includes/uthash.h:
+plugins/agents/_dcnet/../../includes/curve25519.h:
+plugins/agents/_dcnet/../../includes/InstantDEX_quote.h:
+plugins/agents/_dcnet/../plugin777.c:
