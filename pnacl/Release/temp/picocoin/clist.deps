@@ -1,6 +1,0 @@
-# Updated by fix_deps.py
-pnacl/Debug/picocoin/clist.o: picocoin/clist.c \
-  picocoin/include/picocoin-config.h picocoin/include/clist.h
-picocoin/clist.c:
-picocoin/include/picocoin-config.h:
-picocoin/include/clist.h:

@@ -1,9 +1,0 @@
-# Updated by fix_deps.py
-pnacl/Debug/picocoin/file_seq.o: picocoin/file_seq.c \
-  picocoin/include/picocoin-config.h picocoin/include/util.h \
-  picocoin/include/cstr.h picocoin/include/clist.h
-picocoin/file_seq.c:
-picocoin/include/picocoin-config.h:
-picocoin/include/util.h:
-picocoin/include/cstr.h:
-picocoin/include/clist.h:

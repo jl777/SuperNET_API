@@ -1,5 +1,0 @@
-# Updated by fix_deps.py
-pnacl/Debug/plugins/utils/libgfshare.o: plugins/utils/libgfshare.c \
-  plugins/utils/../includes/libgfshare.h
-plugins/utils/libgfshare.c:
-plugins/utils/../includes/libgfshare.h:

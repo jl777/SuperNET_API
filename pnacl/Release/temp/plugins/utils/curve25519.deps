@@ -1,7 +1,0 @@
-# Updated by fix_deps.py
-pnacl/Debug/plugins/utils/curve25519.o: plugins/utils/curve25519.c \
-  plugins/utils/../includes/curve25519.h \
-  /Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h
-plugins/utils/curve25519.c:
-plugins/utils/../includes/curve25519.h:
-/Users/jimbolaptop/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
