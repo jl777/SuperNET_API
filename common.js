@@ -376,7 +376,7 @@ var common = (function() {
               }
               else
               {
-                retmsg('{"error":"method not found"}');
+                retmsg('{"error":"method not found"}', cb);
               }
               
     if (typeof message_event.data === 'string') {
