@@ -676,7 +676,6 @@ PSMainFunc_t PSUserMainGet()
 #endif
 
 //void *bindloop(void *args);
-void init_InstantDEX(void *json);
 int SuperNET_init(int argc,const char *argv[]);
 //int32_t pp_connect(char *hostname,uint16_t port);
 void msleep(uint32_t milliseconds);
@@ -685,10 +684,6 @@ void *SuperNET(void *threads)
 {
     static const char *argv[2] = { "127.0.0.1" }; // int32_t sock2;
     SuperNET_init(1,argv);
-    //init_InstantDEX(0);
-    //sock2 = pp_connect("127.0.0.1",8000);
-    //printf("sock2.%d\n",sock2);
-    //example_main();
     while ( 1 )
     {
         msleep(1000);

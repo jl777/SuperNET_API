@@ -192,36 +192,56 @@ static int inet_pton4(char *src, unsigned char *dst) {
     int saw_digit, octets, ch;
     unsigned char tmp[sizeof(struct in_addr)], *tp;
     
+    //printf("inet_pton4(%s)\n",src);
     saw_digit = 0;
     octets = 0;
     *(tp = tmp) = 0;
-    while ((ch = *src++) != '\0') {
+    while ((ch = (uint8_t)*src++) != '\0')
+    {
         char *pch;
-        
-        if ((pch = strchr(digits, ch)) != NULL) {
+        if ( (pch = strchr(digits, ch)) != NULL )
+        {
             unsigned int nw = (unsigned int)(*tp * 10 + (pch - digits));
-            
             if (saw_digit && *tp == 0)
+            {
+                printf("inet_pton4 0\n");
                 return EINVAL;
-            if (nw > 255)
+            }
+            if ( nw > 255 )
+            {
+                printf("inet_pton4 1\n");
                 return EINVAL;
+            }
             *tp = nw;
             if (!saw_digit) {
                 if (++octets > 4)
+                {
+                    printf("inet_pton4 2\n");
                     return EINVAL;
+                }
                 saw_digit = 1;
             }
         } else if (ch == '.' && saw_digit) {
             if (octets == 4)
+            {
+                printf("inet_pton4 3\n");
                 return EINVAL;
+            }
             *++tp = 0;
             saw_digit = 0;
         } else
+        {
+            printf("inet_pton4 4\n");
             return EINVAL;
+        }
     }
     if (octets < 4)
+    {
+        printf("inet_pton4 5\n");
         return EINVAL;
+    }
     memcpy(dst, tmp, sizeof(struct in_addr));
+    //printf("not errors %08x\n",*(int32_t *)dst);
     return 0;
 }
 
@@ -515,7 +535,7 @@ char *conv_ipv6(char *ipv6addr)
 
 uint16_t parse_endpoint(int32_t *ip6flagp,char *transport,char *ipbuf,char *retbuf,char *endpoint,uint16_t default_port)
 {
-    int32_t myatoi(char *str,int32_t range);
+    //int32_t myatoi(char *str,int32_t range);
     char *valids[] = { "tcp", "ws", "ipc", "inproc", "tcpmux" };
     char tmp[128],*inet = 0,*ipaddr = 0; uint64_t ipbits; int32_t i,j,n,port = 0;
     ipbuf[0] = retbuf[0] = 0;
@@ -535,7 +555,7 @@ uint16_t parse_endpoint(int32_t *ip6flagp,char *transport,char *ipbuf,char *retb
                     {
                         if ( ipaddr[j] == ':' )
                         {
-                            if ( (port= myatoi(ipaddr + j + 1,0)) < 0 || port >= (1 << 16) )
+                            if ( (port= atoi(ipaddr + j + 1)) < 0 || port >= (1 << 16) )
                             {
                                 if ( ipaddr[j-1] == ']' )
                                     ipaddr[j] = 0;
@@ -558,7 +578,7 @@ uint16_t parse_endpoint(int32_t *ip6flagp,char *transport,char *ipbuf,char *retb
                     {
                         if ( ipaddr[j] == ':' )
                         {
-                            if ( (port= myatoi(ipaddr + j + 1,0)) < 0 || port >= (1 << 16) )
+                            if ( (port= atoi(ipaddr + j + 1)) < 0 || port >= (1 << 16) )
                                 ipaddr = 0;
                             break;
                         }

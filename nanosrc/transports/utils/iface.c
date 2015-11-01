@@ -34,8 +34,7 @@
 #endif
 
 /*  Private functions. */
-void nn_iface_any (int ipv4only, struct sockaddr_storage *result,
-    size_t *resultlen);
+void nn_iface_any (int ipv4only, struct sockaddr_storage *result,size_t *resultlen);
 
 #if defined NN_USE_IFADDRS
 
@@ -210,8 +209,7 @@ int nn_iface_resolve (const char *addr, size_t addrlen, int ipv4only,
 /*  The last resort case. If we haven't found any mechanism for turning
     NIC names into addresses, we'll try to resolve the string as an address
     literal. */
-int nn_iface_resolve (const char *addr, size_t addrlen, int ipv4only,
-    struct sockaddr_storage *result, size_t *resultlen)
+int nn_iface_resolve (const char *addr, size_t addrlen, int ipv4only,struct sockaddr_storage *result, size_t *resultlen)
 {
     int rc;
 
@@ -221,9 +219,8 @@ int nn_iface_resolve (const char *addr, size_t addrlen, int ipv4only,
         return 0;
     }
 
-    /*  On Windows there are no sane network interface names. We'll treat the
-        name as a IP address literal. */
-    rc = nn_literal_resolve (addr, addrlen, ipv4only, result, resultlen);
+    // On Windows there are no sane network interface names. We'll treat the name as a IP address literal
+    rc = nn_literal_resolve(addr, addrlen, ipv4only, result, resultlen);
     if (rc == -EINVAL)
         return -ENODEV;
     errnum_assert (rc == 0, -rc);

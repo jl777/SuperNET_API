@@ -25,7 +25,7 @@
 #include "plugins/agents/plugins.h"
 #undef DEFINES_ONLY
 
-int32_t numxmit,Totalxmit;
+int32_t numxmit,Totalxmit,USE_Jay;
 
 #ifdef INSIDE_MGW
 struct db777 *DB_revNXTtrades,*DB_NXTtrades;
@@ -279,7 +279,7 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
         {
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"instanceid"));
-            retstr = register_daemon(name.buf,daemonid,instanceid,cJSON_GetObjectItem(json,"methods"),cJSON_GetObjectItem(json,"pubmethods"),cJSON_GetObjectItem(json,"authmethods"));
+            retstr = register_daemon(name.buf,daemonid,instanceid,cJSON_GetObjectItem(json,"methods"),cJSON_GetObjectItem(json,"pubmethods"),cJSON_GetObjectItem(json,"authmethods"),JSONstr);
         }
         else
         {
@@ -700,12 +700,12 @@ int SuperNET_start(char *fname,char *myip)
     randombytes((void *)&i,sizeof(i));
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
-    SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
     printf("%p myip.(%s) rand.%llx fname.(%s)\n",myip,myip,(long long)i,fname);
     if ( (jsonargs= loadfile(&allocsize,os_compatible_path(fname))) == 0 )
     {
         printf("ERROR >>>>>>>>>>> (%s) SuperNET.conf file doesnt exist\n",fname);
         jsonargs = clonestr(DEFAULT_SUPERNET_CONF);
+        SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
     }
     if ( (json= cJSON_Parse(jsonargs)) != 0 )
         SuperNET_initconf(json), free_json(json);
@@ -718,6 +718,8 @@ int SuperNET_start(char *fname,char *myip)
     printf("SuperNET_start.(%s) myip.(%s) -> ipaddr.(%s) SUPERNET.port %d\n",jsonargs,myip!=0?myip:"",ipaddr,SUPERNET.port);
     init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);
     busdata_init(10,1,0);
+    void init_InstantDEX(cJSON *json);
+    init_InstantDEX(json);
     strs[n++] = SuperNET_launch_agent("SuperNET",jsonargs,&SUPERNET.readyflag);
     strs[n++] = SuperNET_launch_agent("kv777",jsonargs,0);
     strs[n++] = SuperNET_launch_agent("coins",jsonargs,&COINS.readyflag);

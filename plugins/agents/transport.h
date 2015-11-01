@@ -59,7 +59,7 @@ int32_t init_pluginhostsocks(struct daemon_info *dp,char *connectaddr)
         printf("error creating dp->pushsock %s\n",nn_strerror(nn_errno()));
         return(-1);
     }
-    else if ( nn_settimeouts(dp->pushsock,10,1) < 0 )
+    else if ( nn_settimeouts(dp->pushsock,10,10) < 0 )
     {
         printf("error setting dp->pushsock timeouts %s\n",nn_strerror(nn_errno()));
         return(-1);

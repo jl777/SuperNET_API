@@ -127,34 +127,6 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
     return(0);
 }
 
-char *InstantDEX_cancelorder(char *activenxt,char *secret,uint64_t orderid,uint64_t quoteid)
-{
-    struct InstantDEX_quote *iQ; cJSON *json,*array,*item; char numstr[64],*retstr; uint64_t quoteids[256]; int32_t i,n=0;
-    json = cJSON_CreateObject(), array = cJSON_CreateArray();
-    if ( quoteid != 0 )
-        quoteids[n++] = quoteid;
-    //n += InstantDEX_quoteids(quoteids+n,orderid);
-    for (i=0; i<n; i++)
-    {
-        quoteid = quoteids[i];
-        if ( (retstr= cancel_NXTorderid(activenxt,secret,quoteid)) != 0 )
-        {
-            if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->s.offerNXT == calc_nxt64bits(activenxt) )
-                cancel_InstantDEX_quote(iQ);
-            if ( (item= cJSON_Parse(retstr)) != 0 )
-                jaddi(array,item);
-            free(retstr);
-        }
-        cancelquote(activenxt,quoteid);
-    }
-    if ( orderid != 0 )
-    {
-        if ( cancelquote(activenxt,orderid) != 0 )
-            sprintf(numstr,"%llu",(long long)orderid), jaddstr(json,"ordercanceled",numstr);
-    }
-    return(jprint(json,1));
-}
-
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
 {
     struct InstantDEX_quote *newiQ,*tmp; struct prices777 *prices; int32_t inverted; long len = 0;
@@ -320,18 +292,78 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
     else return(buf);
 }
 
-char *InstantDEX_orderstatus(uint64_t orderid,uint64_t quoteid)
+char *InstantDEX_cancelorder(cJSON *argjson,char *activenxt,char *secret,uint64_t orderid,uint64_t quoteid)
 {
-    struct InstantDEX_quote *iQ = 0;
+    struct InstantDEX_quote *iQ; cJSON *json,*array,*item; char numstr[64],*retstr,*exchangestr;
+    uint64_t quoteids[256]; int32_t i,exchangeid,n=0;  struct exchange_info *exchange;
+    if ( (exchangestr= jstr(argjson,"exchange")) != 0 && (exchange= find_exchange(&exchangeid,exchangestr)) != 0 )
+    {
+        if ( exchange->issue.cancelorder != 0 )
+        {
+            if ( (retstr= (*exchange->issue.cancelorder)(exchange,argjson,quoteid)) == 0 )
+                retstr = clonestr("{\"result\":\"nothing returned from exchange\"}");
+            return(retstr);
+        }
+        else return(clonestr("{\"error\":\"no cancelorder function\"}"));
+    }
+    json = cJSON_CreateObject(), array = cJSON_CreateArray();
+    if ( quoteid != 0 )
+        quoteids[n++] = quoteid;
+    //n += InstantDEX_quoteids(quoteids+n,orderid);
+    for (i=0; i<n; i++)
+    {
+        quoteid = quoteids[i];
+        if ( (retstr= cancel_NXTorderid(activenxt,secret,quoteid)) != 0 )
+        {
+            if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->s.offerNXT == calc_nxt64bits(activenxt) )
+                cancel_InstantDEX_quote(iQ);
+            if ( (item= cJSON_Parse(retstr)) != 0 )
+                jaddi(array,item);
+            free(retstr);
+        }
+        cancelquote(activenxt,quoteid);
+    }
+    if ( orderid != 0 )
+    {
+        if ( cancelquote(activenxt,orderid) != 0 )
+            sprintf(numstr,"%llu",(long long)orderid), jaddstr(json,"ordercanceled",numstr);
+    }
+    return(jprint(json,1));
+}
+
+char *InstantDEX_orderstatus(cJSON *argjson,uint64_t orderid,uint64_t quoteid)
+{
+    struct InstantDEX_quote *iQ = 0; char *exchangestr,*str; struct exchange_info *exchange; int32_t exchangeid;
+    if ( (exchangestr= jstr(argjson,"exchange")) != 0 && (exchange= find_exchange(&exchangeid,exchangestr)) != 0 )
+    {
+        if ( exchange->issue.orderstatus != 0 )
+        {
+            if ( (str= (*exchange->issue.orderstatus)(exchange,argjson,quoteid)) == 0 )
+                str = clonestr("{\"result\":\"nothing returned from exchange\"}");
+            return(str);
+        }
+        else return(clonestr("{\"error\":\"no orderstatus function\"}"));
+    }
     if ( (iQ= find_iQ(orderid)) != 0 || (iQ= find_iQ(quoteid)) != 0 )
         return(InstantDEX_str(0,0,0,iQ));
     return(clonestr("{\"error\":\"couldnt find orderid\"}"));
 }
 
-char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
+char *InstantDEX_openorders(cJSON *argjson,char *NXTaddr,int32_t allorders)
 {
-    struct InstantDEX_quote *iQ,*tmp; char buf[4096],*jsonstr; uint32_t now,duration; cJSON *json,*array,*item;
-    uint64_t nxt64bits = calc_nxt64bits(NXTaddr);
+    struct InstantDEX_quote *iQ,*tmp; char buf[4096],*exchangestr,*jsonstr,*str; uint32_t now,duration;
+    cJSON *json,*array,*item; uint64_t nxt64bits; struct exchange_info *exchange; int32_t exchangeid;
+    if ( (exchangestr= jstr(argjson,"exchange")) != 0 && (exchange= find_exchange(&exchangeid,exchangestr)) != 0 )
+    {
+        if ( exchange->issue.openorders != 0 )
+        {
+            if ( (str= (*exchange->issue.openorders)(exchange,argjson)) == 0 )
+                str = clonestr("{\"result\":\"nothing returned from exchange\"}");
+            return(str);
+        }
+        else return(clonestr("{\"error\":\"no orderstatus function\"}"));
+    }
+    nxt64bits = calc_nxt64bits(NXTaddr);
     now = (uint32_t)time(NULL);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
     HASH_ITER(hh,AllQuotes,iQ,tmp)

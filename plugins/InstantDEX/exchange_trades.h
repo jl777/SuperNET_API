@@ -20,41 +20,77 @@
 #define SHA512_DIGEST_SIZE (512 / 8)
 void *curl_post(CURL **cHandlep,char *url,char *userpass,char *postfields,char *hdr0,char *hdr1,char *hdr2,char *hdr3);
 
+uint64_t exchange_nonce(struct exchange_info *exchange)
+{
+    uint64_t nonce;
+    nonce = time(NULL);
+    if ( nonce < exchange->lastnonce )
+        nonce = exchange->lastnonce + 1;
+    exchange->lastnonce = nonce;
+    return(nonce);
+}
+
 int32_t flip_for_exchange(char *pairstr,char *fmt,char *refstr,int32_t dir,double *pricep,double *volumep,char *base,char *rel)
 {
     if ( strcmp(rel,refstr) == 0 )
         sprintf(pairstr,fmt,rel,base);
-    else if ( strcmp(base,refstr) == 0 )
+    else
     {
-        sprintf(pairstr,fmt,base,rel);
-        dir = -dir;
-        *volumep *= *pricep;
-        *pricep = (1. / *pricep);
+        if ( strcmp(base,refstr) == 0 )
+        {
+            sprintf(pairstr,fmt,base,rel);
+            dir = -dir;
+            *volumep *= *pricep;
+            *pricep = (1. / *pricep);
+        }
+        else sprintf(pairstr,fmt,rel,base);
     }
     return(dir);
 }
 
-int32_t flipstr_for_exchange(char *pairstr,char *fmt,char *pairs[][2],int32_t n,int32_t dir,double *pricep,double *volumep,char *base,char *rel)
+int32_t flipstr_for_exchange(struct exchange_info *exchange,char *pairstr,char *fmt,int32_t dir,double *pricep,double *volumep,char *_base,char *_rel)
 {
-    int32_t i;
-    for (i=0; i<n; i++)
+    int32_t polarity; char base[64],rel[64];
+    strcpy(base,_base), strcpy(rel,_rel);
+    tolowercase(base), tolowercase(rel);
+    polarity = (*exchange->issue.supports)(base,rel);
+    if ( dir > 0 )
+        sprintf(pairstr,fmt,base,rel);
+    else if ( dir < 0 )
     {
-        if ( strcmp(pairs[i][0],base) == 0 && strcmp(pairs[i][1],rel) == 0 )
-        {
-            sprintf(pairstr,fmt,base,rel);
-            return(dir);
-        }
-        else if ( strcmp(pairs[i][0],rel) == 0 && strcmp(pairs[i][1],base) == 0 )
-        {
-            *volumep *= *pricep;
-            *pricep = (1. / *pricep);
-            sprintf(pairstr,fmt,rel,base);
-            return(-dir);
-        }
+        *volumep *= *pricep;
+        *pricep = (1. / *pricep);
+        sprintf(pairstr,fmt,rel,base);
     }
-    return(0);
+    return(dir);
 }
 
+int32_t cny_flip(char *market,char *coinname,char *base,char *rel,int32_t dir,double *pricep,double *volumep)
+{
+    char pairstr[512],lbase[16],lrel[16],*refstr=0;
+    strcpy(lbase,base), tolowercase(lbase), strcpy(lrel,rel), tolowercase(lrel);
+    if ( strcmp(lbase,"cny") == 0 || strcmp(lrel,"cny") == 0 )
+    {
+        dir = flip_for_exchange(pairstr,"%s_%s","cny",dir,pricep,volumep,lbase,lrel);
+        refstr = "cny";
+    }
+    else if ( strcmp(lbase,"btc") == 0 || strcmp(lrel,"btc") == 0 )
+    {
+        dir = flip_for_exchange(pairstr,"%s_%s","btc",dir,pricep,volumep,lbase,lrel);
+        refstr = "btc";
+    }
+    if ( market != 0 && coinname != 0 && refstr != 0 )
+    {
+        strcpy(market,refstr);
+        if ( strcmp(lbase,"refstr") != 0 )
+            strcpy(coinname,lbase);
+        else strcpy(coinname,lrel);
+        touppercase(coinname);
+    }
+    return(dir);
+}
+
+#ifdef notnow
 uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
@@ -63,7 +99,8 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
     uint64_t nonce,txid = 0;
     cJSON *json,*resultobj;
     int32_t i,j,n;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
+    
 // https://bittrex.com/api/v1.1/market/selllimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3
     if ( dir == 0 )
         sprintf(urlbuf,"https://bittrex.com/api/v1.1/account/getbalances?apikey=%s&nonce=%llu",exchange->apikey,(long long)nonce);
@@ -114,12 +151,9 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
 
 uint64_t poloniex_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {
-    static CURL *cHandle; static uint32_t lastnonce;
+    static CURL *cHandle;
  	char *sig,*data,*extra,*typestr,cmdbuf[8192],hdr1[4096],hdr2[4096],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json; uint64_t nonce,txid = 0;
-    nonce = time(NULL);
-    if ( nonce <= lastnonce )
-        nonce = lastnonce+1;
-    lastnonce = (uint32_t)nonce;
+    nonce = exchange_nonce(exchange);
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
     if ( dir == 0 )
@@ -151,31 +185,6 @@ uint64_t poloniex_trade(char **retstrp,struct exchange_info *exchange,char *base
     else if ( data != 0 )
         free(data);
     return(txid);
-}
-
-int32_t cny_flip(char *market,char *coinname,char *base,char *rel,int32_t dir,double *pricep,double *volumep)
-{
-    char pairstr[512],lbase[16],lrel[16],*refstr=0;
-    strcpy(lbase,base), tolowercase(lbase), strcpy(lrel,rel), tolowercase(lrel);
-    if ( strcmp(lbase,"cny") == 0 || strcmp(lrel,"cny") == 0 )
-    {
-        dir = flip_for_exchange(pairstr,"%s_%s","cny",dir,pricep,volumep,lbase,lrel);
-        refstr = "cny";
-    }
-    else if ( strcmp(lbase,"btc") == 0 || strcmp(lrel,"btc") == 0 )
-    {
-        dir = flip_for_exchange(pairstr,"%s_%s","btc",dir,pricep,volumep,lbase,lrel);
-        refstr = "btc";
-    }
-    if ( market != 0 && coinname != 0 && refstr != 0 )
-    {
-        strcpy(market,refstr);
-        if ( strcmp(lbase,"refstr") != 0 )
-            strcpy(coinname,lbase);
-        else strcpy(coinname,lrel);
-        touppercase(coinname);
-    }
-    return(dir);
 }
 
 /*uint64_t bter_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
@@ -221,22 +230,18 @@ uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *_base,ch
     Sign — Signature. POST-parameters (?nonce=1&param0=val0), signed with a Secret key using HMAC-SHA512*/
     static CURL *cHandle;
     
-    char *baserels[][2] = { {"btc","usd"}, {"btc","rur"}, {"btc","eur"}, {"ltc","btc"}, {"ltc","usd"}, {"ltc","rur"}, {"ltc","eur"}, {"nmc","btc"}, {"nmc","usd"}, {"nvc","btc"}, {"nvc","usd"}, {"eur","usd"}, {"eur","rur"}, {"ppc","btc"}, {"ppc","usd"} };
     char *sig,*data,base[64],rel[64],payload[8192],hdr1[4096],hdr2[4096],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json,*resultobj; uint64_t nonce,txid = 0;
     sprintf(hdr1,"Key:%s",exchange->apikey);
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     if ( dir == 0 )
         sprintf(payload,"method=getInfo&nonce=%llu",(long long)nonce);
     else
     {
-        strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
         }
-        //dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
         sprintf(payload,"method=Trade&nonce=%ld&pair=%s&type=%s&rate=%.3f&amount=%.6f",(long)time(NULL),pairstr,dir>0?"buy":"sell",price,volume);
     }
     if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),payload)) != 0 )
@@ -290,7 +295,7 @@ uint64_t kraken_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     }
     sprintf(hdr1,"API-Key:%s",exchange->apikey);
     n = nn_base64_decode((void *)exchange->apisecret,strlen(exchange->apisecret),(void *)decode64,sizeof(decode64));
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     if ( dir == 0 )
     {
         sprintf(postbuf,"nonce=%llu",(long long)nonce);
@@ -298,9 +303,8 @@ uint64_t kraken_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     }
     else
     {
-        /*strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        /*
+         if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
@@ -381,12 +385,12 @@ uint64_t bitfinex_trade(char **retstrp,struct exchange_info *exchange,char *_bas
         is_hidden	[bool]	true if the order should be hidden. Default is false.*/
             
     static CURL *cHandle;
-    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"}, {"ltc","btc"} };
- 	char *sig,*data,hdr3[4096],url[512],*extra,*typestr,*method,req[4096],base[16],rel[16],payload[4096],hdr1[4096],hdr2[4096],pairstr[512],dest[1024 + 1]; cJSON *json; uint64_t nonce,txid = 0;
+ 	char *sig,*data,hdr3[4096],url[512],*extra,*typestr,*method,req[4096],base[16],rel[16],payload[4096],hdr1[4096],hdr2[4096],pairstr[512],dest[1024 + 1];
+    cJSON *json; uint64_t nonce,txid = 0;
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
     memset(req,0,sizeof(req));
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     if ( dir == 0 )
     {
         method = "balances";
@@ -394,14 +398,11 @@ uint64_t bitfinex_trade(char **retstrp,struct exchange_info *exchange,char *_bas
     }
     else
     {
-        strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
         }
-        //dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
         method = "order/new";
         //Either "market" / "limit" / "stop" / "trailing-stop" / "fill-or-kill" / "exchange market" / "exchange limit" / "exchange stop" / "exchange trailing-stop" / "exchange fill-or-kill". (type starting by "exchange " are exchange orders, others are margin trading orders)
         if ( (typestr= extra) == 0 )
@@ -468,7 +469,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
             return(0);
         }
     }
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     sprintf(buf,"%s_%s_%s_%llu",exchange->apikey,exchange->userid,exchange->apisecret,(long long)nonce);
     //printf("MD5.(%s)\n",buf);
     calc_md5(digest,buf,(int32_t)strlen(buf));
@@ -528,9 +529,8 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
 uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
-    char *baserels[][2] = { {"btc","cny"}, {"ltc","cny"} };
     char *data,*extra,*method,pricestr[64],pairstr[64],base[64],rel[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0; int32_t type;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     pricestr[0] = 0;
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
@@ -543,13 +543,11 @@ uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
     }
     else
     {
-        strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
-        } else printf("FOUND (%s/%s)\n",base,rel);
+        }
         if ( extra != 0 && strcmp(extra,"market") == 0 )
             method = (dir > 0) ? "buy_market" : "sell_market";
         else method = (dir > 0) ? "buy" : "sell", sprintf(pricestr,"&price=%.2f",price);
@@ -586,9 +584,8 @@ uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
 uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
-    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"} };
     char *data,*extra,*method,pricestr[64],pairstr[64],base[64],rel[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0; int32_t type;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     pricestr[0] = 0;
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
@@ -601,9 +598,7 @@ uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     }
     else
     {
-        strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
@@ -653,9 +648,8 @@ uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *_base,
 uint64_t okcoin_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
-    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"} };
     char *data,*path,*typestr,*extra,pricestr[64],base[64],rel[64],pairstr[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
     if ( dir == 0 )
@@ -669,9 +663,7 @@ uint64_t okcoin_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     else
     {
         path = "trade.do";
-        strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
@@ -730,11 +722,11 @@ uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *_base
      params= (i.e., blank)*/
     
     static CURL *cHandle;
-    char *baserels[][2] = { {"btc","usd"}, {"btc","cny"} };
-    char *data,*method,buf64[4096],paramstr[128],jsonbuf[1024],base[64],rel[64],pairstr[64],params[1024],dest[512],url[1024],cmdbuf[8192],*sig,hdr1[4096],hdr2[4096],buf[4096]; cJSON *json; uint64_t tonce,txid = 0;
+    char *data,*method,buf64[4096],paramstr[128],jsonbuf[1024],base[64],rel[64],pairstr[64],params[1024],dest[512],url[1024],cmdbuf[8192],*sig,hdr1[4096],hdr2[4096],buf[4096]; cJSON *json; uint64_t tonce,nonce,txid = 0;
     *retstrp = 0;
     params[0] = 0;
-    tonce = ((uint64_t)time(NULL) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
+    nonce = exchange_nonce(exchange);
+    tonce = (nonce * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     if ( dir == 0 )
     {
         method = "getAccountInfo";
@@ -743,9 +735,7 @@ uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *_base
     }
     else
     {
-        strcpy(base,_base), strcpy(rel,_rel);
-        tolowercase(base), tolowercase(rel);
-        if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
@@ -816,13 +806,12 @@ uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *_bas
      
      */
     static CURL *cHandle;
-    char *baserels[][2] = { {"btc","usd"}, {"btc","cad"} };
 	char *extra,*sig,*data,*path,pairstr[64],base[64],rel[64],hdr3[4096],url[512],md5secret[128],req[4096],payload[4096],hdr1[4096],hdr2[4096],dest[1024 + 1];
     cJSON *json; uint64_t nonce,txid = 0;
     memset(payload,0,sizeof(payload));
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     sprintf(payload,"%llu%s%s",(long long)nonce,exchange->userid,exchange->apikey);
     calc_md5(md5secret,exchange->apisecret,(int32_t)strlen(exchange->apisecret));
     if ( (sig= hmac_sha256_str(dest,md5secret,(int32_t)strlen(md5secret),payload)) != 0 )
@@ -834,9 +823,7 @@ uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *_bas
         }
         else
         {
-            strcpy(base,_base), strcpy(rel,_rel);
-            tolowercase(base), tolowercase(rel);
-            if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+            if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
             {
                 printf("cant find baserel (%s/%s)\n",base,rel);
                 return(0);
@@ -885,7 +872,7 @@ uint64_t bitstamp_trade(char **retstrp,struct exchange_info *exchange,char *base
     static CURL *cHandle;
  	char *sig,*data,*path,url[512],req[4096],payload[2048],dest[1024 + 1]; cJSON *json; uint64_t nonce,txid = 0;
     memset(payload,0,sizeof(payload));
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     sprintf(payload,"%llu%s%s",(long long)nonce,exchange->userid,exchange->apikey);
     if ( dir == 0 )
         path = "balance";
@@ -937,7 +924,7 @@ uint64_t coinbase_trade(char **retstrp,struct exchange_info *exchange,char *base
             */
     static CURL *cHandle;
  	char *sig,*data,*path,sig64[1024],body[4096],method[64],prehash64[512],prehash[512],cmdbuf[8192],url[1024],decodedsecret[128],hdr1[4096],hdr2[4096],hdr3[4096],hdr4[4096],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json; int32_t n; uint64_t nonce,txid = 0;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     cmdbuf[0] = 0;
     body[0] = 0;
     n = nn_base64_decode((void *)exchange->apisecret,strlen(exchange->apisecret),(void *)decodedsecret,sizeof(decodedsecret));
@@ -1000,7 +987,7 @@ uint64_t exmo_trade(char **retstrp,struct exchange_info *exchange,char *base,cha
      */
     static CURL *cHandle;
  	char *sig,*method,*data,url[512],cmdbuf[8192],hdr1[4096],hdr2[4096],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json; uint64_t nonce,txid = 0;
-    nonce = time(NULL);
+    nonce = exchange_nonce(exchange);
     if ( dir == 0 )
     {
         sprintf(cmdbuf,"nonce=%llu?method=get_info",(long long)nonce);
@@ -1033,6 +1020,7 @@ uint64_t exmo_trade(char **retstrp,struct exchange_info *exchange,char *base,cha
         free(data);
     return(txid);
 }
+#endif
 #endif
 
 uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT,uint32_t triggerheight)
@@ -1126,10 +1114,10 @@ uint64_t submit_to_exchange(int32_t exchangeid,char **jsonstrp,uint64_t assetid,
                 txid = 0;
         }
     }
-    else if ( exchangeid < MAX_EXCHANGES && (exchange= &Exchanges[exchangeid]) != 0 && exchange->exchangeid == exchangeid && exchange->trade != 0 )
+    else if ( exchangeid < MAX_EXCHANGES && (exchange= &Exchanges[exchangeid]) != 0 && exchange->exchangeid == exchangeid && exchange->issue.trade != 0 )
     {
         printf("submit_to_exchange.(%d) dir.%d price %f vol %f | inv %f %f (%s)\n",exchangeid,dir,price,volume,1./price,price*volume,comment);
-        if ( (txid= (*exchange->trade)(&retstr,exchange,base,rel,dir,price,volume)) == 0 )
+        if ( (txid= (*exchange->issue.trade)(&retstr,exchange,base,rel,dir,price,volume)) == 0 )
             printf("error trading (%s/%s) dir.%d price %f vol %f ret.(%s)\n",base,rel,dir,price,volume,retstr!=0?retstr:"");
         if ( jsonstrp != 0 )
             *jsonstrp = retstr;

@@ -404,7 +404,7 @@ void nn_usock_connect (struct nn_usock *self, const struct sockaddr *addr,
     if ( nn_slow(errno != EINPROGRESS) )
     {
         self->errnum = errno;
-        PostMessage("error not EINPROGRESS\n");
+        PostMessage("error.%d not EINPROGRESS\n",errno);
         nn_fsm_action (&self->fsm, NN_USOCK_ACTION_ERROR);
         return;
     }

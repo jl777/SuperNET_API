@@ -208,7 +208,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
         printf("error creating plugin->pushsock %s\n",nn_strerror(nn_errno()));
         return(-1);
     }
-    else if ( nn_settimeouts(plugin->pushsock,10,1) < 0 )
+    else if ( nn_settimeouts(plugin->pushsock,10,10) < 0 )
     {
         printf("error setting plugin->pushsock timeouts %s\n",nn_strerror(nn_errno()));
         return(-1);
@@ -223,7 +223,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
         printf("error creating plugin->pullsock %s\n",nn_strerror(nn_errno()));
         return(-1);
     }
-    else if ( nn_settimeouts(plugin->pullsock,10,1) < 0 )
+    else if ( nn_settimeouts(plugin->pullsock,10,10) < 0 )
     {
         printf("error setting plugin->pullsock timeouts %s\n",nn_strerror(nn_errno()));
         return(-1);

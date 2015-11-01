@@ -44,7 +44,7 @@ struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base
 {
     int32_t i,j,m,iter,max = 0; double firstwt,wtsum; struct prices777 *prices,*feature;
     printf("createbasket.%s n.%d (%s/%s)\n",typestr,n,base,rel);
-    prices = prices777_initpair(1,0,typestr,base,rel,0.,name,baseid,relid,n);
+    prices = prices777_initpair(1,typestr,base,rel,0.,name,baseid,relid,n);
     for (iter=0; iter<2; iter++)
     {
         for (i=0; i<n; i++)
@@ -999,10 +999,10 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
         if ( prices != 0 )
         {
             exchange = &Exchanges[prices->exchangeid];
-            if ( loadprices != 0 && exchange->updatefunc != 0 )
+            if ( loadprices != 0 && exchange->issue.update != 0 )
             {
                 portable_mutex_lock(&exchange->mutex);
-                (exchange->updatefunc)(prices,MAX_DEPTH);
+                (exchange->issue.update)(prices,MAX_DEPTH);
                 portable_mutex_unlock(&exchange->mutex);
             }
             printf("total polling.%d added.(%s)\n",BUNDLE.num,prices->contract);
@@ -1074,7 +1074,7 @@ int32_t create_basketitem(struct prices777_basket *basketitem,cJSON *item,char *
         strcpy(rel.buf,refrel);
     InstantDEX_name(key,&keysize,exchangestr.buf,name.buf,base.buf,&baseid,rel.buf,&relid);
     printf(">>>>>>>>>> create basketitem.(%s) name.(%s) %s (%s/%s) %llu/%llu wt %f\n",jprint(item,0),name.buf,exchangestr.buf,base.buf,rel.buf,(long long)baseid,(long long)relid,wt);
-    if ( (prices= prices777_initpair(1,0,exchangestr.buf,base.buf,rel.buf,0.,name.buf,baseid,relid,basketsize)) != 0 )
+    if ( (prices= prices777_initpair(1,exchangestr.buf,base.buf,rel.buf,0.,name.buf,baseid,relid,basketsize)) != 0 )
     {
         prices777_addbundle(&valid,0,prices,0,0,0);
         basketitem->prices = prices;
@@ -1620,7 +1620,7 @@ int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,c
         if ( Exchanges[exchangeid].name[0] == 0 )
             break;
         //printf("check %s for (%s/%s) group.%d wt.%f\n",Exchanges[exchangeid].name,base,rel,group,wt);
-        if ( Exchanges[exchangeid].supports != 0 && (inverted= (*Exchanges[exchangeid].supports)(base,rel)) != 0 && (tradeable == 0 || Exchanges[exchangeid].apikey[0] != 0) )
+        if ( Exchanges[exchangeid].issue.supports != 0 && (inverted= (*Exchanges[exchangeid].issue.supports)(base,rel)) != 0 && (tradeable == 0 || Exchanges[exchangeid].apikey[0] != 0|| Exchanges[exchangeid].apisecret[0] != 0) )
         {
             if ( array != 0 )
             {
@@ -1637,7 +1637,7 @@ int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,c
                 jaddi(array,item);
             }
             n++;
-        }
+        } //else printf("%s doesnt support.(%s/%s)\n",Exchanges[exchangeid].name,base,rel);
     }
     return(n);
 }

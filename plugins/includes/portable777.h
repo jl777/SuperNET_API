@@ -257,16 +257,31 @@ struct prices777
     struct prices777_basket basket[];
 };
 
-struct exchange_info
+struct exchange_info;
+struct exchange_funcs
 {
-    double (*updatefunc)(struct prices777 *prices,int32_t maxdepth);
-    char *(*coinbalance)(struct exchange_info *exchange,double *balancep,char *coinstr);
+    char *exchange;
+    double (*update)(struct prices777 *prices,int32_t maxdepth);
     int32_t (*supports)(char *base,char *rel);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
+    char *(*orderstatus)(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid);
+    char *(*cancelorder)(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid);
+    char *(*openorders)(struct exchange_info *exchange,cJSON *argjson);
+    char *(*tradehistory)(struct exchange_info *exchange,cJSON *argjson);
+    cJSON *(*balances)(struct exchange_info *exchange);
+    char *(*parsebalance)(struct exchange_info *exchange,double *balancep,char *coinstr);
+    char *(*withdraw)(struct exchange_info *exchange,cJSON *argjson);
+};
+#define EXCHANGE_FUNCS(xchg,name) { name, prices777_ ## xchg, xchg ## _supports, xchg ## _trade, xchg ## _orderstatus, xchg ## _cancelorder, xchg ## _openorders, xchg ## _tradehistory, xchg ## _balances, xchg ## _parsebalance, xchg ## _withdraw }
+
+struct exchange_info
+{
+    struct exchange_funcs issue;
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD]; cJSON *balancejson;
-    uint32_t num,exchangeid,pollgap,refcount,polling,lastbalancetime; uint64_t nxt64bits; double lastupdate,commission;
+    uint32_t num,exchangeid,pollgap,refcount,polling,lastbalancetime; uint64_t nxt64bits,lastnonce; double lastupdate,commission;
     portable_mutex_t mutex;
 };
+
 extern uint32_t FIRST_EXTERNAL;
 
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight,char *phasesecret);
@@ -310,7 +325,7 @@ uint64_t is_NXT_native(uint64_t assetid);
 void randombytes(unsigned char *x,long xlen);
 void *portable_thread_create(void *funcp,void *argp);
 
-struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
+struct prices777 *prices777_initpair(int32_t needfunc,char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
 struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson,int32_t addbasket,char *typestr,struct prices777 *baskets[],int32_t num);
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
