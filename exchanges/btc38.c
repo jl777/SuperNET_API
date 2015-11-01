@@ -247,22 +247,13 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
-{
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized orderstatus
-}
-
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
+    char payload[1024],*rel,*retstr = 0; cJSON *json;
+    if ( (rel= jstr(argjson,"rel")) == 0 )
+        rel = "cny";
+    sprintf(payload,"&mk_type=%s&order_id=%llu",rel,(long long)quoteid);
+   if ( (json= SIGNPOST(&retstr,exchange,payload,"cancelOrder.php")) != 0 )
     {
         free_json(json);
     }
@@ -271,9 +262,13 @@ char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
+    char payload[1024],*base,*rel,*retstr = 0; cJSON *json;
+    if ( (rel= jstr(argjson,"rel")) == 0 )
+        rel = "cny";
+    sprintf(payload,"&mk_type=%s",rel);
+    if ( (base= jstr(argjson,"base")) != 0 )
+        sprintf(payload + strlen(payload),"&coinname=%s",base);
+    if ( (json= SIGNPOST(&retstr,exchange,payload,"getOrderList.php")) != 0 )
     {
         free_json(json);
     }
@@ -282,24 +277,25 @@ char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized tradehistory
+    return(clonestr("{\"error\":\"btc38 doesnt seem to have trade history api!\"}"));
 }
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
+    return(clonestr("{\"error\":\"btc38 doesnt seem to have withdraw api!\"}"));
+}
+
+char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+{
+    char *status,*retstr;
+    status = OPENORDERS(exchange,argjson);
+    if ( (retstr= exchange_extractorderid(0,status,quoteid,"order_id")) != 0 )
     {
-        free_json(json);
+        free(status);
+        return(retstr);
     }
-    return(retstr); // return standardized withdraw
+    free(status);
+    return(clonestr("{\"result\":\"order not pending\"}"));
 }
 
 struct exchange_funcs btc38_funcs = EXCHANGE_FUNCS(btc38,EXCHANGE_NAME);

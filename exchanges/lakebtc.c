@@ -60,7 +60,7 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,char
         nn_base64_encode((void *)cmdbuf,strlen(cmdbuf),buf64,sizeof(buf64));
         sprintf(hdr1,"Authorization:Basic %s",buf64);
         sprintf(hdr2,"Json-Rpc-Tonce: %llu",(long long)tonce);
-        if ( (data= curl_post(&cHandle,"https://www.lakebtc.com/api_v1",0,payload,hdr1,hdr2,hdr3,hdr4)) != 0 )
+        if ( (data= curl_post(&cHandle,"https://www.LakeBTC.com/api_v1",0,payload,hdr1,hdr2,hdr3,hdr4)) != 0 )
             json = cJSON_Parse(data);
     }
     if ( retstrp != 0 )
@@ -168,16 +168,6 @@ uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *re
     return(txid);
 }
 
-cJSON *BALANCES(struct exchange_info *exchange)
-{
-    char payload[1024],jsonbuf[1024],*method; uint64_t tonce;
-    method = "getAccountInfo";
-    tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
-    sprintf(payload,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=",(long long)tonce,exchange->userid,method);
-    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,"");
-    return(SIGNPOST(0,exchange,jsonbuf,payload,tonce));
-}
-
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //lakebtc.({"balance":{"BTC":0.1},"locked":{"BTC":0.0},"profile":{"email":"jameslee777@yahoo.com","id":"U137561934","btc_deposit_addres":"1RyKrNJjezeFfvYaicnJEozHfhWfYzbuh"}})
@@ -202,23 +192,22 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+cJSON *BALANCES(struct exchange_info *exchange)
 {
-    char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
+    char payload[1024],jsonbuf[1024],*method; uint64_t tonce;
     method = "getAccountInfo";
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized orderstatus
+    sprintf(payload,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=",(long long)tonce,exchange->userid,method);
+    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,"");
+    return(SIGNPOST(0,exchange,jsonbuf,payload,tonce));
 }
 
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
-    method = "getAccountInfo";
+    method = "cancelOrder";
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
+    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%llu\"],\"id\":1}",method,(long long)quoteid);
     if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
     {
         free_json(json);
@@ -229,8 +218,9 @@ char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
-    method = "getAccountInfo";
+    method = "getOrders";
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
+    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,"");
     if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
     {
         free_json(json);
@@ -240,9 +230,14 @@ char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
-    method = "getAccountInfo";
+    char payload[1024],jsonbuf[1024],timestr[64],*method,*retstr = 0;
+    cJSON *json; uint64_t tonce; uint32_t starttime;
+    method = "getTrades";
+    if ( (starttime= juint(argjson,"start")) != 0 )
+        sprintf(timestr,"%u",starttime);
+    else timestr[0] = 0;
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
+    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[%s],\"id\":1}",method,timestr);
     if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
     {
         free_json(json);
@@ -250,16 +245,22 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
     return(retstr); // return standardized tradehistory
 }
 
+char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+{
+    char *status,*retstr;
+    status = OPENORDERS(exchange,argjson);
+    if ( (retstr= exchange_extractorderid(0,status,quoteid,"id")) != 0 )
+    {
+        free(status);
+        return(retstr);
+    }
+    free(status);
+    return(clonestr("{\"error\":\"cant find quoteid\"}"));
+}
+
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
-    method = "getAccountInfo";
-    tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized withdraw
+    return(clonestr("{\"error\":\"btc38 doesnt seem to have withdraw api!\"}"));
 }
 
 struct exchange_funcs lakebtc_funcs = EXCHANGE_FUNCS(lakebtc,EXCHANGE_NAME);

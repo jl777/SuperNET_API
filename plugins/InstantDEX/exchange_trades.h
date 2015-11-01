@@ -90,6 +90,32 @@ int32_t cny_flip(char *market,char *coinname,char *base,char *rel,int32_t dir,do
     return(dir);
 }
 
+char *exchange_extractorderid(int32_t historyflag,char *status,uint64_t quoteid,char *quoteid_field)
+{
+    cJSON *array,*item,*json; int32_t i,n; uint64_t txid;
+    if ( status != 0 )
+    {
+        if ( (array= cJSON_Parse(status)) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+        {
+            for (i=0; i<n; i++)
+            {
+                item = jitem(array,i);
+                if ( (txid= juint(item,quoteid_field)) == quoteid )
+                {
+                    json = cJSON_CreateObject();
+                    jaddstr(json,"result",historyflag == 0 ? "order still pending" : "order completed");
+                    jadd(json,"order",cJSON_Duplicate(item,1));
+                    free_json(array);
+                    return(jprint(json,1));
+                }
+            }
+        }
+        if ( array != 0 )
+            free_json(array);
+    }
+    return(0);
+}
+
 #ifdef notnow
 uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {

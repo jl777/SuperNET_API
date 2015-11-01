@@ -119,7 +119,7 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    sprintf(payload,"method=OrderInfo&nonce=%llu&order_id=%llu",(long long)exchange_nonce(exchange),(long long)quoteid);
     if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
@@ -130,7 +130,7 @@ char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    sprintf(payload,"method=CancelOrder&nonce=%llu&order_id=%llu",(long long)exchange_nonce(exchange),(long long)quoteid);
     if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
@@ -140,8 +140,14 @@ char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    char payload[1024],market[64],*base,*rel,*retstr = 0; cJSON *json;
+    sprintf(payload,"method=ActiveOrders&nonce=%llu",(long long)exchange_nonce(exchange));
+    if ( (base= jstr(argjson,"base")) != 0 && (rel= jstr(argjson,"rel")) != 0 )
+    {
+        sprintf(market,"%s_%s",base,rel);
+        tolowercase(market);
+        sprintf(payload + strlen(payload),"&pair=%s",market);
+    }
     if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
@@ -151,8 +157,18 @@ char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    char payload[1024],market[64],*base,*rel,*retstr = 0; cJSON *json; uint32_t starttime,endtime;
+    sprintf(payload,"method=TradeHistory&nonce=%llu",(long long)exchange_nonce(exchange));
+    if ( (starttime= juint(argjson,"start")) != 0 )
+        sprintf(payload + strlen(payload),"&since=%u",starttime);
+    if ( (endtime= juint(argjson,"end")) != 0 )
+        sprintf(payload + strlen(payload),"&end=%u",endtime);
+    if ( (base= jstr(argjson,"base")) != 0 && (rel= jstr(argjson,"rel")) != 0 )
+    {
+        sprintf(market,"%s_%s",base,rel);
+        tolowercase(market);
+        sprintf(payload + strlen(payload),"&pair=%s",market);
+    }
     if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
@@ -162,8 +178,14 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    char payload[1024],*base,*destaddr,*retstr = 0; cJSON *json; double amount;
+    if ( (base= jstr(argjson,"base")) == 0 )
+        return(clonestr("{\"error\":\"base not specified\"}"));
+    if ( (destaddr= jstr(argjson,"destaddr")) == 0 )
+        return(clonestr("{\"error\":\"destaddr not specified\"}"));
+    if ( (amount= jdouble(argjson,"amount")) < SMALLVAL )
+        return(clonestr("{\"error\":\"amount not specified\"}"));
+    sprintf(payload,"method=WithdrawCoin&nonce=%llu&coinName=%s&amount=%.6f&address=%s",(long long)exchange_nonce(exchange),base,amount,destaddr);
     if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);

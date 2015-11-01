@@ -156,7 +156,7 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    sprintf(payload,"https://bittrex.com/api/v1.1/account/getorder?apikey=%s&nonce=%llu&uuid=%llu",exchange->apikey,(long long)exchange_nonce(exchange),(long long)quoteid);
     if ( (json= SIGNPOST(&retstr,exchange,payload,payload)) != 0 )
     {
         free_json(json);
@@ -167,7 +167,7 @@ char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    sprintf(payload,"https://bittrex.com/api/v1.1/market/cancel?apikey=%s&nonce=%llu&uuid=%llu",exchange->apikey,(long long)exchange_nonce(exchange),(long long)quoteid);
     if ( (json= SIGNPOST(&retstr,exchange,payload,payload)) != 0 )
     {
         free_json(json);
@@ -177,8 +177,13 @@ char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    char payload[1024],market[64],*base,*rel,*retstr = 0; cJSON *json;
+    sprintf(payload,"https://bittrex.com/api/v1.1/market/getopenorders?apikey=%s&nonce=%llu",exchange->apikey,(long long)exchange_nonce(exchange));
+    if ( (base= jstr(argjson,"base")) != 0 && (rel= jstr(argjson,"rel")) != 0 )
+    {
+        sprintf(market,"%s-%s",rel,base);
+        sprintf(payload + strlen(payload),"&market=%s",market);
+    }
     if ( (json= SIGNPOST(&retstr,exchange,payload,payload)) != 0 )
     {
         free_json(json);
@@ -188,8 +193,13 @@ char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    char payload[1024],market[64],*base,*rel,*retstr = 0; cJSON *json;
+    sprintf(payload,"https://bittrex.com/api/v1.1/account/getorderhistory?apikey=%s&nonce=%llu",exchange->apikey,(long long)exchange_nonce(exchange));
+    if ( (base= jstr(argjson,"base")) != 0 && (rel= jstr(argjson,"rel")) != 0 )
+    {
+        sprintf(market,"%s-%s",rel,base);
+        sprintf(payload + strlen(payload),"&market=%s",market);
+    }
     if ( (json= SIGNPOST(&retstr,exchange,payload,payload)) != 0 )
     {
         free_json(json);
@@ -199,8 +209,17 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
+    char payload[1024],*destaddr,*paymentid,*base,*retstr = 0; cJSON *json; double amount;
+    if ( (base= jstr(argjson,"base")) == 0 )
+        return(clonestr("{\"error\":\"base not specified\"}"));
+    if ( (destaddr= jstr(argjson,"destaddr")) == 0 )
+        return(clonestr("{\"error\":\"destaddr not specified\"}"));
+    if ( (amount= jdouble(argjson,"amount")) < SMALLVAL )
+        return(clonestr("{\"error\":\"amount not specified\"}"));
+    paymentid = jstr(argjson,"paymentid");
+    sprintf(payload,"https://bittrex.com/api/v1.1/account/withdraw?apikey=%s&nonce=%llu&currency=%s&amount=%.4f&address=%s",exchange->apikey,(long long)exchange_nonce(exchange),base,amount,destaddr);
+    if ( paymentid != 0 )
+        sprintf(payload + strlen(payload),"&paymentid=%s",paymentid);
     if ( (json= SIGNPOST(&retstr,exchange,payload,payload)) != 0 )
     {
         free_json(json);

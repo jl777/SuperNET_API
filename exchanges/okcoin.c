@@ -132,14 +132,17 @@ uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *re
     return(txid);
 }
 
-cJSON *BALANCES(struct exchange_info *exchange)
+cJSON *okcoin_issue_auth(struct exchange_info *exchange,char *method,char *buf)
 {
-    char payload[1024],buf[512],digest[512],url[512];
-    sprintf(buf,"api_key=%s&secret_key=%s",exchange->apikey,exchange->apisecret);
-    calc_md5(digest,buf,(int32_t)strlen(buf));
+    char payload[1024],tmp[1024],digest[512],url[512];
+    sprintf(tmp,"api_key=%s%s",exchange->apikey,buf);
+ 
+    sprintf(payload,"%s&secret_key=%s",tmp,exchange->apisecret);
+    //printf("tmp.(%s) payload.(%s)\n",tmp,payload);
+    calc_md5(digest,payload,(int32_t)strlen(payload));
     touppercase(digest);
-    sprintf(payload,"api_key=%s&sign=%s",exchange->apikey,digest);
-    sprintf(url,"%s/%s",EXCHANGE_AUTHURL,"userinfo.do");
+    sprintf(payload,"%s&sign=%s",tmp,digest);
+    sprintf(url,"%s/%s",EXCHANGE_AUTHURL,method);
     return(SIGNPOST(0,exchange,url,payload));
 }
 
@@ -168,59 +171,49 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
+cJSON *BALANCES(struct exchange_info *exchange)
+{
+    return(okcoin_issue_auth(exchange,"userinfo.do",""));
+}
+
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized orderstatus
+    char buf[64];
+    sprintf(buf,"&symbol=btc_usd&order_id=%llu",(long long)quoteid);
+    return(jprint(okcoin_issue_auth(exchange,"order_info.do",buf),1));
 }
 
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized cancelorder
+    char buf[64];
+    sprintf(buf,"&symbol=btc_usd&order_id=%llu",(long long)quoteid);
+    return(jprint(okcoin_issue_auth(exchange,"cancel_order.do",buf),1));
 }
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized open orders
+    return(jprint(okcoin_issue_auth(exchange,"orders_info.do",""),1));
 }
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized tradehistory
+    return(jprint(okcoin_issue_auth(exchange,"orders_history.do","&status=1&symbol=btc_usd&current_page=0&page_length=200"),1));
 }
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized withdraw
+    char payload[1024],*base,*destaddr,*method,*tradepassword; double amount;
+    if ( (base= jstr(argjson,"base")) == 0 || strcmp(base,"BTC") != 0 )
+        return(clonestr("{\"error\":\"base not specified or base != BTC\"}"));
+    if ( (destaddr= jstr(argjson,"destaddr")) == 0 )
+        return(clonestr("{\"error\":\"destaddr not specified\"}"));
+    if ( (amount= jdouble(argjson,"amount")) < SMALLVAL )
+        return(clonestr("{\"error\":\"amount not specified\"}"));
+    if ( (tradepassword= jstr(argjson,"tradepassword")) == 0 )
+        return(clonestr("{\"error\":\"tradepassword not specified\"}"));
+    method = "withdraw_coin";
+    sprintf(payload,"&symbol=btc_usd&chargefee=0.0001&withdraw_address=%s&withdraw_amount=%.4f&trade_pwd=%s",destaddr,amount,tradepassword);
+    return(jprint(okcoin_issue_auth(exchange,method,payload),1));
 }
 
 struct exchange_funcs okcoin_funcs = EXCHANGE_FUNCS(okcoin,EXCHANGE_NAME);

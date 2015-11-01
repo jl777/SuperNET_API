@@ -90,11 +90,6 @@ uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *re
     return(txid);
 }
 
-cJSON *BALANCES(struct exchange_info *exchange)
-{
-    return(SIGNPOST(0,exchange,"","balance"));
-}
-
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //[{"btc_available":"0.00000000","btc_reserved":"0.00000000","btc_balance":"0.00000000","cad_available":"0.00","cad_reserved":"0.00","cad_balance":"0.00","usd_available":"0.00","usd_reserved":"0.00","usd_balance":"0.00","xau_available":"0.000000","xau_reserved":"0.000000","xau_balance":"0.000000","fee":"0.5000"}]
@@ -121,59 +116,47 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
+cJSON *BALANCES(struct exchange_info *exchange)
+{
+    return(SIGNPOST(0,exchange,"","balance"));
+}
+
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized orderstatus
+    char buf[64];
+    sprintf(buf,"\"id\":%llu,",(long long)quoteid);
+    return(jprint(SIGNPOST(0,exchange,buf,"lookup_order"),1));
 }
 
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized cancelorder
+    char buf[64];
+    sprintf(buf,"\"id\":%llu,",(long long)quoteid);
+    return(jprint(SIGNPOST(0,exchange,buf,"cancel_order"),1));
 }
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized open orders
+    return(jprint(SIGNPOST(0,exchange,"","open_orders"),1));
 }
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized tradehistory
+    return(jprint(SIGNPOST(0,exchange,"","user_transactions"),1));
 }
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized withdraw
+    char buf[1024],*base,*destaddr; double amount;
+    if ( (base= jstr(argjson,"base")) == 0 || strcmp(base,"BTC") != 0 )
+        return(clonestr("{\"error\":\"base not specified or base != BTC\"}"));
+    if ( (destaddr= jstr(argjson,"destaddr")) == 0 )
+        return(clonestr("{\"error\":\"destaddr not specified\"}"));
+    if ( (amount= jdouble(argjson,"amount")) < SMALLVAL )
+        return(clonestr("{\"error\":\"amount not specified\"}"));
+    sprintf(buf,"\"amount\":%.4f,\"address\":\"%s\",",amount,destaddr);
+    printf("submit.(%s)\n",buf);
+    return(jprint(SIGNPOST(0,exchange,"","bitcoin_withdrawal"),1));
 }
 
 struct exchange_funcs quadriga_funcs = EXCHANGE_FUNCS(quadriga,EXCHANGE_NAME);

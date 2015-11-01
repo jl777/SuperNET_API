@@ -44,7 +44,8 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload)
     static CURL *cHandle;
     char *data; cJSON *json;
     json = 0;
-    if ( (data= curl_post(&cHandle,"https://api.huobi.com/apiv3",0,payload,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
+    //if ( (data= curl_post(&cHandle,"https://api.huobi.com/apiv3",0,payload,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
+    if ( (data= curl_post(&cHandle,"https://api.huobi.com/apiv3",0,payload,"",0,0,0)) != 0 )
         json = cJSON_Parse(data);
     if ( retstrp != 0 )
         *retstrp = data;
@@ -53,10 +54,22 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload)
     return(json);
 }
 
+cJSON *huobi_issue_auth(struct exchange_info *exchange,char *method,char *buf)
+{
+    char payload[1024],digest[33],tmp[1024]; uint64_t nonce;
+    nonce = exchange_nonce(exchange);
+    sprintf(tmp,"access_key=%s&created=%llu&method=%s%s",exchange->apikey,(long long)nonce,method,buf);
+    sprintf(payload,"%s&secret_key=%s",tmp,exchange->apisecret);
+    //printf("tmp.(%s) payload.(%s)\n",tmp,payload);
+    calc_md5(digest,payload,(int32_t)strlen(payload));
+    sprintf(payload,"%s&sign=%s",tmp,digest);
+    //printf("-> (%s)\n",payload);
+    return(SIGNPOST(0,exchange,payload));
+}
+
 uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {
-    char payload[1024],pairstr[64],buf[1024],digest[33],pricestr[64],*extra,*method;
-    cJSON *json; int32_t type; uint64_t nonce,txid = 0;
+    char payload[1024],pairstr[64],pricestr[64],*extra,*method; cJSON *json; int32_t type; uint64_t txid = 0;
     if ( (extra= *retstrp) != 0 )
         *retstrp = 0;
     if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
@@ -76,27 +89,13 @@ uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *re
         printf("cant find baserel (%s/%s)\n",base,rel);
         return(0);
     }
-    nonce = exchange_nonce(exchange);
-    sprintf(buf,"access_key=%s&amount=%.4f&coin_type=%d&created=%llu&method=%s%s&secret_key=%s",exchange->apikey,volume,type,(long long)nonce,method,pricestr,exchange->apisecret);
-    calc_md5(digest,buf,(int32_t)strlen(buf));
-    sprintf(payload,"access_key=%s&amount=%.4f&coin_type=%d&created=%llu&method=%s%s&sign=%s",exchange->apikey,volume,type,(long long)nonce,method,pricestr,digest);
-    if ( (json= SIGNPOST(retstrp,exchange,payload)) != 0 )
+    sprintf(payload,"&amount=%.4f&coin_type=%d%s",volume,type,pricestr);
+    if ( (json= huobi_issue_auth(exchange,method,payload)) != 0 )
     {
         txid = j64bits(json,"order_id");
         free_json(json);
     }
     return(txid);
-}
-
-cJSON *BALANCES(struct exchange_info *exchange)
-{
-    char buf[1024],digest[33],payload[1024],*method; uint64_t nonce;
-    nonce = exchange_nonce(exchange);
-    method = "get_account_info";
-    sprintf(buf,"access_key=%s&created=%llu&method=%s&secret_key=%s",exchange->apikey,(long long)nonce,method,exchange->apisecret);
-    calc_md5(digest,buf,(int32_t)strlen(buf));
-    sprintf(payload,"access_key=%s&created=%llu&method=%s&sign=%s",exchange->apikey,(long long)nonce,method,digest);
-    return(SIGNPOST(0,exchange,payload));
 }
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
@@ -119,59 +118,47 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
+cJSON *BALANCES(struct exchange_info *exchange)
+{
+    return(huobi_issue_auth(exchange,"get_account_info",""));
+}
+
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized orderstatus
+    char payload[1024];
+    sprintf(payload,"&id=%llu&coin_type=1",(long long)quoteid);
+    return(jprint(huobi_issue_auth(exchange,"order_info",payload),1));
 }
 
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized cancelorder
+    char payload[1024];
+    sprintf(payload,"&id=%llu&coin_type=1",(long long)quoteid);
+    return(jprint(huobi_issue_auth(exchange,"cancel_order",payload),1));
 }
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized open orders
+    return(jprint(huobi_issue_auth(exchange,"get_orders","&coin_type=1"),1));
 }
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized tradehistory
+    return(clonestr("{\"error\":\"huobi doesnt seem to have trade history api!\"}"));
 }
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized withdraw
+    char payload[1024],*base,*destaddr,*method; double amount;
+    if ( (base= jstr(argjson,"base")) == 0 || strcmp(base,"BTC") != 0 )
+        return(clonestr("{\"error\":\"base not specified or base != BTC\"}"));
+    if ( (destaddr= jstr(argjson,"destaddr")) == 0 )
+        return(clonestr("{\"error\":\"destaddr not specified\"}"));
+    if ( (amount= jdouble(argjson,"amount")) < SMALLVAL )
+        return(clonestr("{\"error\":\"amount not specified\"}"));
+    method = "withdraw_coin";
+    sprintf(payload,"&coin_type=1&withdraw_address=%s&withdraw_amount=%.4f",destaddr,amount);
+    return(jprint(huobi_issue_auth(exchange,method,payload),1));
 }
 
 struct exchange_funcs huobi_funcs = EXCHANGE_FUNCS(huobi,EXCHANGE_NAME);

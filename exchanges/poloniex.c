@@ -174,35 +174,18 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char *status; cJSON *json,*array,*item; uint32_t j,i,n,txid;
-    for (j=0; j<2; j++)
+    char *status,*retstr; uint32_t iter;
+    for (iter=0; iter<2; iter++)
     {
-        if ( j == 0 )
+        if ( iter == 0 )
             status = OPENORDERS(exchange,argjson);
-        else
-            status = TRADEHISTORY(exchange,argjson);
-        if ( status != 0 )
+        else status = TRADEHISTORY(exchange,argjson);
+        if ( (retstr= exchange_extractorderid(iter,status,quoteid,"orderNumber")) != 0 )
         {
-            if ( (array= cJSON_Parse(status)) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    item = jitem(array,i);
-                    if ( (txid= juint(item,"orderNumber")) == quoteid )
-                    {
-                        json = cJSON_CreateObject();
-                        jaddstr(json,"result",j == 0 ? "order still pending" : "order completed");
-                        jadd(json,"order",cJSON_Duplicate(item,1));
-                        free(status);
-                        free_json(array);
-                        return(jprint(json,1));
-                    }
-                }
-            }
-            if ( array != 0 )
-                free_json(array);
             free(status);
+            return(retstr);
         }
+        free(status);
     }
     return(clonestr("{\"error\":\"cant find quoteid\"}"));
 }
