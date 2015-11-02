@@ -159,9 +159,9 @@ int nn_usock_start (struct nn_usock *self, int domain, int type, int protocol)
 
     /*  If the operating system allows to directly open the socket with CLOEXEC
         flag, do so. That way there are no race conditions. */
-#ifdef SOCK_CLOEXEC
-    type |= SOCK_CLOEXEC;
-#endif
+//#ifdef SOCK_CLOEXEC
+//    type |= SOCK_CLOEXEC;
+//#endif
 
     /* Open the underlying socket. */
     s = socket (domain, type, protocol);
@@ -198,14 +198,14 @@ static void nn_usock_init_from_fd (struct nn_usock *self, int s)
         second best option after using SOCK_CLOEXEC. There is a race condition
         here (if process is forked between socket creation and setting
         the option) but the problem is pretty unlikely to happen. */
-#if defined FD_CLOEXEC
-    rc = fcntl (self->s, F_SETFD, FD_CLOEXEC);
-#if defined NN_HAVE_OSX
-    errno_assert (rc != -1 || errno == EINVAL);
-#else
-    errno_assert (rc != -1);
-#endif
-#endif
+//#if defined FD_CLOEXEC
+//    rc = fcntl (self->s, F_SETFD, FD_CLOEXEC);
+//#if defined NN_HAVE_OSX
+//    errno_assert (rc != -1 || errno == EINVAL);
+//#else
+//    errno_assert (rc != -1);
+//#endif
+//#endif
 
     // If applicable, prevent SIGPIPE signal when writing to the connection already closed by the peer
 #ifdef SO_NOSIGPIPE

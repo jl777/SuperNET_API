@@ -260,7 +260,7 @@ char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    return(clonestr("{\"error\":\"btc38 doesnt seem to have withdraw api!\"}"));
+    return(clonestr("{\"error\":\"lakebtc doesnt seem to have withdraw api!\"}"));
 }
 
 struct exchange_funcs lakebtc_funcs = EXCHANGE_FUNCS(lakebtc,EXCHANGE_NAME);
