@@ -781,9 +781,6 @@ int SuperNET_start(char *fname,char *myip)
     return(0);
 }
 
-int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
-int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { printf(">>>>>>>>>>> NARROWCAST.(%s) -> (%s)\n",msg,destip);  return(0); }
-
 void SuperNET_console(void *ptr)
 {
     char line[32768];
@@ -818,6 +815,9 @@ int SuperNET_init(int argc,const char *argv[])
 }
 
 #ifdef STANDALONE
+
+int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
+int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { printf(">>>>>>>>>>> NARROWCAST.(%s) -> (%s)\n",msg,destip);  return(0); }
 
 int main(int argc,const char *argv[])
 {
