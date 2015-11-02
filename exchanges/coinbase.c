@@ -60,6 +60,20 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,uint
      The method should be UPPER CASE
      Remember to first base64-decode the alphanumeric secret string (resulting in 64 bytes) before using it as the key for HMAC. Also, base64-encode the digest output before sending in the header.
      */
+   /* def __call__(self, request):
+    timestamp = str(time.time())
+    message = timestamp + request.method + request.path_url + (request.body or '')
+    hmac_key = base64.b64decode(self.secret_key)
+    signature = hmac.new(hmac_key, message, hashlib.sha256)
+    signature_b64 = signature.digest().encode('base64').rstrip('\n')
+    
+    request.headers.update({
+        'CB-ACCESS-SIGN': signature_b64,
+        'CB-ACCESS-TIMESTAMP': timestamp,
+        'CB-ACCESS-KEY': self.api_key,
+        'CB-ACCESS-PASSPHRASE': self.passphrase,
+        'Content-Type': 'application/json'
+    })*/
     static CURL *cHandle;
     char url[1024],hdr1[512],hdr2[512],hdr3[512],hdr4[512],dest[1024]; cJSON *json; int32_t n;
     char prehash64[512],prehash[512],decodedsecret[512],sig64[512],*sig,*data = 0;
@@ -115,8 +129,7 @@ uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *re
 
 cJSON *BALANCES(struct exchange_info *exchange)
 {
-    char payload[1024];
-    return(SIGNPOST(0,exchange,payload,exchange_nonce(exchange),"accounts","GET"));
+    return(SIGNPOST(0,exchange,"",exchange_nonce(exchange),"accounts","GET"));
 }
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)

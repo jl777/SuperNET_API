@@ -306,6 +306,7 @@ char *InstantDEX_cancelorder(cJSON *argjson,char *activenxt,char *secret,uint64_
         }
         else return(clonestr("{\"error\":\"no cancelorder function\"}"));
     }
+    memset(quoteids,0,sizeof(quoteids));
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
     if ( quoteid != 0 )
         quoteids[n++] = quoteid;

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <ccoin/mbr.h>
 #include <ccoin/message.h>
-#include <ccoin/endian.h>
+#include <ccoin/pendian.h>
 
 
 bool fread_block(int fd, struct p2p_message *msg, bool *read_ok)

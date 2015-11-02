@@ -9,7 +9,7 @@
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/buffer.h>
-#include <ccoin/endian.h>
+#include <ccoin/pendian.h>
 
 bool bsp_getop(struct bscript_op *op, struct bscript_parser *bp)
 {

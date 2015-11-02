@@ -40,7 +40,7 @@ int32_t SUPPORTS(char *base,char *rel)
     return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
-cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *url,char *payload)
+cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *method,char *payload)
 {
     /*signature is a HMAC-SHA256 encoded message containing: nonce, customer ID (can be found here) and API key. The HMAC-SHA256 code must be generated using a secret key that was generated with your API key. This code must be converted to it's hexadecimal representation (64 uppercase characters).Example (Python):
      message = nonce + customer_id + api_key
@@ -51,7 +51,7 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *url,char *pa
      nonce - nonce
      */
     static CURL *cHandle;
-    char dest[1025],req[1024],hdr1[512],hdr2[512],hdr3[512],hdr4[512],*sig,*data = 0;
+    char dest[1025],url[1024],req[1024],hdr1[512],hdr2[512],hdr3[512],hdr4[512],*sig,*data = 0;
     cJSON *json; uint64_t nonce;
     hdr1[0] = hdr2[0] = hdr3[0] = hdr4[0] = 0;
     nonce = exchange_nonce(exchange);
@@ -59,9 +59,13 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *url,char *pa
     json = 0;
     if ( (sig= hmac_sha256_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),req)) != 0 )
     {
-        touppercase(sig);
-        sprintf(req,"{\"key\":\"%s\",\"signature\":\"%s\",\"nonce\":%llu}",exchange->apikey,sig,(long long)nonce);
-        if ( (data= curl_post(&cHandle,url,0,payload,req,hdr2,hdr3,hdr4)) != 0 )
+        //touppercase(sig);
+        //printf("req.(%s) sig.(%s)\n",req,sig);
+        //sprintf(req,"{\"key\":\"%s\",\"signature\":\"%s\",\"nonce\":%llu%s}",exchange->apikey,sig,(long long)nonce,payload);
+        sprintf(req,"key=%s&signature=%s&nonce=%llu%s",exchange->apikey,sig,(long long)nonce,payload);
+        //printf("submit.(%s)\n",req);
+        sprintf(url,"%s/%s/",EXCHANGE_AUTHURL,method);
+        if ( (data= curl_post(&cHandle,url,0,req,req,hdr2,hdr3,hdr4)) != 0 )
             json = cJSON_Parse(data);
     }
     if ( retstrp != 0 )
@@ -89,13 +93,6 @@ uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *re
     }
     return(txid);
 }
-    
-cJSON *BALANCES(struct exchange_info *exchange)
-{
-    char payload[1024],url[512];
-    sprintf(url,"%s/%s/",EXCHANGE_AUTHURL,"balance");
-    return(SIGNPOST(0,exchange,url,payload));
-}
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
@@ -117,59 +114,38 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
+cJSON *BALANCES(struct exchange_info *exchange)
+{
+    return(SIGNPOST(0,exchange,"balance",""));
+}
+
 char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized orderstatus
+    char jsonbuf[128];
+    sprintf(jsonbuf,"&id=%llu",(long long)quoteid);
+    return(jprint(SIGNPOST(0,exchange,"order_status",jsonbuf),1));
 }
 
 char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized cancelorder
+    char jsonbuf[128];
+    sprintf(jsonbuf,"&id=%llu",(long long)quoteid);
+    return(jprint(SIGNPOST(0,exchange,"cancel_order",jsonbuf),1));
 }
 
 char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized open orders
+    return(jprint(SIGNPOST(0,exchange,"open_orders",""),1));
 }
 
 char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized tradehistory
+    return(jprint(SIGNPOST(0,exchange,"user_transactions",""),1));
 }
 
 char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
 {
-    char payload[1024],*retstr = 0; cJSON *json;
-    // generate payload
-    if ( (json= SIGNPOST(&retstr,exchange,"https://",payload)) != 0 )
-    {
-        free_json(json);
-    }
-    return(retstr); // return standardized withdraw
+    return(clonestr("{\"error\":\"withdraw not yet\"}"));
 }
 
 struct exchange_funcs bitstamp_funcs = EXCHANGE_FUNCS(bitstamp,EXCHANGE_NAME);

@@ -302,7 +302,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         //uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits);
         if ( coin->mgw.assetidbits != 0 )
             _set_assetname(&coin->mgw.ap_mult,coin->mgw.assetname,0,coin->mgw.assetidbits);
-        printf("assetname.(%s) mult.%llu\n",coin->mgw.assetname,coin->mgw.ap_mult);
+        printf("assetname.(%s) mult.%llu\n",coin->mgw.assetname,(long long)coin->mgw.ap_mult);
         strcpy(coin->mgw.coinstr,coinstr);
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )
             coin->mgw.special = cJSON_GetObjectItem(COINS.argjson,"special");

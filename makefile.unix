@@ -2,7 +2,7 @@ include makefile.shared
 
 TARGET = SuperNET
 
-LIBS = -lcurl -lssl -lcrypto -lpthread -lz
+LIBS = -lcurl -lssl -lcrypto -lpthread -lz -lm
 
 CC = gcc
 OS := $(shell uname -s)
@@ -15,8 +15,13 @@ OBJS := $(ALLSOURCES:%.c=%.o)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	ar rcu libs/libjl777.a $(OBJS); gcc -o $(TARGET) -DSTANDALONE SuperNET.c libs/libjl777.a $(LIBS); gcc -o SNapi SNapi.c libs/libjl777.a -lm
+$(TARGET): $(OBJS) SNapi
+	ar rcu libs/libjl777.a $(OBJS); gcc -o $(TARGET) -DSTANDALONE SuperNET.c $(OBJS) $(LIBS); #gcc -o SNapi SNapi.c -lnanomsg -lm
+
+SNapi.c: ;
+
+SNapi: SNapi.c plugins/utils/cJSON.c ;\
+    gcc -o SNapi SNapi.c plugins/utils/cJSON.c  -lnanomsg -lm
 
 btcd: src/BitcoinDarkd; \
     cd src; rm BitcoinDarkd; $(MAKE) -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ..
