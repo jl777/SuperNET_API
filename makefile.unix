@@ -16,15 +16,15 @@ OBJS := $(ALLSOURCES:%.c=%.o)
 all: $(TARGET)
 
 $(TARGET): $(OBJS) SNapi
-	ar rcu libs/libjl777.a $(OBJS); gcc -o $(TARGET) -DSTANDALONE SuperNET.c $(OBJS) $(LIBS); #gcc -o SNapi SNapi.c -lnanomsg -lm
+	ar rcu libs/libjl777.a $(OBJS); $(CC) -o $(TARGET) -DSTANDALONE SuperNET.c $(OBJS) $(LIBS); #gcc -o SNapi SNapi.c -lnanomsg -lm
 
 SNapi.c: ;
 
 SNapi: SNapi.c plugins/utils/cJSON.c ;\
-    gcc -o SNapi SNapi.c plugins/utils/cJSON.c  -lnanomsg -lm
+    $(CC) -o SNapi SNapi.c plugins/utils/cJSON.c  -lnanomsg -lm
 
 btcd: src/BitcoinDarkd; \
-    cd src; rm BitcoinDarkd; $(MAKE) -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ..
+    $(CC) -c -o src/obj/SuperNET.o SuperNET.c; cd src; rm BitcoinDarkd; $(MAKE) -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ..
 
 src/BitcoinDarkd: libs/libjl777.a
 
