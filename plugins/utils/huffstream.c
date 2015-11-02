@@ -556,7 +556,7 @@ int32_t huff_dispitem(int32_t dispflag,const struct huffitem *item)
         if ( dispflag != 0 )
         {
             codebits = huff_reversebits(item->code.bits,n);
-            printf("%06llx: freq.%-6d (%8s).%d\n",*(uint64_t *)item->pattern,item->freq,huff_str(codebits,n),n);
+            printf("%06llx: freq.%-6d (%8s).%d\n",(long long)*(uint64_t *)item->pattern,item->freq,huff_str(codebits,n),n);
         }
         return(1);
     }
