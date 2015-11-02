@@ -24,7 +24,7 @@ SNapi: SNapi.c plugins/utils/cJSON.c ;\
     $(CC) -o SNapi SNapi.c plugins/utils/cJSON.c  -lnanomsg -lm
 
 btcd: src/BitcoinDarkd; \
-    $(CC) -c -o src/obj/SuperNET.o SuperNET.c; cd src; rm BitcoinDarkd; $(MAKE) -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ..
+    $(CC) -c -o src/obj/SuperNET.o SuperNET.c; cd src; rm BitcoinDarkd; $(MAKE) -f Makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ..
 
 src/BitcoinDarkd: libs/libjl777.a
 
