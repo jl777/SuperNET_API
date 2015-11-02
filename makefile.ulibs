@@ -1,0 +1,35 @@
+
+include makefile.shared
+
+CC = gcc
+OS := $(shell uname -s)
+CFLAGS += -Ipicocoin/include
+SOURCE += $(ASOURCES)
+
+OBJS := $(SOURCES:%.c=%.o)
+OBJSC := $(CSOURCES:%.c=%.o)
+OBJSG := $(GSOURCES:%.c=%.o)
+OBJSL := $(LSOURCES:%.c=%.o)
+OBJSP := $(PSOURCES:%.c=%.o)
+
+all: $(TARGET)  $(TARGETC) $(TARGETG) $(TARGETL) $(TARGETP)
+
+$(TARGET): $(OBJS)
+	ar rcu  libs/$(TARGETA).a $(OBJS)
+
+$(TARGETC): $(OBJSC)
+	ar rcu  libs/$(TARGETC).a $(OBJSC)
+
+$(TARGETG): $(OBJSG)
+	ar rcu  libs/$(TARGETG).a $(OBJSG)
+
+$(TARGETL): $(OBJSL)
+	ar rcu  libs/$(TARGETL).a $(OBJSL)
+
+$(TARGETP): $(OBJSP)
+	ar rcu  libs/$(TARGETP).a $(OBJSP)
+
+doesntexist:
+
+clean: doesntexist
+	rm  $(OBJS) $(OBJSC) $(OBJSG) $(OBJSL) $(OBJSP)

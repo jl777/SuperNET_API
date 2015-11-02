@@ -1,0 +1,32 @@
+include makefile.shared
+
+TARGET = SuperNET
+
+LIBS = -lcurl -lssl -lcrypto -lpthread -lz
+
+CC = gcc
+OS := $(shell uname -s)
+CFLAGS += -Ipicocoin/include  
+
+ALLSOURCES =  plugins/InstantDEX/InstantDEX_main.c plugins/common/prices777.c plugins/peggy/quotes777.c plugins/peggy/peggy777.c plugins/common/opreturn777.c  plugins/common/txind777.c plugins/common/teleport777.c  plugins/KV/ramkv777.c plugins/agents/shuffle777.c $(SOURCES) $(ASOURCES) $(CSOURCES) $(GSOURCES) $(LSOURCES) $(PSOURCES)
+
+
+OBJS := $(ALLSOURCES:%.c=%.o)
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	ar rcu libs/libjl777.a $(OBJS); gcc -o $(TARGET) -DSTANDALONE SuperNET.c libs/libjl777.a $(LIBS); gcc -o SNapi SNapi.c libs/libjl777.a -lm
+
+btcd: src/BitcoinDarkd; \
+    cd src; rm BitcoinDarkd; $(MAKE) -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ..
+
+src/BitcoinDarkd: libs/libjl777.a
+
+libs/libjl777.a: $(OBJS); \
+   ar rcu libs/libjl777.a $(OBJS);
+
+doesntexist:
+
+clean: doesntexist
+	rm  $(OBJS) $(OBJSA) $(OBJSC) $(OBJSG) $(OBJSL) $(OBJSP)

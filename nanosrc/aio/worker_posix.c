@@ -172,7 +172,7 @@ static void nn_worker_routine (void *arg)
     struct nn_worker_task *task;
     struct nn_worker_fd *fd;
     struct nn_worker_timer *timer;
-    PostMessage("nn_worker_routine started\n");
+    //PostMessage("nn_worker_routine started\n");
     self = (struct nn_worker*) arg;
     while ( 1 ) //  Infinite loop. It will be interrupted only when the object is shut down.
     {

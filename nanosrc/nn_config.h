@@ -45,7 +45,7 @@
 #define NN_HAVE_STDINT 1
 
 #define NN_HAVE_MSG_CONTROL 1
-#define STANDALONE 1
+//#define STANDALONE 1
 
 #ifdef __PNACL
 //#define FD_CLOEXEC 1
@@ -54,7 +54,7 @@ void PostMessage(const char* format, ...);
 #include <glibc-compat/sys/uio.h>
 #include <glibc-compat/sys/un.h>
 #else
-#define NN_ENABLE_EXTRA 1
+//#define NN_ENABLE_EXTRA 1
 #define PostMessage printf
 #include <sys/uio.h>
 #include <sys/un.h>

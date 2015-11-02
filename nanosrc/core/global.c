@@ -230,7 +230,7 @@ void nn_global_init (void)
     //  Plug in individual transports.
     nn_global_add_transport(nn_ipc);
     nn_global_add_transport(nn_tcp);
-#ifdef NN_ENABLE_EXTRA
+//#ifdef NN_ENABLE_EXTRA
     nn_global_add_transport(nn_inproc);
     //nn_global_add_transport(nn_ws);
     //nn_global_add_transport(nn_tcpmux);
@@ -246,7 +246,7 @@ void nn_global_init (void)
     nn_global_add_socktype(nn_surveyor_socktype);
     nn_global_add_socktype(nn_xrespondent_socktype);
     nn_global_add_socktype(nn_xsurveyor_socktype);
-#endif
+//#endif
     nn_global_add_socktype(nn_pub_socktype);
     nn_global_add_socktype(nn_sub_socktype);
     nn_global_add_socktype(nn_xpub_socktype);
@@ -1248,7 +1248,7 @@ static int nn_global_create_ep (int s, const char *addr, int bind)
         return -EPROTONOSUPPORT;
     }
 #endif
-    printf("protocol.(%s)\n",proto);
+    //printf("protocol.(%s)\n",proto);
     /*  Find the specified protocol. */
     tp = NULL;
     for (it = nn_list_begin (&SELF.transports);

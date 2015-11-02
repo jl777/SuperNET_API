@@ -7,90 +7,13 @@
 
 VALID_TOOLCHAINS := pnacl newlib glibc clang-newlib mac
 NACL_SDK_ROOT ?= $(abspath $(CURDIR))
-
-TARGET = nanoagent
-TARGETA = nanomsg
-TARGETC = crypto777
-TARGETG = pangea
-TARGETL = jl777
-TARGETP = ccoin
-
 include $(NACL_SDK_ROOT)/tools/common.mk
-
 CHROME_ARGS += --allow-nacl-socket-api=localhost
+OS = newos
 
-DEPS =
+include makefile.shared
 
-CFLAGS = -D__PNACL -Wall -fno-strict-aliasing -DNN_HAVE_POLL=1 -DNN_HAVE_SEMAPHORE=1 -DNN_HAVE_PIPE=1 -DNN_USE_POLL=1 -DNN_DISABLE_GETADDRINFO_A=1 -DNN_USE_LITERAL_IFADDR=1 -DNN_HAVE_STDINT=1 -DNN_HAVE_MSG_CONTROL=1 -DNN_USE_MYMSG 
-
-NONPORTABLE=   plugins/nonportable/newos/random.c  plugins/nonportable/newos/files.c
-
-NANOMSG_CORE = nanosrc/core/ep.c nanosrc/core/epbase.c nanosrc/core/pipe.c nanosrc/core/poll.c nanosrc/core/sock.c nanosrc/core/sockbase.c nanosrc/core/symbol.c
-
-NANOMSG_DEVICES = nanosrc/devices/device.c nanosrc/devices/tcpmuxd.c
-
-NANOMSG_AIO = nanosrc/aio/ctx.c nanosrc/aio/fsm.c nanosrc/aio/poller.c nanosrc/aio/pool.c nanosrc/aio/timer.c nanosrc/aio/usock.c nanosrc/aio/timerset.c nanosrc/aio/worker.c 
-
-NANOMSG_UTILS = nanosrc/utils/alloc.c nanosrc/utils/atomic.c nanosrc/utils/chunk.c nanosrc/utils/chunkref.c nanosrc/utils/clock.c nanosrc/utils/closefd.c nanosrc/utils/efd.c nanosrc/utils/err.c nanosrc/utils/glock.c nanosrc/utils/hash.c nanosrc/utils/list.c nanosrc/utils/msg.c nanosrc/utils/mutex.c nanosrc/utils/queue.c nanosrc/utils/random.c nanosrc/utils/sem.c nanosrc/utils/sleep.c nanosrc/utils/stopwatch.c nanosrc/utils/thread.c nanosrc/utils/wire.c plugins/utils/inet.c
-
-PROTOCOLS_UTILS = nanosrc/protocols/utils/dist.c nanosrc/protocols/utils/excl.c nanosrc/protocols/utils/fq.c nanosrc/protocols/utils/lb.c nanosrc/protocols/utils/priolist.c
-
-PROTOCOLS_BUS = nanosrc/protocols/bus/bus.c nanosrc/protocols/bus/xbus.c
-
-PROTOCOLS_PIPELINE = nanosrc/protocols/pipeline/push.c nanosrc/protocols/pipeline/pull.c nanosrc/protocols/pipeline/xpull.c nanosrc/protocols/pipeline/xpush.c
-
-PROTOCOLS_PUBSUB = nanosrc/protocols/pubsub/pub.c nanosrc/protocols/pubsub/sub.c nanosrc/protocols/pubsub/trie.c nanosrc/protocols/pubsub/xpub.c nanosrc/protocols/pubsub/xsub.c
-
-NANOMSG_PROTOCOLS = $(PROTOCOLS_PUBSUB) $(PROTOCOLS_BUS) $(PROTOCOLS_PIPELINE) $(PROTOCOLS_UTILS)
-
-TRANSPORTS_UTILS = nanosrc/transports/utils/backoff.c nanosrc/transports/utils/dns.c nanosrc/transports/utils/iface.c nanosrc/transports/utils/literal.c nanosrc/transports/utils/port.c nanosrc/transports/utils/streamhdr.c nanosrc/transports/utils/base64.c
-
-TRANSPORTS_IPC = nanosrc/transports/ipc/aipc.c nanosrc/transports/ipc/bipc.c nanosrc/transports/ipc/cipc.c nanosrc/transports/ipc/ipc.c nanosrc/transports/ipc/sipc.c
-
-TRANSPORTS_TCP = nanosrc/transports/tcp/atcp.c nanosrc/transports/tcp/btcp.c nanosrc/transports/tcp/ctcp.c nanosrc/transports/tcp/stcp.c nanosrc/transports/tcp/tcp.c
-
-NANOMSG_TRANSPORTS =  $(TRANSPORTS_UTILS)  $(TRANSPORTS_IPC) $(TRANSPORTS_TCP)
-
-########## additional
-TRANSPORTS_INPROC = nanosrc/transports/inproc/binproc.c nanosrc/transports/inproc/cinproc.c nanosrc/transports/inproc/inproc.c nanosrc/transports/inproc/ins.c nanosrc/transports/inproc/msgqueue.c nanosrc/transports/inproc/sinproc.c
-
-NANOMSG_ATRANSPORTS =  $(TRANSPORTS_INPROC)
-
-PROTOCOLS_PAIR = nanosrc/protocols/pair/pair.c nanosrc/protocols/pair/xpair.c
-
-PROTOCOLS_REQREP = nanosrc/protocols/reqrep/req.c nanosrc/protocols/reqrep/rep.c nanosrc/protocols/reqrep/task.c nanosrc/protocols/reqrep/xrep.c nanosrc/protocols/reqrep/xreq.c
-
-PROTOCOLS_SURVEY = nanosrc/protocols/survey/respondent.c nanosrc/protocols/survey/surveyor.c nanosrc/protocols/survey/xrespondent.c nanosrc/protocols/survey/xsurveyor.c
-
-NANOMSG_APROTOCOLS = $(PROTOCOLS_PAIR) $(PROTOCOLS_REQREP) $(PROTOCOLS_SURVEY)
-
-TRANSPORTS_WS = nanosrc/transports/ws/aws.c nanosrc/transports/ws/bws.c nanosrc/transports/ws/cws.c nanosrc/transports/ws/sws.c nanosrc/transports/ws/ws.c nanosrc/transports/ws/ws_handshake.c nanosrc/transports/ws/sha1.c
-
-#$(TRANSPORTS_TCPMUX) $(TRANSPORTS_WS)
-
-TRANSPORTS_TCPMUX = nanosrc/transports/tcpmux/atcpmux.c nanosrc/transports/tcpmux/btcpmux.c nanosrc/transports/tcpmux/ctcpmux.c nanosrc/transports/tcpmux/stcpmux.c nanosrc/transports/tcpmux/tcpmux.c
-
-################################################################################
-#  automated tests                                                             #
-################################################################################
-
-TRANSPORT_TESTS = nanosrc/tests/inproc.c  nanosrc/tests/inproc_shutdown.c  nanosrc/tests/ipc.c  nanosrc/tests/ipc_shutdown.c  nanosrc/tests/ipc_stress.c  nanosrc/tests/tcp.c  nanosrc/tests/tcp_shutdown.c  nanosrc/tests/ws.c  nanosrc/tests/tcpmux.c
-
-PROTOCOL_TESTS = nanosrc/tests/pair.c  nanosrc/tests/pubsub.c nanosrc/tests/reqrep.c  nanosrc/tests/pipeline.c  nanosrc/tests/survey.c  nanosrc/tests/bus.c
-
-FEATURE_TESTS = nanosrc/tests/block.c  nanosrc/tests/term.c  nanosrc/tests/timeo.c  nanosrc/tests/iovec.c  nanosrc/tests/msg.c  nanosrc/tests/prio.c  nanosrc/tests/poll.c nanosrc/tests/device.c  nanosrc/tests/emfile.c  nanosrc/tests/domain.c  nanosrc/tests/trie.c  nanosrc/tests/list.c  nanosrc/tests/hash.c  nanosrc/tests/symbol.c  nanosrc/tests/separation.c  nanosrc/tests/zerocopy.c  nanosrc/tests/shutdown.c  nanosrc/tests/cmsg.c
-
-TESTS = $(TRANSPORT_TESTS) $(PROTOCOL_TESTS) $(FEATURE_TESTS)
-
-SOURCES =  $(NONPORTABLE) $(NANOMSG_CORE) $(NANOMSG_AIO) $(NANOMSG_UTILS) $(NANOMSG_DEVICES) $(NANOMSG_TRANSPORTS) $(NANOMSG_PROTOCOLS) nanosrc/core/global.c plugins/utils/cJSON.c plugins/coins/bitcoind_RPC.c plugins/utils/utils777.c plugins/utils/files777.c
-
-PSOURCES = picocoin/base58.c picocoin/key.c picocoin/bignum.c picocoin/file_seq.c picocoin/clist.c picocoin/util.c picocoin/cstr.c
-
-CSOURCES = plugins/utils/ramcoder.c plugins/utils/curve25519.c plugins/utils/crypt_argchk.c plugins/utils/tom_md5.c plugins/utils/sha256.c plugins/utils/rmd160.c plugins/utils/hmac_sha512.c plugins/utils/sha512.c plugins/utils/huffstream.c plugins/utils/libgfshare.c plugins/utils/SaM.c plugins/utils/bits777.c
-
-LSOURCES = libjl777.c plugins/coins/coins777_main.c plugins/coins/coins777.c plugins/coins/gen1.c plugins/coins/cointx.c plugins/KV/kv777.c  plugins/KV/kv777_main.c plugins/utils/transport777.c  plugins/agents/_dcnet/dcnet777.c plugins/utils/NXT777.c plugins/common/console777.c plugins/common/busdata777.c plugins/common/relays777.c plugins/common/system777.c
-
-GSOURCES =   plugins/common/hostnet777.c plugins/games/tourney777.c plugins/games/cards777.c  plugins/games/pangea/pangea777.c plugins/games/pangea/poker.c
+CFLAGS += -D__PNACL
 
 # Build rules generated by macros from common.mk:
 
@@ -100,7 +23,7 @@ $(foreach src,$(CSOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))
 $(foreach src,$(GSOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))
 $(foreach src,$(LSOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS))))
 $(foreach src,$(PSOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGS) -Ipicocoin/include)))
-$(foreach src, $(TESTS) nanosrc/core/global.c $(NANOMSG_APROTOCOLS) $(NANOMSG_ATRANSPORTS),$(eval $(call COMPILE_RULE,$(src),$(CFLAGSA) -DNN_ENABLE_EXTRA=1)))
+$(foreach src,$(ASOURCES),$(eval $(call COMPILE_RULE,$(src),$(CFLAGSA))))
 
 # The PNaCl workflow uses both an unstripped and finalized/stripped binary.
 # On NaCl, only produce a stripped binary for Release configs (not Debug).
