@@ -784,11 +784,21 @@ int SuperNET_start(char *fname,char *myip)
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
 int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { printf(">>>>>>>>>>> NARROWCAST.(%s) -> (%s)\n",msg,destip);  return(0); }
 
-#ifdef STANDALONE
-int main(int argc,const char *argv[])
-#else
+void SuperNET_console(void *ptr)
+{
+    char line[32768];
+    while ( 1 )
+    {
+        line[0] = 0;
+        if ( getline777(line,sizeof(line)-1) > 0 )
+        {
+            //printf("getline777.(%s)\n",line);
+            process_userinput(line);
+        }
+    }
+}
+
 int SuperNET_init(int argc,const char *argv[])
-#endif
 {
     uint64_t ipbits; uint32_t i; char _ipaddr[64],*ipaddr = "127.0.0.1:7777";
     i = 1;
@@ -804,7 +814,15 @@ int SuperNET_init(int argc,const char *argv[])
     printf(">>>>>>>>> call SuperNET_start.(%s)\n",ipaddr);
     SuperNET_start(os_compatible_path("SuperNET.conf"),ipaddr);
     printf("<<<<<<<<< back SuperNET_start\n");
-#ifndef __PNACL
+    return(0);
+}
+
+#ifdef STANDALONE
+
+int main(int argc,const char *argv[])
+{
+    int32_t i = 1;
+    SuperNET_init(argc,argv);
     if ( i < argc )
     {
         char *jsonstr; uint64_t allocsize;
@@ -815,16 +833,8 @@ int SuperNET_init(int argc,const char *argv[])
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
         free(jsonstr);
     }
+    portable_thread_create((void *)SuperNET_console,"");
     while ( 1 )
-    {
-        char line[32768];
-        line[0] = 0;
-        if ( getline777(line,sizeof(line)-1) > 0 )
-        {
-            //printf("getline777.(%s)\n",line);
-            process_userinput(line);
-        }
-    }
-#endif
-    return(0);
+    sleep(777);
 }
+#endif

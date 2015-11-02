@@ -503,7 +503,13 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
             secret = SUPERNET.NXTACCTSECRET;
             activenxt = SUPERNET.NXTADDR;
         }
-         if ( strcmp(method.buf,"orderstatus") == 0 )
+        if ( strcmp(method.buf,"exit") == 0 )
+        {
+            printf("getchar and then exit\n");
+            getchar();
+            exit(0);
+        }
+        if ( strcmp(method.buf,"orderstatus") == 0 )
             retstr = InstantDEX_orderstatus(json,sequenceid,iQ.s.quoteid);
         else if ( strcmp(method.buf,"cancelorder") == 0 )
             retstr = InstantDEX_cancelorder(json,jstr(json,"activenxt"),jstr(json,"secret"),sequenceid,iQ.s.quoteid);
