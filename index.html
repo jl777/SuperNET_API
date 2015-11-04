@@ -6,6 +6,7 @@
     <title>SuperNET API</title>
     <script src="jquery-2.1.4.min.js" type="text/javascript"></script>
     <link rel="stylesheet" href="css/bootstrap.css" type="text/css">
+	
 </head>
 <body data-custom-load="true" data-name="SuperNET_API" data-tools="pnacl newlib glibc clang-newlib mac" data-configs="Debug Release" data-path="{tc}/{config}">
 <!--
@@ -50,6 +51,10 @@
                             <li><a href="#">Community</a></li>
                             <li role="separator" class="divider"></li>
                             <li><a href="#">Contact</a></li>
+							<li role="separator" class="divider"></li>
+							<li><a>Upload Conf<input type="file" id="files" name="file" /></a></li>
+							<div id="byte_range"></div>
+							<div id="byte_content"></div>
                         </ul>
                     </li>
                 </ul>
@@ -702,6 +707,47 @@
 <script src="js/settings.js" type="text/javascript" charset="utf-8"></script>
 <script src="js/jay.min.js"></script>
 <script src="js/jay.ext.js"></script>
+
+<script>
+	document.getElementById('files').addEventListener('change', handleFileSelect, false);
+	
+	function handleFileSelect(evt) {
+	  var startByte = evt.target.getAttribute('data-startbyte');
+      var endByte = evt.target.getAttribute('data-endbyte');
+      readBlob(startByte, endByte);
+	}
+	
+	function readBlob(opt_startByte, opt_stopByte) {
+
+    var files = document.getElementById('files').files;
+    if (!files.length) {
+      alert('Please select a file!');
+      return;
+    }
+
+    var file = files[0];
+    var start = parseInt(opt_startByte) || 0;
+    var stop = parseInt(opt_stopByte) || file.size - 1;
+
+    var reader = new FileReader();
+
+    // If we use onloadend, we need to check the readyState.
+    reader.onloadend = function(e) {
+      if (e.target.readyState == FileReader.DONE) { // DONE == 2
+        
+		  var confString = e.target.result;
+		  
+		  postCall("SuperNET", '{setConf: ' + confString + '}', function(result){
+			console.log(result);
+		  });
+		
+      }
+    };
+
+    var blob = file.slice(start, stop + 1);
+    reader.readAsBinaryString(blob);
+   }
+	</script>
 
 </body>
 </html>
