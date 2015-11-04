@@ -25,6 +25,7 @@
 #define BALANCES bitfinex ## _balances
 #define PARSEBALANCE bitfinex ## _parsebalance
 #define WITHDRAW bitfinex ## _withdraw
+#define CHECKBALANCE bitfinex ## _checkbalance
 
 double UPDATE(struct prices777 *prices,int32_t maxdepth)
 {
@@ -37,65 +38,6 @@ int32_t SUPPORTS(char *base,char *rel)
 {
     char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"}, {"ltc","btc"} };
     return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
-}
-
-cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,char *method)
-{
-    static CURL *cHandle;
-    char dest[1025],url[1024],hdr1[512],hdr2[512],hdr3[512],hdr4[512],req[1024],*sig,*data = 0; cJSON *json;
-    hdr1[0] = hdr2[0] = hdr3[0] = hdr4[0] = 0;
-    json = 0;
-    nn_base64_encode((void *)payload,strlen(payload),req,sizeof(req));
-    if ( (sig= hmac_sha384_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),req)) != 0 )
-    {
-        sprintf(hdr1,"X-BFX-APIKEY:%s",exchange->apikey);
-        sprintf(hdr2,"X-BFX-PAYLOAD:%s",req);
-        sprintf(hdr3,"X-BFX-SIGNATURE:%s",sig);
-        //printf("req.(%s) H0.(%s) H1.(%s) H2.(%s)\n",req,hdr1,hdr2,hdr3);
-        sprintf(url,"https://api.bitfinex.com/v1/%s",method);
-        if ( (data= curl_post(&cHandle,url,0,req,hdr1,hdr2,hdr3,hdr4)) != 0 )
-            json = cJSON_Parse(data);
-        if ( retstrp != 0 )
-            *retstrp = data;
-        else if ( data != 0 )
-            free(data);
-    }
-    return(json);
-}
-
-uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
-{
-    char payload[1024],pairstr[512],*typestr,*method,*extra; cJSON *json; uint64_t txid = 0;
-    if ( (extra= *retstrp) != 0 )
-        *retstrp = 0;
-    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
-    {
-        printf("cant find baserel (%s/%s)\n",base,rel);
-        return(0);
-    }
-    method = "order/new";
-    //Either "market" / "limit" / "stop" / "trailing-stop" / "fill-or-kill" / "exchange market" / "exchange limit" / "exchange stop" / "exchange trailing-stop" / "exchange fill-or-kill". (type starting by "exchange " are exchange orders, others are margin trading orders)
-    if ( (typestr= extra) == 0 )
-        typestr = "exchange limit";
-    sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\",\"exchange\":\"bitfinex\",\"side\":\"%s\",\"type\":\"%s\",\"price\":\"%.8f\",\"amount\":\"%.8f\",\"symbol\":\"%s\"}",method,(long long)exchange_nonce(exchange),dir>0?"buy":"sell",typestr,price,volume,pairstr);
-    if ( (json= SIGNPOST(retstrp,exchange,payload,method)) != 0 )
-    {
-        if ( (txid= j64bits(json,"order_id")) == 0 )
-        {
-            if ( dir != 0 )
-                printf("bitfinex: no txid error\n");
-        }
-        free_json(json);
-    }
-    return(txid);
-}
-
-cJSON *BALANCES(struct exchange_info *exchange)
-{
-    char payload[1024],*method;
-    method = "balances";
-    sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\"}",method,(long long)exchange_nonce(exchange));
-    return(SIGNPOST(0,exchange,payload,method));
 }
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
@@ -152,43 +94,105 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+cJSON *SIGNPOST(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *payload,char *method)
+{
+    char dest[1025],url[1024],hdr1[512],hdr2[512],hdr3[512],hdr4[512],req[1024],*sig,*data = 0; cJSON *json;
+    hdr1[0] = hdr2[0] = hdr3[0] = hdr4[0] = 0;
+    json = 0;
+    nn_base64_encode((void *)payload,strlen(payload),req,sizeof(req));
+    if ( (sig= hmac_sha384_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),req)) != 0 )
+    {
+        sprintf(hdr1,"X-BFX-APIKEY:%s",exchange->apikey);
+        sprintf(hdr2,"X-BFX-PAYLOAD:%s",req);
+        sprintf(hdr3,"X-BFX-SIGNATURE:%s",sig);
+        //printf("req.(%s) H0.(%s) H1.(%s) H2.(%s)\n",req,hdr1,hdr2,hdr3);
+        sprintf(url,"https://api.bitfinex.com/v1/%s",method);
+        if ( dotrade == 0 )
+            data = exchange_would_submit(req,hdr1,hdr2,hdr3,hdr4);
+        else if ( (data= curl_post(cHandlep,url,0,req,hdr1,hdr2,hdr3,hdr4)) != 0 )
+            json = cJSON_Parse(data);
+        if ( retstrp != 0 )
+            *retstrp = data;
+        else if ( data != 0 )
+            free(data);
+    }
+    return(json);
+}
+
+cJSON *BALANCES(void **cHandlep,struct exchange_info *exchange)
+{
+    char payload[1024],*method;
+    method = "balances";
+    sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\"}",method,(long long)exchange_nonce(exchange));
+    return(SIGNPOST(cHandlep,1,0,exchange,payload,method));
+}
+
+#include "checkbalance.c"
+
+uint64_t TRADE(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+{
+    char payload[1024],pairstr[512],*typestr,*method,*extra; cJSON *json; uint64_t txid = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
+    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
+    {
+        printf("cant find baserel (%s/%s)\n",base,rel);
+        return(0);
+    }
+    method = "order/new";
+    //Either "market" / "limit" / "stop" / "trailing-stop" / "fill-or-kill" / "exchange market" / "exchange limit" / "exchange stop" / "exchange trailing-stop" / "exchange fill-or-kill". (type starting by "exchange " are exchange orders, others are margin trading orders)
+    if ( (typestr= extra) == 0 )
+        typestr = "exchange limit";
+    sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\",\"exchange\":\"bitfinex\",\"side\":\"%s\",\"type\":\"%s\",\"price\":\"%.8f\",\"amount\":\"%.8f\",\"symbol\":\"%s\"}",method,(long long)exchange_nonce(exchange),dir>0?"buy":"sell",typestr,price,volume,pairstr);
+    if ( CHECKBALANCE(retstrp,dotrade,exchange,dir,base,rel,price,volume) == 0 && (json= SIGNPOST(cHandlep,dotrade,retstrp,exchange,payload,method)) != 0 )
+    {
+        if ( (txid= j64bits(json,"order_id")) == 0 )
+        {
+            if ( dir != 0 )
+                printf("bitfinex: no txid error\n");
+        }
+        free_json(json);
+    }
+    return(txid);
+}
+
+char *ORDERSTATUS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*method,*retstr = 0; cJSON *json;
     method = "order/status";
     sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\",\"order_id\":%llu}",method,(long long)exchange_nonce(exchange),(long long)quoteid);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,method)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,method)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized orderstatus
 }
 
-char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+char *CANCELORDER(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*method,*retstr = 0; cJSON *json;
     method = "order/cancel";
     sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\",\"order_id\":%llu}",method,(long long)exchange_nonce(exchange),(long long)quoteid);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,method)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,method)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized cancelorder
 }
 
-char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
+char *OPENORDERS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],*method,*retstr = 0; cJSON *json;
     method = "orders";
     sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\"}",method,(long long)exchange_nonce(exchange));
-    if ( (json= SIGNPOST(&retstr,exchange,payload,method)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,method)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized open orders
 }
 
-char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
+char *TRADEHISTORY(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],baserel[16],*method,*base,*rel,*retstr = 0; uint32_t timestamp; cJSON *json;
     method = "mytrades";
@@ -203,14 +207,14 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
     timestamp = juint(argjson,"start");
     sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\",\"symbol\":\"%s\",\"timestamp\":%u}",method,(long long)exchange_nonce(exchange),baserel,timestamp);
     //printf("TRADEHISTORY.(%s)\n",payload);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,method)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,method)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized tradehistory
 }
 
-char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
+char *WITHDRAW(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],*method,*base,*destaddr,*type,*retstr = 0; cJSON *json; double amount;
     amount = jdouble(argjson,"amount");
@@ -231,7 +235,7 @@ char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
         return(clonestr("{\"error\":\"invalid wallet type specified\"}"));
     method = "withdraw";
     sprintf(payload,"{\"request\":\"/v1/%s\",\"nonce\":\"%llu\",\"amount\":\"%.6f\",\"withdraw_type\":\"%s\",\"walletselected\":\"%s\",\"address\":\"%s\"}",method,(long long)exchange_nonce(exchange),amount,base,type,destaddr);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,method)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,method)) != 0 )
     {
         free_json(json);
     }
@@ -252,3 +256,4 @@ struct exchange_funcs bitfinex_funcs = EXCHANGE_FUNCS(bitfinex,EXCHANGE_NAME);
 #undef PARSEBALANCE
 #undef WITHDRAW
 #undef EXCHANGE_NAME
+#undef CHECKBALANCE

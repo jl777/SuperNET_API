@@ -26,6 +26,7 @@
 #define PARSEBALANCE btce ## _parsebalance
 #define WITHDRAW btce ## _withdraw
 #define EXCHANGE_AUTHURL "https://btc-e.com/tapi"
+#define CHECKBALANCE btce ## _checkbalance
 
 double UPDATE(struct prices777 *prices,int32_t maxdepth)
 {
@@ -42,9 +43,8 @@ int32_t SUPPORTS(char *base,char *rel)
     return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
-cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *url,char *payload)
+cJSON *SIGNPOST(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *url,char *payload)
 {
-    static CURL *cHandle;
     char dest[SHA512_DIGEST_SIZE*2+1],hdr1[512],hdr2[512],hdr3[512],hdr4[512],*data,*sig; cJSON *json;
     hdr1[0] = hdr2[0] = hdr3[0] = hdr4[0] = 0;
     json = 0;
@@ -52,7 +52,9 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *url,char *pa
         sprintf(hdr1,"Sign:%s",sig);
     else hdr1[0] = 0;
     sprintf(hdr2,"Key:%s",exchange->apikey);
-    if ( (data= curl_post(&cHandle,url,0,payload,hdr1,hdr2,hdr3,hdr4)) != 0 )
+    if ( dotrade == 0 )
+        data = exchange_would_submit(payload,hdr1,hdr2,hdr3,hdr4);
+    else if ( (data= curl_post(cHandlep,url,0,payload,hdr1,hdr2,hdr3,hdr4)) != 0 )
         json = cJSON_Parse(data);
     if ( retstrp != 0 )
         *retstrp = data;
@@ -61,38 +63,11 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *url,char *pa
     return(json);
 }
 
-uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
-{
-    char payload[1024],pairstr[512],*extra; cJSON *json,*resultobj; uint64_t txid = 0;
-    if ( (extra= *retstrp) != 0 )
-        *retstrp = 0;
-    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
-    {
-        printf("cant find baserel (%s/%s)\n",base,rel);
-        return(0);
-    }
-    sprintf(payload,"method=Trade&nonce=%llu&pair=%s&type=%s&rate=%.3f&amount=%.6f",(long long)exchange_nonce(exchange),pairstr,dir>0?"buy":"sell",price,volume);
-    if ( (json= SIGNPOST(retstrp,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
-    {
-        //{ "success":1, "return":{ "received":0.1, "remains":0, "order_id":0, "funds":{ "usd":325, "btc":2.498,  } } }
-        if ( juint(json,"success") > 0 && (resultobj= jobj(json,"return")) != 0 )
-        {
-            if ( (txid= j64bits(resultobj,"order_id")) == 0 )
-            {
-                if ( j64bits(resultobj,"remains") == 0 )
-                    txid = _crc32(0,payload,strlen(payload));
-            }
-        }
-        free_json(json);
-    }
-    return(txid);
-}
-
-cJSON *BALANCES(struct exchange_info *exchange)
+cJSON *BALANCES(void **cHandlep,struct exchange_info *exchange)
 {
     char payload[1024];
     sprintf(payload,"method=getInfo&nonce=%llu",(long long)exchange_nonce(exchange));
-    return(SIGNPOST(0,exchange,EXCHANGE_AUTHURL,payload));
+    return(SIGNPOST(cHandlep,1,0,exchange,EXCHANGE_AUTHURL,payload));
 }
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
@@ -116,29 +91,58 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+#include "checkbalance.c"
+
+uint64_t TRADE(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+{
+    char payload[1024],pairstr[512],*extra; cJSON *json,*resultobj; uint64_t txid = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
+    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
+    {
+        printf("cant find baserel (%s/%s)\n",base,rel);
+        return(0);
+    }
+    sprintf(payload,"method=Trade&nonce=%llu&pair=%s&type=%s&rate=%.3f&amount=%.6f",(long long)exchange_nonce(exchange),pairstr,dir>0?"buy":"sell",price,volume);
+    if ( CHECKBALANCE(retstrp,dotrade,exchange,dir,base,rel,price,volume) == 0 && (json= SIGNPOST(cHandlep,dotrade,retstrp,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
+    {
+        //{ "success":1, "return":{ "received":0.1, "remains":0, "order_id":0, "funds":{ "usd":325, "btc":2.498,  } } }
+        if ( juint(json,"success") > 0 && (resultobj= jobj(json,"return")) != 0 )
+        {
+            if ( (txid= j64bits(resultobj,"order_id")) == 0 )
+            {
+                if ( j64bits(resultobj,"remains") == 0 )
+                    txid = _crc32(0,payload,strlen(payload));
+            }
+        }
+        free_json(json);
+    }
+    return(txid);
+}
+
+char *ORDERSTATUS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*retstr = 0; cJSON *json;
     sprintf(payload,"method=OrderInfo&nonce=%llu&order_id=%llu",(long long)exchange_nonce(exchange),(long long)quoteid);
-    if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized orderstatus
 }
 
-char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+char *CANCELORDER(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*retstr = 0; cJSON *json;
     sprintf(payload,"method=CancelOrder&nonce=%llu&order_id=%llu",(long long)exchange_nonce(exchange),(long long)quoteid);
-    if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized cancelorder
 }
 
-char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
+char *OPENORDERS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],market[64],*base,*rel,*retstr = 0; cJSON *json;
     sprintf(payload,"method=ActiveOrders&nonce=%llu",(long long)exchange_nonce(exchange));
@@ -148,14 +152,14 @@ char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
         tolowercase(market);
         sprintf(payload + strlen(payload),"&pair=%s",market);
     }
-    if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized open orders
 }
 
-char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
+char *TRADEHISTORY(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],market[64],*base,*rel,*retstr = 0; cJSON *json; uint32_t starttime,endtime;
     sprintf(payload,"method=TradeHistory&nonce=%llu",(long long)exchange_nonce(exchange));
@@ -169,14 +173,14 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
         tolowercase(market);
         sprintf(payload + strlen(payload),"&pair=%s",market);
     }
-    if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized tradehistory
 }
 
-char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
+char *WITHDRAW(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],*base,*destaddr,*retstr = 0; cJSON *json; double amount;
     if ( (base= jstr(argjson,"base")) == 0 )
@@ -186,7 +190,7 @@ char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
     if ( (amount= jdouble(argjson,"amount")) < SMALLVAL )
         return(clonestr("{\"error\":\"amount not specified\"}"));
     sprintf(payload,"method=WithdrawCoin&nonce=%llu&coinName=%s&amount=%.6f&address=%s",(long long)exchange_nonce(exchange),base,amount,destaddr);
-    if ( (json= SIGNPOST(&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,EXCHANGE_AUTHURL,payload)) != 0 )
     {
         free_json(json);
     }
@@ -208,3 +212,4 @@ struct exchange_funcs btce_funcs = EXCHANGE_FUNCS(btce,EXCHANGE_NAME);
 #undef WITHDRAW
 #undef EXCHANGE_NAME
 #undef EXCHANGE_AUTHURL
+#undef CHECKBALANCE

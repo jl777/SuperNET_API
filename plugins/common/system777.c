@@ -102,9 +102,9 @@ struct SuperNET_info
     struct kv777 *PM,*rawPM,*protocols,*alias,*services,*invoices,*NXTtxids,*NXTaccts;
     struct dKV777 *relays;
     cJSON *argjson;
-#ifdef INSIDE_MGW
-    struct env777 DBs;
-#endif
+//#ifdef INSIDE_MGW
+ //   struct env777 *DBs;
+//#endif
 }; extern struct SuperNET_info SUPERNET;
 
 struct coins_info

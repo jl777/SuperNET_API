@@ -1,23 +1,15 @@
-/******************************************************************************
- * Copyright © 2014-2015 The SuperNET Developers.                             *
- *                                                                            *
- * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
- * the top-level directory of this distribution for the individual copyright  *
- * holder information and the developer policies on copyright and licensing.  *
- *                                                                            *
- * Unless otherwise agreed in a custom licensing agreement, no part of the    *
- * SuperNET software, including this file may be copied, modified, propagated *
- * or distributed except according to the terms contained in the LICENSE file *
- *                                                                            *
- * Removal or modification of this copyright notice is prohibited.            *
- *                                                                            *
- ******************************************************************************/
 
+//
+//  MGW_main.c
+//  crypto777
+//
+//  Copyright (c) 2015 jl777. All rights reserved.
+//
 // add to limbo:  txids 204961939803594792, 7301360590217481477, 14387806392702706073 for a total of 568.1248 BTCD
 // 17638509709909095430 ~170
 // http://chain.explorebtcd.info/tx/1dc0faf122e64aa46393291f00483f7779b73504573c1776301347545b760ea9
 
-#ifdef INSIDE_MGW
+
 #define DEPOSIT_XFER_DURATION 30
 #define MIN_DEPOSIT_FACTOR 5
 
@@ -34,19 +26,27 @@
 #include "../common/system777.c"
 #include "../utils/NXT777.c"
 #include "../ramchain/ramchain.c"
-#include "old/db777.c"
 #undef DEFINES_ONLY
 
 int32_t MGW_idle(struct plugin_info *plugin)
 {
     return(0);
 }
+void *extract_jsonints(cJSON *item,void *arg,void *arg2);
+int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *userNXTpubkey,int32_t buyNXT);
+int32_t update_MGW_jsonfile(void (*setfname)(char *fname,char *NXTaddr),void *(*extract_jsondata)(cJSON *item,void *arg,void *arg2),int32_t (*jsoncmp)(void *ref,void *item),char *NXTaddr,char *jsonstr,void *arg,void *arg2);
+int32_t jsonmsigcmp(void *ref,void *item);
+int32_t jsonstrcmp(void *ref,void *item);
+void set_MGW_msigfname(char *fname,char *NXTaddr);
+void set_MGW_statusfname(char *fname,char *NXTaddr);
+void set_MGW_moneysentfname(char *fname,char *NXTaddr);
+void set_MGW_depositfname(char *fname,char *NXTaddr);
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method);
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "audit", "markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
-char *PLUGNAME(_pubmethods)[] = { "audit", "markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
-char *PLUGNAME(_authmethods)[] = { "audit", "markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_methods)[] = { "fixmsigaddr", "audit", "findmsigaddr","markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_pubmethods)[] = { "fixmsigaddr", "audit", "findmsigaddr", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_authmethods)[] = { "fixmsigaddr", "audit", "findmsigaddr", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
@@ -55,25 +55,619 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
+int32_t NXT_set_revassettxid(struct db777 *DB_NXTtxids,uint64_t assetidbits,uint32_t ind,struct extra_info *extra)
+{
+    uint64_t revkey[2]; void *obj;
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    {
+        revkey[0] = assetidbits, revkey[1] = ind;
+        //printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
+        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
+            return(sp_set(DB_NXTtxids->db,obj));
+        else
+        {
+            sp_destroy(obj);
+            printf("error NXT_add_assettxid rev %llu ind.%d\n",(long long)extra->txidbits,ind);
+        }
+    }
+    return(-1);
+}
+
+int32_t NXT_revassettxid(struct db777 *DB_NXTtxids,struct extra_info *extra,uint64_t assetidbits,uint32_t ind)
+{
+    void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
+    memset(extra,0,sizeof(*extra));
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    {
+        revkey[0] = assetidbits, revkey[1] = ind;
+        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
+        {
+            value = sp_get(result,"value",&len);
+            if ( len == sizeof(*extra) )
+                memcpy(extra,value,len);
+            else printf("NXT_revassettxid mismatched len.%d vs %ld\n",len,sizeof(*extra));
+            sp_destroy(result);
+        } //else sp_destroy(obj);
+    }
+    return(len);
+}
+
+int32_t NXT_add_assettxid(struct db777 *DB_NXTtxids,uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
+{
+    void *obj;
+    if ( value != 0 )
+    {
+        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+        {
+            extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
+            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
+                sp_set(DB_NXTtxids->db,obj);
+            else
+            {
+                sp_destroy(obj);
+                printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
+            }
+        }
+        NXT_set_revassettxid(DB_NXTtxids,assetidbits,ind,extra);
+    }
+    return(0);
+}
+
+char *NXT_assettxid(struct db777 *DB_NXTtxids,uint64_t assettxid)
+{
+    void *obj,*result,*value; int32_t len; char *retstr = 0;
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    {
+        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
+        {
+            value = sp_get(result,"value",&len);
+            retstr = clonestr(value);
+            sp_destroy(result);
+        }// else sp_destroy(obj);
+    }
+    return(retstr);
+}
+
+uint64_t _set_NXT_sender(char *sender,int32_t senderlen,cJSON *txobj)
+{
+    cJSON *senderobj;
+    senderobj = cJSON_GetObjectItem(txobj,"sender");
+    if ( senderobj == 0 )
+        senderobj = cJSON_GetObjectItem(txobj,"accountId");
+    else if ( senderobj == 0 )
+        senderobj = cJSON_GetObjectItem(txobj,"account");
+    copy_cJSON2(sender,senderlen,senderobj);
+    if ( sender[0] != 0 )
+        return(calc_nxt64bits(sender));
+    else return(0);
+}
+
+int32_t _in_specialNXTaddrs(struct mgw777 *mgw,char *NXTaddr)
+{
+    //printf("%s -> %d\n",NXTaddr,in_jsonarray(mgw->special,NXTaddr));
+    return(in_jsonarray(mgw->special,NXTaddr));
+}
+
+uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height)
+{
+    uint64_t quantity,circulation = 0; char cmd[4096],*retstr = 0; cJSON *json,*array,*item; uint32_t i,n; struct destbuf acct;
+    mgw->RTNXT_height = _get_NXTheight(0);
+    if ( minconfirms != 0 )
+        height = mgw->RTNXT_height - minconfirms;
+    sprintf(cmd,"requestType=getAssetAccounts&asset=%llu",(long long)mgw->assetidbits);
+    if ( height > 0 )
+        sprintf(cmd+strlen(cmd),"&height=%u",height);
+    if ( (retstr= issue_NXTPOST(cmd)) != 0 )
+    {
+        //printf("(%s) -> (%s)\n",cmd,retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(json,"accountAssets")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    item = cJSON_GetArrayItem(array,i);
+                    copy_cJSON(&acct,cJSON_GetObjectItem(item,"account"));
+                    if ( acct.buf[0] != 0 && _in_specialNXTaddrs(mgw,acct.buf) == 0 && (quantity= get_API_nxt64bits(cJSON_GetObjectItem(item,"quantityQNT"))) != 0 )
+                        circulation += quantity;
+                }
+            }
+            free_json(json);
+        }
+        free(retstr);
+    }
+    return(circulation * mgw->ap_mult);
+}
+
+int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,char *coindata,int32_t maxdatalen,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
+{
+    char AMstr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],receiver[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],txid[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],buf[MAX_JSON_FIELD];
+    cJSON *attachment,*message,*assetjson,*commentobj,*json = 0,*obj; struct NXT_AMhdr *hdr;
+    uint64_t units,estNXT; uint32_t buyNXT,height = 0; int32_t funcid,numconfs,coinv = -1,timestamp=0;
+    int64_t type,subtype,n,satoshis,assetoshis = 0;
+    *flagp = MGW_IGNORE*0, *amountp = *senderbitsp = *receiverbitsp = *heightp = 0;
+    if ( txobj != 0 )
+    {
+        hdr = 0, sender[0] = receiver[0] = 0;
+        *heightp = height = (uint32_t)get_cJSON_int(txobj,"height");
+        if ( confirmed != 0 )
+        {
+            if ( (numconfs= (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"confirmations"),0)) == 0 )
+                numconfs = (_get_NXTheight(0) - height);
+        } else numconfs = 0;
+        copy_cJSON2(txid,sizeof(txid),cJSON_GetObjectItem(txobj,"transaction"));
+        type = get_cJSON_int(txobj,"type");
+        subtype = get_cJSON_int(txobj,"subtype");
+        timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
+        *senderbitsp = _set_NXT_sender(sender,sizeof(sender),txobj);
+        copy_cJSON2(receiver,sizeof(receiver),cJSON_GetObjectItem(txobj,"recipient"));
+        if ( receiver[0] != 0 )
+            *receiverbitsp = calc_nxt64bits(receiver);
+        attachment = cJSON_GetObjectItem(txobj,"attachment");
+        if ( attachment != 0 )
+        {
+            message = cJSON_GetObjectItem(attachment,"message");
+            assetjson = cJSON_GetObjectItem(attachment,"asset");
+            memset(comment,0,sizeof(comment));
+            if ( message != 0 && type == 1 )
+            {
+                copy_cJSON2(AMstr,sizeof(AMstr),message);
+                n = strlen(AMstr);
+                if ( is_hexstr(AMstr) != 0 )
+                {
+                    if ( (n&1) != 0 || n > 2000 )
+                        printf("warning: odd message len?? %ld\n",(long)n);
+                    decode_hex((void *)buf,(int32_t)(n>>1),AMstr);
+                    buf[(n>>1)] = 0;
+                    hdr = (struct NXT_AMhdr *)buf;
+                    //_process_AM_message(mgw,height,(void *)hdr,sender,receiver,txid);
+                }
+            }
+            else if ( assetjson != 0 && type == 2 && subtype == 1 )
+            {
+                commentobj = cJSON_GetObjectItem(attachment,"comment");
+                if ( commentobj == 0 )
+                    commentobj = message;
+                copy_cJSON2(comment,sizeof(comment),commentobj);
+                if ( comment[0] != 0 )
+                {
+                    unstringify(comment);
+                    json = cJSON_Parse(comment);
+                }
+                copy_cJSON2(assetidstr,sizeof(assetidstr),cJSON_GetObjectItem(attachment,"asset"));
+                assetoshis = get_cJSON_int(attachment,"quantityQNT");
+                if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
+                    estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
+                else estNXT = 0;
+                *amountp = assetoshis * mgw->ap_mult;
+                //printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json);
+                if ( assetidstr[0] != 0 && strcmp(mgw->assetidstr,assetidstr) == 0 )
+                {
+                    if ( json != 0 )
+                    {
+                        copy_cJSON2(coinstr,sizeof(coinstr),cJSON_GetObjectItem(json,"coin"));
+                        copy_cJSON2(coindata,maxdatalen,cJSON_GetObjectItem(json,"withdrawaddr"));
+                        if ( coindata[0] != 0 )
+                        {
+                            if ( *receiverbitsp == mgw->issuerbits )
+                                *flagp = MGW_PENDINGREDEEM;
+                            else printf("%llu != issuer.%llu ",(long long)*receiverbitsp,(long long)mgw->issuerbits);
+                        }
+                        else
+                        {
+                            if ( (obj= cJSON_GetObjectItem(json,"coinv")) == 0 )
+                                obj = cJSON_GetObjectItem(json,"vout");
+                            coinv = (uint32_t)get_API_int(obj,-1);
+                            copy_cJSON2(coindata,maxdatalen,cJSON_GetObjectItem(json,"cointxid"));
+                            if ( coindata[0] != 0 )
+                                *flagp = MGW_DEPOSITDONE;
+                        }
+                        free_json(json);
+                        if ( coindata[0] != 0 )
+                            unstringify(coindata);
+                    }
+                }
+            }
+            else
+            {
+                copy_cJSON2(comment,sizeof(comment),message);
+                unstringify(comment);
+                commentobj = comment[0] != 0 ? cJSON_Parse(comment) : 0;
+                if ( type == 5 && subtype == 3 )
+                {
+                    copy_cJSON2(assetidstr,sizeof(assetidstr),cJSON_GetObjectItem(attachment,"currency"));
+                    units = get_API_int(cJSON_GetObjectItem(attachment,"units"),0);
+                    if ( commentobj != 0 )
+                    {
+                        funcid = (int32_t)get_API_int(cJSON_GetObjectItem(commentobj,"funcid"),-1);
+                        //if ( funcid >= 0 && (commentobj= _process_MGW_message(mgw,height,funcid,commentobj,calc_nxt64bits(assetidstr),units,sender,receiver,txid)) != 0 )
+                        //    free_json(commentobj);
+                    }
+                }
+                else if ( type == 0 && subtype == 0 && commentobj != 0 )
+                {
+                    if ( _in_specialNXTaddrs(mgw,sender) != 0 )
+                    {
+                        buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
+                        satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                        if ( buyNXT*SATOSHIDEN == satoshis )
+                        {
+                            mgw->S.sentNXT += buyNXT * SATOSHIDEN;
+                            printf("%s sent %d NXT, total sent %.0f\n",sender,buyNXT,dstr(mgw->S.sentNXT));
+                        }
+                        else if ( buyNXT != 0 )
+                            printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
+                    }
+                    //if ( strcmp(sender,mgw->srvNXTADDR) == 0 )
+                    //    ram_gotpayment(mgw,comment,commentobj);
+                }
+            }
+        }
+    }
+    else printf("unexpected error iterating timestamp.(%d) txid.(%s)\n",timestamp,txid);
+    //fprintf(stderr,"finish type.%d subtype.%d txid.(%s)\n",(int)type,(int)subtype,txid);
+    return(coinv);
+}
+
+char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
+{
+    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
+    printf(" (%s) NXT_txidstr.(%s) write.%d ind.%d DB.%p db.%p\n",mgw->coinstr,txid,writeflag,ind,mgw->DB_NXTtxids,mgw->DB_NXTtxids->db);
+    if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
+    {
+        flag = writeflag;
+        if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
+        {
+            free(txidjsonstr);
+            cJSON_DeleteItemFromObject(json,"requestProcessingTime");
+            cJSON_DeleteItemFromObject(json,"confirmations");
+            cJSON_DeleteItemFromObject(json,"transactionIndex");
+            txidjsonstr = cJSON_Print(json);
+            free_json(json);
+        } else printf("PARSE ERROR.(%s)\n",txidjsonstr);
+        _stripwhite(txidjsonstr,' ');
+        slen = (int32_t)strlen(txidjsonstr)+1;
+        txidbits = calc_nxt64bits(txid);
+        printf("txid.(%s) vs bits.%llu\n",txid,(long long)txidbits);
+        if ( (obj= sp_object(mgw->DB_NXTtxids->db)) != 0 )
+        {
+            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(mgw->DB_NXTtxids->db,obj)) != 0 )
+            {
+                value = sp_get(result,"value",&len);
+                if ( value != 0 )
+                {
+                    if ( len != slen || strcmp(value,txidjsonstr) != 0 )
+                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,slen,len,txidjsonstr,value);
+                    else flag = 0;
+                }
+                sp_destroy(result);
+            } //else sp_destroy(obj);
+        }
+        if ( flag != 0 )
+        {
+            int32_t mgw_markunspent(struct mgw777 *mgw,char *txidstr,int32_t vout,int32_t status);
+            NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,ind);
+            savedbits = extra.txidbits;
+            memset(&extra,0,sizeof(extra));
+            if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
+            {
+                extra.vout = process_assettransfer(&extra.height,&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,sizeof(extra.coindata),0,mgw,txobj);
+                free_json(txobj);
+                if ( extra.vout >= 0 )
+                {
+                    mgw_markunspent(mgw,extra.coindata,extra.vout,MGW_DEPOSITDONE);
+                    printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
+                }
+            } else extra.vout = -1;
+            printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
+            NXT_add_assettxid(mgw->DB_NXTtxids,mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
+        }
+    }
+    return(txidjsonstr);
+}
+
+int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t firstindex,int32_t lastindex)
+{
+    char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
+    int32_t i,n = 0; uint64_t txidbits,revkey[2];
+    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",mgw->assetidstr);
+    if ( firstindex >= 0 && lastindex >= firstindex )
+        sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
+    revkey[0] = mgw->assetidbits;
+    //printf("issue.(%s) max.%ld\n",cmd,max);
+    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
+    {
+        //printf("(%s) -> (%s)\n",cmd,jsonstr);
+        if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    copy_cJSON2(txid,sizeof(txid),cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
+                    if ( txid[0] != 0 && (txidbits= calc_nxt64bits(txid)) != 0 )
+                    {
+                        if ( i < max )
+                            txids[i] = txidbits;
+                        if ( firstindex < 0 && lastindex <= firstindex )
+                        {
+                            if ( (txidstr= NXT_txidstr(mgw,txid,1,n - i)) != 0 )
+                                free(txidstr);
+                        }
+                    }
+                }
+            } free_json(transfers);
+        } free(jsonstr);
+    }
+    //if ( firstindex < 0 || lastindex <= firstindex )
+    //    printf("assetid.(%s) -> %d entries\n",mgw->assetidstr,n);
+    return(n);
+}
+
+int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid)
+{
+    int32_t i,count; struct extra_info extra;
+    if ( NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,0) == sizeof(extra) )
+    {
+        //printf("got extra ind.%d\n",extra.ind);
+        count = extra.ind;
+        for (i=1; i<=count; i++)
+        {
+            NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,i);
+            if ( extra.txidbits == redeemtxid != 0 && (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
+            {
+                extra.flags |= MGW_WITHDRAWDONE;
+                printf("NXT_mark_withdrawdone %s.%llu %.8f\n",mgw->coinstr,(long long)redeemtxid,dstr(extra.amount));
+                NXT_set_revassettxid(mgw->DB_NXTtxids,mgw->assetidbits,i,&extra);
+                return(i);
+            }
+            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
+        }
+    }
+    return(-1);
+}
+
+int32_t update_NXT_assettransfers(struct mgw777 *mgw)
+{
+    int32_t len,verifyflag = 0;
+    uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],nxt_txid[64],*txidjsonstr; struct extra_info extra;
+    mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
+    mgw->withdrawsum = mgw->numwithdraws = 0;
+    if ( (len= NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,0)) == sizeof(extra) )
+    {
+        //printf("got extra ind.%d\n",extra.ind);
+        count = extra.ind;
+        for (i=1; i<=count; i++)
+        {
+            NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,i);
+            if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
+            {
+                int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
+                expand_nxt64bits(nxt_txid,extra.txidbits);
+                if ( in_jsonarray(mgw->limbo,nxt_txid) != 0 || mgw_update_redeem(mgw,&extra) != 0 )
+                {
+                    extra.flags |= MGW_WITHDRAWDONE;
+                    NXT_set_revassettxid(mgw->DB_NXTtxids,mgw->assetidbits,i,&extra);
+                }
+            }
+            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
+        }
+        //fprintf(stderr,"sequential tx.%d\n",count);
+        NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,count);
+        mostrecent = extra.txidbits;
+        //NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,count+1);
+        //if ( extra.txidbits != 0 )
+        //    mostrecent = extra.txidbits;
+        //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
+        for (i=0; i<sizeof(txids)/sizeof(*txids); i++)
+        {
+            if ( NXT_assettransfers(mgw,&txids[i],1,i,i) == 1 && txids[i] == mostrecent )
+            {
+                if ( i != 0 )
+                    printf("asset.(%s) count.%d i.%d mostrecent.%llu vs %llu\n",mgw->assetidstr,count,i,(long long)mostrecent,(long long)txids[i]);
+                while ( i-- > 0 )
+                {
+                    expand_nxt64bits(txidstr,txids[i]);
+                    if ( (txidjsonstr= NXT_txidstr(mgw,txidstr,1,++count)) != 0 )
+                        free(txidjsonstr);
+                }
+                break;
+            }
+        }
+        if ( i == 100 )
+            count = 0;
+    } else printf("cant get count len.%d\n",len);
+    if ( count == 0 )
+        count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
+    if ( NXT_revassettxid(mgw->DB_NXTtxids,&extra,mgw->assetidbits,0) != sizeof(extra) || extra.ind != count )
+    {
+        memset(&extra,0,sizeof(extra));
+        extra.ind = count;
+        NXT_set_revassettxid(mgw->DB_NXTtxids,mgw->assetidbits,0,&extra);
+    }
+    if ( verifyflag != 0 )
+        NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
+    return(count);
+}
+
+int32_t get_pubkey2(char *pubkey,char *coinstr,char *serverport,char *userpass,char *coinaddr)
+{
+    struct destbuf tmp; int32_t n;
+    if ( (n= get_pubkey(&tmp,coinstr,serverport,userpass,coinaddr)) > 0 && n < 128 )
+    {
+        strcpy(pubkey,tmp.buf);
+        return(n);
+    }
+    return(-1);
+}
+
+int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *coinaddr,char *pubkey)
+{
+    struct coin777 *coin = coin777_find(coinstr,0);
+    uint64_t key[3]; char *keycoinaddr,buf[256]; int32_t flag,len = sizeof(buf);
+    if ( coin ==0 || coin->mgw.DB_NXTaccts == 0 )
+    {
+        printf("null coin.%p or null DB_NXTaccts.%p\n",coin,coin!=0?coin->mgw.DB_NXTaccts:0);
+        return(-1);
+    }
+    key[0] = stringbits(coinstr);
+    key[1] = srvbits;
+    key[2] = nxt64bits;
+    flag = 0;
+    coinaddr[0] = pubkey[0] = 0;
+    if ( (keycoinaddr= db777_read(buf,&len,0,coin->mgw.DB_NXTaccts,key,sizeof(key),0)) != 0 )
+    {
+        strcpy(coinaddr,keycoinaddr);
+        //free(keycoinaddr);
+    }
+    if ( coinaddr[0] != 0 )
+        db777_findstr(pubkey,512,coin->mgw.DB_NXTaccts,coinaddr);
+    //printf("(%llu %llu) get.(%s) -> (%s)\n",(long long)srvbits,(long long)nxt64bits,coinaddr,pubkey);
+    return(coinaddr[0] != 0 && pubkey[0] != 0);
+}
+
+int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *newcoinaddr,char *newpubkey)
+{
+    struct coin777 *coin = coin777_find(coinstr,0);
+    uint64_t key[3]; char *coinaddr,pubkey[513],buf[1024]; int32_t len = sizeof(buf),flag,updated = 0;
+    if ( coin ==0 || coin->mgw.DB_NXTaccts == 0 )
+    {
+        printf("null coin.%p or null DB_NXTaccts.%p\n",coin,coin!=0?coin->mgw.DB_NXTaccts:0);
+        return(-1);
+    }
+    key[0] = stringbits(coinstr);
+    key[1] = srvbits;
+    key[2] = nxt64bits;
+    flag = 1;
+    if ( (coinaddr= db777_read(buf,&len,0,coin->mgw.DB_NXTaccts,key,sizeof(key),0)) != 0 )
+    {
+        if ( newcoinaddr[0] != 0 && strcmp(coinaddr,newcoinaddr) == 0 )
+            flag = 0;
+    }
+    if ( flag != 0 )
+    {
+        if ( db777_write(0,coin->mgw.DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
+            updated = 1;
+        else printf("error adding (%s)\n",newcoinaddr);
+    }
+    flag = 1;
+    if ( db777_findstr(pubkey,sizeof(pubkey),coin->mgw.DB_NXTaccts,newcoinaddr) > 0 )
+    {
+        if ( newpubkey != 0 &&  newpubkey[0] != 0 && strcmp(pubkey,newpubkey) == 0 )
+            flag = 0;
+    }
+    //printf("(%llu %llu) add.(%s) -> (%s) flag.%d\n",(long long)srvbits,(long long)nxt64bits,newcoinaddr,newpubkey,flag);
+    if ( flag != 0  && newpubkey != 0 && newpubkey[0] != 0  )
+    {
+        if ( db777_addstr(coin->mgw.DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
+            updated = 1;//, printf("added (%s)\n",newpubkey);
+        else printf("error adding (%s)\n",newpubkey);
+    }
+    return(updated);
+}
+
+struct multisig_addr *find_msigaddr(struct multisig_addr *msig,int32_t *lenp,char *coinstr,char *multisigaddr)
+{
+    char keystr[1024]; struct coin777 *coin = coin777_find(coinstr,1);
+    sprintf(keystr,"%s.%s",coinstr,multisigaddr);
+    //printf("search_msig.(%s)\n",keystr);
+    return(db777_read(msig,lenp,0,coin->mgw.DB_msigs,keystr,(int32_t)strlen(keystr)+1,0));
+}
+
+int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig)
+{
+    char keystr[1024]; struct coin777 *coin = coin777_find(coinstr,1);
+    sprintf(keystr,"%s.%s",coinstr,msig->multisigaddr);
+    printf("save_msig.(%s)\n",keystr);
+    return(db777_write(0,coin->mgw.DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,msig->size));
+}
+
+void mgw_fixmsigaddr(char *retbuf,struct coin777 *coin,cJSON *json)
+{
+    char *NXTaddr,*NXTpubkey,*addrs[3],*msigaddr,coinaddrs[3][256],pubkeys[3][1024],*pubs[3];
+    uint64_t nxt64bits; int32_t i,m  =0 ;
+    NXTpubkey = cJSON_str(cJSON_GetObjectItem(json,"NXTpubkey"));
+    addrs[0] = cJSON_str(cJSON_GetObjectItem(json,"addr0"));
+    addrs[1] = cJSON_str(cJSON_GetObjectItem(json,"addr1"));
+    addrs[2] = cJSON_str(cJSON_GetObjectItem(json,"addr2"));
+    msigaddr = cJSON_str(cJSON_GetObjectItem(json,"msigaddr"));
+    pubs[0] = cJSON_str(cJSON_GetObjectItem(json,"pub0"));
+    pubs[1] = cJSON_str(cJSON_GetObjectItem(json,"pub1"));
+    pubs[2] = cJSON_str(cJSON_GetObjectItem(json,"pub2"));
+    if ( (NXTaddr= cJSON_str(cJSON_GetObjectItem(json,"userNXT"))) != 0 && addrs[0] != 0 && addrs[1] != 0 && addrs[2] != 0 && msigaddr != 0 )
+    {
+        nxt64bits = calc_nxt64bits(NXTaddr);
+        for (i=0; i<3; i++)
+        {
+            coinaddrs[i][0] = pubkeys[i][0] = 0;
+            get_NXT_coininfo(MGW.srv64bits[i],nxt64bits,coin->name,coinaddrs[i],pubkeys[i]);
+            if ( pubs[i] != 0 && pubkeys[i][0] != 0 )
+            {
+                if ( strcmp(pubs[i],pubkeys[i]) != 0 )
+                {
+                    if ( i == SUPERNET.gatewayid )
+                        get_pubkey2(pubkeys[i],coin->name,coin->serverport,coin->userpass,addrs[i]);
+                    else
+                        strcpy(pubkeys[i],pubs[i]);
+                }
+            }
+            else if ( pubs[i] != 0 )
+                strcpy(pubkeys[i],pubs[i]);
+            else
+                get_pubkey2(pubkeys[i],coin->name,coin->serverport,coin->userpass,addrs[i]);
+            
+            //printf("%s %s: user.%llu (%s) (%s)\n",coin->name,(long long)MGW.srv64bits[i],(long long)nxt64bits,coinaddrs[i],pubkeys[i]);
+            if ( 0 && strcmp(coinaddrs[i],addrs[i]) == 0 )
+            {
+                printf("G%d %s already there\n",i,addrs[i]);
+                if ( NXTpubkey != 0 && NXTpubkey[0] != 0 && strcmp(NXTpubkey,pubkeys[i]) == 0 )
+                    printf("G%d %s NXTpubkey already there\n",i,NXTpubkey);
+                else
+                {
+                    add_NXT_coininfo(MGW.srv64bits[i],nxt64bits,coin->name,addrs[i],pubkeys[i]);
+                    printf("G%d: add %s pubkey.(%s) NXTpub.%s\n",i,addrs[i],pubkeys[i],NXTpubkey!=0?NXTpubkey:"");
+                }
+            }
+            else if ( pubkeys[i][0] != 0 )
+            {
+                m++;
+                add_NXT_coininfo(MGW.srv64bits[i],nxt64bits,coin->name,addrs[i],pubkeys[i]);
+                printf("G%d: add %s pubkey.(%s) NXTpub.%s\n",i,addrs[i],pubkeys[i],NXTpubkey!=0?NXTpubkey:"");
+            }
+        }
+        if ( m == 3 )
+        {
+            struct multisig_addr *get_NXT_msigaddr(int32_t forceflag,uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT);
+            char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated);
+            struct multisig_addr *msig = get_NXT_msigaddr(1,MGW.srv64bits,MGW.M,SUPERNET.numgateways,nxt64bits,coin->name,coinaddrs,pubkeys,NXTpubkey,0);
+            char *str = create_multisig_jsonstr(msig,0);
+            if ( strcmp(msigaddr,msig->multisigaddr) != 0 )
+                printf("ERROR MSIG mismatch (%s) vs (%s)\n",msigaddr,msig->multisigaddr);
+            strcpy(retbuf,str);
+            free(str);
+        } else strcpy(retbuf,"{\"error\":\"not enough pubkeys\"}");
+    } else strcpy(retbuf,"{\"error\":\"need userNXT, addr0, addr1, addr2 and msigaddr\"}");
+}
+
 void mgw_sendaudit(char *coinstr,cJSON *array)
 {
     cJSON *mgw_stdjson(char *coinstr,char *NXTaddr,int32_t gatewayid,char *method);
     cJSON *json; char *jsonstr;
-    json = mgw_stdjson(coinstr,SUPERNET.NXTaddr,SUPERNET.gatewayid,"audit");
+    json = mgw_stdjson(coinstr,SUPERNET.NXTADDR,SUPERNET.gatewayid,"audit");
     cJSON_AddItemToObject(json,"msigs",array);
     jsonstr = cJSON_Print(json);
+    //printf("sendaudit.(%s)\n",jsonstr);
     _stripwhite(jsonstr,' ');
-    sendlen = nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
+    nn_send(MGW.all.socks.both.bus,jsonstr,(int32_t)strlen(jsonstr)+1,0);
     free_json(json); free(jsonstr);
 }
-
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"fixmsigaddr","coin":"BTC","userNXT":"9107498805000502866","addr0":"1NngsW3PtdNejFNJAwTtssQ2ETyPAoc8qQ","pub0":"0207a0fd5041658424357812cdaa1481f37bc248aea1b8d4a0d36fb110f0b10d5f","addr1":"1QFBPyPEjDLccoBbTvuvNALiGi25L2DGb1":"pub1":"03248fc74649a1edb4bae32b1d7859ca35580221c3575134743c71602c79687f74","addr2":"17JaYdf3zRUfgumWnuSt3j1JzEBXDtNJDr":"pub2":"03c3d7e1bc58375e5b5ad1fe26d8d1e8a4eedd2a81409e39b9d996825c05ceb32f","msigaddr":"3Fp4m9yyKK4uZZPVDp96zt4e7SGwLHx4KC"}'
 
 //./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"fixmsigaddr","coin":"BTC","userNXT":"6237012670683413539","addr0":"15PWXS7Wfx3B1bi4Y3ExQwUNUNFvtsoLpK","addr1":"14Lf68zhm4SCZ8meCMYnputKtkYgGkh3m1","addr2":"1AzNHtgoBW8rUvYAqCxictVqhT19gfHvFd","msigaddr":"3Kh4n7sPVgEjKfWuXCmGia4M6QDTJVe6Cf"}'
 void mgw_auditjson(cJSON *array,struct multisig_addr *msig)
 {
     cJSON *item = cJSON_CreateObject();
     cJSON_AddItemToObject(item,"plugin",cJSON_CreateString("MGW"));
+    cJSON_AddItemToObject(item,"gatewayid",cJSON_CreateNumber(SUPERNET.gatewayid));
     cJSON_AddItemToObject(item,"method",cJSON_CreateString("fixmsigaddr"));
     cJSON_AddItemToObject(item,"coin",cJSON_CreateString(msig->coinstr));
     cJSON_AddItemToObject(item,"userNXT",cJSON_CreateString(msig->NXTaddr));
@@ -81,8 +675,16 @@ void mgw_auditjson(cJSON *array,struct multisig_addr *msig)
         cJSON_AddItemToObject(item,"NXTpubkey",cJSON_CreateString(msig->NXTpubkey));
     cJSON_AddItemToObject(item,"msigaddr",cJSON_CreateString(msig->multisigaddr));
     cJSON_AddItemToObject(item,"addr0",cJSON_CreateString(msig->pubkeys[0].coinaddr));
+	if ( msig->pubkeys[0].pubkey[0] != 0  )
+        cJSON_AddItemToObject(item,"pub0",cJSON_CreateString(msig->pubkeys[0].pubkey));
+    
     cJSON_AddItemToObject(item,"addr1",cJSON_CreateString(msig->pubkeys[1].coinaddr));
+	if ( msig->pubkeys[1].pubkey[1] != 0  )
+        cJSON_AddItemToObject(item,"pub1",cJSON_CreateString(msig->pubkeys[1].pubkey));
+    
     cJSON_AddItemToObject(item,"addr2",cJSON_CreateString(msig->pubkeys[2].coinaddr));
+	if ( msig->pubkeys[2].pubkey[2] != 0  )
+        cJSON_AddItemToObject(item,"pub2",cJSON_CreateString(msig->pubkeys[2].pubkey));
     cJSON_AddItemToArray(array,item);
 }
 
@@ -123,8 +725,8 @@ int MGW_audit(char *retbuf,struct coin777 *coin,cJSON *json)
                 {
                     nxt64bits = calc_nxt64bits(NXTaddr);
                     add_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coin->name,addr,pubkey);
+                    printf("g%d pubkey stored mismatches (%s) vs (%s)\n",g,msig->pubkeys[g].pubkey,pubkey);
                 }
-                printf("g%d pubkey stored mismatches (%s) vs (%s)\n",g,msig->pubkeys[g],pubkey);
             }
         }
         sprintf(retbuf,"{\"result\":\"audited\",\"new\":%d}",m);
@@ -133,418 +735,12 @@ int MGW_audit(char *retbuf,struct coin777 *coin,cJSON *json)
     return((int32_t)strlen(retbuf));
 }
 
-int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind)
-{
-    void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
-    memset(extra,0,sizeof(*extra));
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            if ( len == sizeof(*extra) )
-                memcpy(extra,value,len);
-            else printf("NXT_revassettxid mismatched len.%d vs %ld\n",len,sizeof(*extra));
-            sp_destroy(result);
-        } //else sp_destroy(obj);
-    }
-    return(len);
-}
-
-int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
-{
-    void *obj;
-    if ( value != 0 )
-    {
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-        {
-            extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
-                sp_set(DB_NXTtxids->db,obj);
-            else
-            {
-                sp_destroy(obj);
-                printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
-            }
-        }
-        NXT_set_revassettxid(assetidbits,ind,extra);
-    }
-    return(0);
-}
-
-char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
-{
-    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
-    printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
-    if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
-    {
-        flag = writeflag;
-        if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
-        {
-            free(txidjsonstr);
-            cJSON_DeleteItemFromObject(json,"requestProcessingTime");
-            cJSON_DeleteItemFromObject(json,"confirmations");
-            cJSON_DeleteItemFromObject(json,"transactionIndex");
-            txidjsonstr = cJSON_Print(json);
-            free_json(json);
-        } else printf("PARSE ERROR.(%s)\n",txidjsonstr);
-        _stripwhite(txidjsonstr,' ');
-        slen = (int32_t)strlen(txidjsonstr)+1;
-        txidbits = calc_nxt64bits(txid);
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-        {
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-            {
-                value = sp_get(result,"value",&len);
-                if ( value != 0 )
-                {
-                    if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,slen,len,txidjsonstr,value);
-                    else flag = 0;
-                }
-                sp_destroy(result);
-            } //else sp_destroy(obj);
-        }
-        if ( flag != 0 )
-        {
-            int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status);
-            NXT_revassettxid(&extra,mgw->assetidbits,ind);
-            savedbits = extra.txidbits;
-            memset(&extra,0,sizeof(extra));
-            if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
-            {
-                int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj);
-                extra.vout = process_assettransfer(&extra.height,&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
-                free_json(txobj);
-                if ( extra.vout >= 0 )
-                {
-                    mgw_markunspent(extra.coindata,extra.vout,MGW_DEPOSITDONE);
-                    printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-                }
-            } else extra.vout = -1;
-            printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-            NXT_add_assettxid(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
-        }
-    }
-    return(txidjsonstr);
-}
-
-int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t firstindex,int32_t lastindex)
-{
-    char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
-    int32_t i,n = 0; uint64_t txidbits,revkey[2];
-    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",mgw->assetidstr);
-    if ( firstindex >= 0 && lastindex >= firstindex )
-        sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
-    revkey[0] = mgw->assetidbits;
-    //printf("issue.(%s) max.%ld\n",cmd,max);
-    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
-    {
-        //printf("(%s) -> (%s)\n",cmd,jsonstr);
-        if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
-        {
-            if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    copy_cJSON(txid,cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
-                    if ( txid[0] != 0 && (txidbits= calc_nxt64bits(txid)) != 0 )
-                    {
-                        if ( i < max )
-                            txids[i] = txidbits;
-                        if ( firstindex < 0 && lastindex <= firstindex )
-                        {
-                            if ( (txidstr= NXT_txidstr(mgw,txid,1,n - i)) != 0 )
-                                free(txidstr);
-                        }
-                    }
-                }
-            } free_json(transfers);
-        } free(jsonstr);
-    }
-    //if ( firstindex < 0 || lastindex <= firstindex )
-    //    printf("assetid.(%s) -> %d entries\n",mgw->assetidstr,n);
-    return(n);
-}
-
-int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid)
-{
-    int32_t i,count; struct extra_info extra;
-    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
-    {
-        //printf("got extra ind.%d\n",extra.ind);
-        count = extra.ind;
-        for (i=1; i<=count; i++)
-        {
-            NXT_revassettxid(&extra,mgw->assetidbits,i);
-            if ( extra.txidbits == redeemtxid != 0 && (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
-            {
-                extra.flags |= MGW_WITHDRAWDONE;
-                printf("NXT_mark_withdrawdone %s.%llu %.8f\n",mgw->coinstr,(long long)redeemtxid,dstr(extra.amount));
-                NXT_set_revassettxid(mgw->assetidbits,i,&extra);
-                return(i);
-            }
-            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
-        }
-    }
-    return(-1);
-}
-
-int32_t update_NXT_assettransfers(struct mgw777 *mgw)
-{
-    int32_t len,verifyflag = 0;
-    uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],nxt_txid[64],*txidjsonstr; struct extra_info extra;
-    mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
-    mgw->withdrawsum = mgw->numwithdraws = 0;
-    if ( (len= NXT_revassettxid(&extra,mgw->assetidbits,0)) == sizeof(extra) )
-    {
-        //printf("got extra ind.%d\n",extra.ind);
-        count = extra.ind;
-        for (i=1; i<=count; i++)
-        {
-            NXT_revassettxid(&extra,mgw->assetidbits,i);
-            if ( SUPERNET.gatewayid >= 0 && (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
-            {
-                int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
-                expand_nxt64bits(nxt_txid,extra.txidbits);
-                if ( in_jsonarray(mgw->limbo,nxt_txid) != 0 || mgw_update_redeem(mgw,&extra) != 0 )
-                {
-                    extra.flags |= MGW_WITHDRAWDONE;
-                    NXT_set_revassettxid(mgw->assetidbits,i,&extra);
-                }
-            }
-            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
-        }
-        //fprintf(stderr,"sequential tx.%d\n",count);
-        NXT_revassettxid(&extra,mgw->assetidbits,count);
-        mostrecent = extra.txidbits;
-        for (i=0; i<sizeof(txids)/sizeof(*txids); i++)
-        {
-            if ( NXT_assettransfers(mgw,&txids[i],1,i,i) == 1 && txids[i] == mostrecent )
-            {
-                if ( i != 0 )
-                    printf("asset.(%s) count.%d i.%d mostrecent.%llu vs %llu\n",mgw->assetidstr,count,i,(long long)mostrecent,(long long)txids[i]);
-                while ( i-- > 0 )
-                {
-                    expand_nxt64bits(txidstr,txids[i]);
-                    if ( (txidjsonstr= NXT_txidstr(mgw,txidstr,1,++count)) != 0 )
-                        free(txidjsonstr);
-                }
-                break;
-            }
-        }
-        if ( i == 100 )
-            count = 0;
-    } else printf("cant get count len.%d\n",len);
-    if ( count == 0 )
-        count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) != sizeof(extra) || extra.ind != count )
-    {
-        memset(&extra,0,sizeof(extra));
-        extra.ind = count;
-        NXT_set_revassettxid(mgw->assetidbits,0,&extra);
-    }
-    if ( verifyflag != 0 )
-        NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    return(count);
-}
-
-int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra)
-{
-    uint64_t revkey[2]; void *obj;
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        //printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
-            return(sp_set(DB_NXTtxids->db,obj));
-        else
-        {
-            sp_destroy(obj);
-            printf("error NXT_add_assettxid rev %llu ind.%d\n",(long long)extra->txidbits,ind);
-        }
-    }
-    return(-1);
-}
-
-char *NXT_assettxid(uint64_t assettxid)
-{
-    void *obj,*result,*value; int32_t len; char *retstr = 0;
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            retstr = clonestr(value);
-            sp_destroy(result);
-        }// else sp_destroy(obj);
-    }
-    return(retstr);
-}
-
-int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *coinaddr,char *pubkey)
-{
-    uint64_t key[3]; char *keycoinaddr,buf[256]; int32_t flag,len = sizeof(buf);
-    key[0] = stringbits(coinstr);
-    key[1] = srvbits;
-    key[2] = nxt64bits;
-    flag = 0;
-    coinaddr[0] = pubkey[0] = 0;
-    if ( (keycoinaddr= db777_read(buf,&len,0,DB_NXTaccts,key,sizeof(key),0)) != 0 )
-    {
-        strcpy(coinaddr,keycoinaddr);
-        //free(keycoinaddr);
-    }
-    if ( coinaddr[0] != 0 )
-        db777_findstr(pubkey,512,DB_NXTaccts,coinaddr);
-//printf("(%llu %llu) get.(%s) -> (%s)\n",(long long)srvbits,(long long)nxt64bits,coinaddr,pubkey);
-    return(coinaddr[0] != 0 && pubkey[0] != 0);
-}
-
-int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *newcoinaddr,char *newpubkey)
-{
-    uint64_t key[3]; char *coinaddr,pubkey[513],buf[1024]; int32_t len = sizeof(buf),flag,updated = 0;
-    key[0] = stringbits(coinstr);
-    key[1] = srvbits;
-    key[2] = nxt64bits;
-    flag = 1;
-    if ( (coinaddr= db777_read(buf,&len,0,DB_NXTaccts,key,sizeof(key),0)) != 0 )
-    {
-        if ( newcoinaddr[0] != 0 && strcmp(coinaddr,newcoinaddr) == 0 )
-            flag = 0;
-    }
-    if ( flag != 0 )
-    {
-        if ( db777_write(0,DB_NXTaccts,key,sizeof(key),newcoinaddr,(int32_t)strlen(newcoinaddr)+1) == 0 )
-            updated = 1;
-        else printf("error adding (%s)\n",newcoinaddr);
-    }
-    flag = 1;
-    if ( db777_findstr(pubkey,sizeof(pubkey),DB_NXTaccts,newcoinaddr) > 0 )
-    {
-        if ( newpubkey != 0 && newpubkey[0] != 0 && strcmp(pubkey,newpubkey) == 0 )
-            flag = 0;
-    }
-    //printf("(%llu %llu) add.(%s) -> (%s) flag.%d\n",(long long)srvbits,(long long)nxt64bits,newcoinaddr,newpubkey,flag);
-    if ( flag != 0 && newpubkey != 0 && newpubkey[0] != 0 )
-    {
-        if ( db777_addstr(DB_NXTaccts,newcoinaddr,newpubkey) == 0 )
-            updated = 1;//, printf("added (%s)\n",newpubkey);
-        else printf("error adding (%s)\n",newpubkey);
-    }
-    return(updated);
-}
-
-struct multisig_addr *find_msigaddr(struct multisig_addr *msig,int32_t *lenp,char *coinstr,char *multisigaddr)
-{
-    char keystr[1024];
-    sprintf(keystr,"%s.%s",coinstr,multisigaddr);
-    //printf("search_msig.(%s)\n",keystr);
-    return(db777_read(msig,lenp,0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,0));
-}
-
-int32_t save_msigaddr(char *coinstr,char *NXTaddr,struct multisig_addr *msig)
-{
-    char keystr[1024];
-    sprintf(keystr,"%s.%s",coinstr,msig->multisigaddr);
-    printf("save_msig.(%s)\n",keystr);
-    return(db777_write(0,DB_msigs,keystr,(int32_t)strlen(keystr)+1,msig,msig->size));
-}
-
-// ./BitcoinDarkd createrawtransaction '[{"txid":"553ca0d9572be8768c6d86b77cdf5e1748c25be56b91b8589c0f522085330460","vout":3,"scriptPubKey":"a91428c7b433f6da06b2f499b4ce07fffd3abb8ac86087","redeemScript":"522103723fabb50f1c8bc24ed6ba5768b068eb94919473e254180420c83ddc034859d22103bf170008f2c2fe761ed87fa14bd11e3ee2d9c313b5bc42ed7602a7777b02301521023e648346f219e97fe161be068d1a7de8df12b5c3a5f8ca006496a4e59bf2b62353ae"}]' '{"RMMGbxZdav3cRJmWScNVX6BJivn6BNbBE8":0.02099999,"RWg6nyzWu7xsGQHzLar2WZvJfVkK62Roee":2.15750000,"RNVtwnCGMsaazkFYN4U8NGopKNL3qX9pPA":0.00000001,"bN5hZtKunzwMBqBykcs3upMa9biJc5QiTe":0.92845863}'
-
-// ./BitcoinDarkd signrawtransaction '01000000b5fd2f56016004338520520f9c58b8916be55bc248175edf7cb7866d8c76e82b57d9a03c550300000000ffffffff041f0b2000000000001976a9148466f34f39c23547abf922d422e3e5322fdf156588ac7015dc0c000000001976a914eaafcbfe26aef0bc9c2229c4c8288d99e43e023188ac01000000000000001976a9149100bd8f400ab6eeb0746d6ec59992990c657edf88ac27b788050000000017a914669636eb3aba8bc71114fd0d3e1811262cd1d6fc8700000000' '[{"txid":"553ca0d9572be8768c6d86b77cdf5e1748c25be56b91b8589c0f522085330460","vout":3,"scriptPubKey":"a91428c7b433f6da06b2f499b4ce07fffd3abb8ac86087","redeemScript":"522103723fabb50f1c8bc24ed6ba5768b068eb94919473e254180420c83ddc034859d22103bf170008f2c2fe761ed87fa14bd11e3ee2d9c313b5bc42ed7602a7777b02301521023e648346f219e97fe161be068d1a7de8df12b5c3a5f8ca006496a4e59bf2b62353ae"}]' '["UrAUQEkCCG9fd2uku8B8BzMwjnPFqUZjCudhZujWUkWZkrtBdFDe", "UtoAMxYK7chjcQDpG17dU7xaH2YVpbzrzkfmJqMJQK9wPa2SLYdW", "UsGKGJgHd5Kp5VCRMUBKq3Y14bPWTYKeWy9n7gnRVfkH6PpSrgDS"]'
-//./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"BTCD"}'
-
-//./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"BTC"}'
-//./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"LTC"}'
-//./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"DOGE"}'
-
-//(32v5Y1htjGB8g9PmJf7g3sREk1GT5zQ68r -> 5083924580550705449 20.00000000) (34LeQ9y9bH49ofbJfB8KbbTp3oFoCSnJFZ -> 6645378619289504440 1.93597400) (34NQiiTcLK9K14xgECQDDJHrtmbia91RQ3 -> 11848242278102848066 0.03920000) (34uG3wzGdQ5tgywDPgSXWZWbLA34zFarSh -> 7660223895825702799 0.00700000) (35QDBr9EJXhMvumesiaj252oEu43v9pnfA -> 13408813046948266949 46.85529019) (35b3KPJPKdDX4sndrrdyqvrtmXVfbPYSQY -> 9989454642355387063 0.80644861) (36HjhKguCzM1DwmwMMSqXvfkaJQm5X7WDM -> 5787012529762821619 0.01636332) (36TpXzaXmGpGtYpDoC1WKCy1Qh4uu8bKza -> 4743602233608284439 6.36867208) (36ridsA4rPGBKeqJMQnNHDFnt6ztG99Foo -> 1002327176344767968 1.32553017) (38DnJt3dcmYuVTy1XHM39TzLmUeHRsuD8v -> 7576874207935798624 1.88128757) (38Z3LW3WcqKDUXFZvKfwesGqWBmYNB6KbZ -> 10896718562309908464 0.01590000) (39ruSwV2sCTxHKQ4Bjb7UMXc1PL7xCsF6R -> 15249778894170127693 0.04466446) (3BXCgq7YeM33bmFpQp1jnyCA2TtUQvcXN6 -> 16090816065851061978 1.70200000) (3BtMJMxEFGaaxfEeWnH18549Q3MJhQfS5v -> 13296104650556846562 0.24250049) (3CnUjSaxnVLz6xR7qFaDDhTZfadoEGUnt6 -> 7580519603555678830 7.90068346) (3EDdM72bz8CMP9nMoEqgHc8jEZ88NLW25T -> 3190337602838854672 0.09612000) (3FCkNvZWPUWeyDaRHLadvquVH4dVVdfNoY -> 13358383254830907313 0.19860000) (3GYS8YyStJjzJ3pBwYcN81sAAKv9Q3Gwq9 -> 8118526282532613576 66.23648000) (3GkVAczJqGgTKFXJR1P2KDPUoX6pFeFgew -> 4034451390557858129 0.06630000) (3J96LKxmgZfMmU6ryQ12PSsoo7FapsfLLv -> 11375297736736256851 1.48526396) (3J9sHto2fYgPKxirmRR5wTZoBVm2KFm4DC -> 14237409714570974370 7.70293776) (3K5QM26kcPybv4eWhYU9gbAVMpRD3Fx6f6 -> 8060723263644558435 1.07787258) (3Kh4n7sPVgEjKfWuXCmGia4M6QDTJVe6Cf -> 6237012670683413539 0.20000000) (3KxYtHMphAXzXU87VoHz1FDbAFuvonpkWE -> 15154262080059269206 0.05570000) (3LcwtbJVqXFtgLcKmPZfdaePNFdqsQWcXD -> 13632947951045332845 0.10000000) (3M1sL9QTpT3a6QeNMQFTdjAj7TK4YJYh8H -> 4327275012681021777 2.00000000) (3MABe8MirBHZYisMxJqPirkEwdbUcG9iLN -> 12558363328955926030 0.05000000) (3Pp9JcVWJ4F3Pwrshyb3bbqymyekwHSy1z -> 6311229396902275574 2.88960000) (3QbJNDrWgKn7zZaUbAWuVfih9r4oyHpwCj -> 2239488413228137841 11.17900000)
-
-// (32v5Y1htjGB8g9PmJf7g3sREk1GT5zQ68r -> 5083924580550705449 20.00000000)- (34LeQ9y9bH49ofbJfB8KbbTp3oFoCSnJFZ -> 6645378619289504440 2.43597400) (34NQiiTcLK9K14xgECQDDJHrtmbia91RQ3 -> 11848242278102848066 0.03920000)- (34uG3wzGdQ5tgywDPgSXWZWbLA34zFarSh -> 7660223895825702799 0.00700000)- (35QDBr9EJXhMvumesiaj252oEu43v9pnfA -> 13408813046948266949 46.85529019)- (35b3KPJPKdDX4sndrrdyqvrtmXVfbPYSQY -> 9989454642355387063 0.80644861)- (36HjhKguCzM1DwmwMMSqXvfkaJQm5X7WDM -> 5787012529762821619 0.01636332)- (36TpXzaXmGpGtYpDoC1WKCy1Qh4uu8bKza -> 4743602233608284439 6.36867208)- (36ridsA4rPGBKeqJMQnNHDFnt6ztG99Foo -> 1002327176344767968 1.32553017)- (38DnJt3dcmYuVTy1XHM39TzLmUeHRsuD8v -> 7576874207935798624 1.88128757)- (38Z3LW3WcqKDUXFZvKfwesGqWBmYNB6KbZ -> 10896718562309908464 0.01590000)- (39ruSwV2sCTxHKQ4Bjb7UMXc1PL7xCsF6R -> 15249778894170127693 0.04466446)- (3BXCgq7YeM33bmFpQp1jnyCA2TtUQvcXN6 -> 16090816065851061978 1.70200000)- (3BtMJMxEFGaaxfEeWnH18549Q3MJhQfS5v -> 13296104650556846562 0.24250049)- (3CnUjSaxnVLz6xR7qFaDDhTZfadoEGUnt6 -> 7580519603555678830 7.90068346)- (3EDdM72bz8CMP9nMoEqgHc8jEZ88NLW25T -> 3190337602838854672 0.09612000)- (3FCkNvZWPUWeyDaRHLadvquVH4dVVdfNoY -> 13358383254830907313 0.19860000)- (3GYS8YyStJjzJ3pBwYcN81sAAKv9Q3Gwq9 -> 8118526282532613576 66.23648000)- (3GkVAczJqGgTKFXJR1P2KDPUoX6pFeFgew -> 4034451390557858129 0.06630000)- (3J96LKxmgZfMmU6ryQ12PSsoo7FapsfLLv -> 11375297736736256851 1.48526396)- (3J9sHto2fYgPKxirmRR5wTZoBVm2KFm4DC -> 14237409714570974370 7.70293776)- (3K5QM26kcPybv4eWhYU9gbAVMpRD3Fx6f6 -> 8060723263644558435 1.07787258)- (3KxYtHMphAXzXU87VoHz1FDbAFuvonpkWE -> 15154262080059269206 0.05570000)- (3LcwtbJVqXFtgLcKmPZfdaePNFdqsQWcXD -> 13632947951045332845 0.10000000)- (3M1sL9QTpT3a6QeNMQFTdjAj7TK4YJYh8H -> 4327275012681021777 2.00000000)- (3MABe8MirBHZYisMxJqPirkEwdbUcG9iLN -> 12558363328955926030 0.05000000)- (3Pp9JcVWJ4F3Pwrshyb3bbqymyekwHSy1z -> 6311229396902275574 2.88960000)- (3QbJNDrWgKn7zZaUbAWuVfih9r4oyHpwCj -> 2239488413228137841 11.17900000)-
-
-// NXT-KCAR-576Z-33PN-6B7P5 4743602233608284439
-// 8cb6d19cb491f18353878bf7a8600e672f3080d906291b8912a0216cacb22b60
-
-//MGW PROCESS.({"requestType":"plugin","plugin":"coins","method":"gotmsigaddr","NXT":"4740362451060434846","serviceNXT":"8119557380101451968","buyNXT":0,"created":1443199459,"M":2,"N":3,"NXTaddr":"6237012670683413539","NXTpubkey":"ce80566c5d88306eef06f639ed942442170ab23a1b0d958926ad72713997d130","RS":"NXT-5Z35-ZCDV-BC28-7KL5F","address":"3Kh4n7sPVgEjKfWuXCmGia4M6QDTJVe6Cf","redeemScript":"522102550493179227865049bc4ebd6e6e02602c4b50689bcea3814d900abda25aaaba2102e0428496d037eb6cfce6e75bcc9851ffd9bd92d50e42d74437ab5fcfbdf7a07321027c3876752afef7cc61b001bf99284ce7e951bc2189a9d3861efa52e9265fba2953ae","coin":"BTC","gatewayid":"2","pubkey":[{"address":"15PWXS7Wfx3B1bi4Y3ExQwUNUNFvtsoLpK","pubkey":"02550493179227865049bc4ebd6e6e02602c4b50689bcea3814d900abda25aaaba","srv":"4208743663088912124"}, {"address":"14Lf68zhm4SCZ8meCMYnputKtkYgGkh3m1","pubkey":"02e0428496d037eb6cfce6e75bcc9851ffd9bd92d50e42d74437ab5fcfbdf7a073","srv":"6277022379039443751"}, {"address":"1AzNHtgoBW8rUvYAqCxictVqhT19gfHvFd","pubkey":"027c3876752afef7cc61b001bf99284ce7e951bc2189a9d3861efa52e9265fba29","srv":"4740362451060434846"}]})
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"fixmsigaddr","coin":"BTC","userNXT":"6237012670683413539","addr0":"15PWXS7Wfx3B1bi4Y3ExQwUNUNFvtsoLpK","addr1":"14Lf68zhm4SCZ8meCMYnputKtkYgGkh3m1","addr2":"1AzNHtgoBW8rUvYAqCxictVqhT19gfHvFd","msigaddr":"3Kh4n7sPVgEjKfWuXCmGia4M6QDTJVe6Cf"}'
-
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"fixmsigaddr","coin":"BTC","userNXT":"3250147289547768700","addr0":"1BwmR7bbhHMy186JG9DNceQHAZwBVpfwQx","addr1":"1EpjPDGQcRi2KZdprJW4u4gGmMAfesEQvM","addr2":"1F9fkceQeP2RhTGkqSpQjVqUajhVnRHEFH","msigaddr":"3LT8Xt3xf55qKRYxEDbk9Bv831oHrphti1"}'
-
-
-//ENSURE.({"requestType":"plugin","plugin":"coins","method":"gotmsigaddr","NXT":"4740362451060434846","serviceNXT":"8119557380101451968","buyNXT":0,"created":1445179634,"M":2,"N":3,"NXTaddr":"3250147289547768700","NXTpubkey":"d5c203027baaf4e768c329d6b1425a50b4194df1334bf5db97bc135fba1baa71","RS":"NXT-52VW-RPLM-T5RY-4RQ8U","address":"3LT8Xt3xf55qKRYxEDbk9Bv831oHrphti1","redeemScript":"522102515ff30b0abc51fbb064de3b0f5da338e4452cf150fc8714201d90b288317e7721037fc96feda66624e15dd6d64f49e470f675347b10ac165592dab8d1e524999e5c21021e8e25a0762391e427fdc98c901d91c3b4af1b428b6d2c8455ea0e8ab9fc529a53ae","coin":"BTC","gatewayid":"2","pubkey":[{"address":"1BwmR7bbhHMy186JG9DNceQHAZwBVpfwQx","pubkey":"02515ff30b0abc51fbb064de3b0f5da338e4452cf150fc8714201d90b288317e77","srv":"4208743663088912124"}, {"address":"1EpjPDGQcRi2KZdprJW4u4gGmMAfesEQvM","pubkey":"037fc96feda66624e15dd6d64f49e470f675347b10ac165592dab8d1e524999e5c","srv":"6277022379039443751"}, {"address":"1F9fkceQeP2RhTGkqSpQjVqUajhVnRHEFH","pubkey":"021e8e25a0762391e427fdc98c901d91c3b4af1b428b6d2c8455ea0e8ab9fc529a","srv":"4740362451060434846"}]})
-//./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"markdeposited","coin":"BTC","txid":"889f668a04fb1ebea2efbe3f8add86ba501d994169c4a138a8a42a837c622595","vout":0}'
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"clearstate","coin":"BTC","txid":"8ed9aebe9eee3883b834936f73e93d87fc8c62d93e806cdbeed2d51fc7ca736d","vout":0}'
-
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"clearstate","coin":"BTC","txid":"a4db216c05c0d5324e0e52baad655c2c2da6a188bf34d00539f098f759d34e16","vout":1}'
-//[numconfs.72729] height.475026 PENDING WITHDRAW: (5655838110597073323 1.61730000 -> LX89p3QzkfhUKBbsmJcubAUXf44GGh4U5U) addrind.6160019 numaddrtx.1
-//[numconfs.31815] height.515940 PENDING WITHDRAW: (3480231094135230912 0.52000000 -> LMp7PY4ymHLnaECvbWxZB245uKsr3jK9zz) addrind.6328069 numaddrtx.2
-
-// ENSURE.({"requestType":"plugin","plugin":"coins","method":"gotmsigaddr","NXT":"4740362451060434846","serviceNXT":"8119557380101451968","buyNXT":0,"created":1444669750,"M":2,"N":3,"NXTaddr":"15249778894170127693","NXTpubkey":"0000000000000000000000000000000000000000000000000000000000000000","RS":"NXT-6ZCF-5G36-FFXX-FTJA9","address":"3PZxpc8g1N3R3FfX6u6QBfb2Ljo6nQoogm","redeemScript":"52210245b6e524e2ed2a91d3e79117cf6ad3ea4722b5207518dc2b4db576431b8aeb542102c9f67f2f75b21d1cdbb6ad74e6247a7f69c59a430c84172d4f83e82332f493d8210227ea76c512369c4773add0895d5e7deaebf13348091314f84bc079209d7dcfac53ae","coin":"LTC","gatewayid":"2","pubkey":[{"address":"LceDZEZc5sKMu2TwH86MTRsQupC41kcNyf","pubkey":"0245b6e524e2ed2a91d3e79117cf6ad3ea4722b5207518dc2b4db576431b8aeb54","srv":"4208743663088912124"}, {"address":"La17RfC938qifuA1oJDNAn3BMg3UNaHc5a","pubkey":"02c9f67f2f75b21d1cdbb6ad74e6247a7f69c59a430c84172d4f83e82332f493d8","srv":"6277022379039443751"}, {"address":"Lc9XmfdUTE8FVjSDGMt6ULqbjS24k1rFbr","pubkey":"0227ea76c512369c4773add0895d5e7deaebf13348091314f84bc079209d7dcfac","srv":"4740362451060434846"}]})
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"fixmsigaddr","coin":"LTC","userNXT":"15249778894170127693","addr0":"LceDZEZc5sKMu2TwH86MTRsQupC41kcNyf","addr1":"La17RfC938qifuA1oJDNAn3BMg3UNaHc5a","addr2":"Lc9XmfdUTE8FVjSDGMt6ULqbjS24k1rFbr","msigaddr":"3PZxpc8g1N3R3FfX6u6QBfb2Ljo6nQoogm"}'
-
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"clearstate","coin":"BTC","txid":"08f52c9b42c8f10416ddf7ac91d51585d140ee24a30a3426384d740d5ec302a7","vout":0}'
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"clearstate","coin":"BTC","txid":"2c11b0e622119a6317f87015e52050198a31fe07bb7abb860e7b63a5ddc98c2c","vout":4}'
-
-// ./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"BTC"}'
-// ./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"LTC"}'
-// ./BitcoinDarkd SuperNET '{"plugin":"ramchain","method":"create","coin":"DOGE"}'
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"findmsigaddr","coin":"BTC","coinaddr":"3QKWWsi5remaBKHvfL83ZFhtj1xQyEdMbY"}'
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"msigaddr","coin":"BTC","userNXT":"13296104650556846562"}'
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"msigaddr","coin":"BTC","userNXT":"6237012670683413539"}'
-// ./BitcoinDarkd SuperNET '{"plugin":"MGW","method":"fixmsigaddr","coin":"BTC","userNXT":"4327275012681021777","addr0":"1P8hx2pPXn7u19BgPReZzuSL4Qs8Lr8ed1","addr1":"1BoKVuMyMNsLUrs2qLeEa2R8BG324iWAVS","addr2":"13RgF7cB91sZ4sowiLCHsnAjgHzMTYHAac","msigaddr":"3M1sL9QTpT3a6QeNMQFTdjAj7TK4YJYh8H"}'
-void mgw_fixmsigaddr(char *retbuf,struct coin777 *coin,cJSON *json)
-{
-    char *NXTaddr,*NXTpubkey,*addrs[3],*msigaddr,*str,coinaddrs[3][256],pubkeys[3][1024];
-    uint64_t nxt64bits; int32_t i;
-    NXTpubkey = cJSON_str(cJSON_GetObjectItem(json,"NXTpubkey"));
-    addrs[0] = cJSON_str(cJSON_GetObjectItem(json,"addr0"));
-    addrs[1] = cJSON_str(cJSON_GetObjectItem(json,"addr1"));
-    addrs[2] = cJSON_str(cJSON_GetObjectItem(json,"addr2"));
-    msigaddr = cJSON_str(cJSON_GetObjectItem(json,"msigaddr"));
-    if ( (NXTaddr= cJSON_str(cJSON_GetObjectItem(json,"userNXT"))) != 0 && addrs[0] != 0 && addrs[1] != 0 && addrs[2] != 0 && msigaddr != 0 )
-    {
-        nxt64bits = calc_nxt64bits(NXTaddr);
-        for (i=0; i<3; i++)
-        {
-            coinaddrs[i][0] = pubkeys[i][0];
-            get_NXT_coininfo(MGW.srv64bits[i],nxt64bits,coin->name,coinaddrs[i],pubkeys[i]);
-            if ( strcmp(coinaddrs[i],addrs[i]) == 0 )
-            {
-                printf("G%d %s already there\n",i,addrs[i]);
-                if ( NXTpubkey != 0 && NXTpubkey[0] != 0 && strcmp(NXTpubkey,pubkeys[i]) == 0 )
-                    printf("G%d %s NXTpubkey already there\n",i,NXTpubkey);
-                else
-                {
-                    add_NXT_coininfo(MGW.srv64bits[i],nxt64bits,coin->name,addrs[i],pubkeys[i]);
-                    printf("G%d: add %s pubkey.(%s)\n",i,addrs[i],NXTpubkey!=0?NXTpubkey:"");
-                }
-            }
-            else
-            {
-                add_NXT_coininfo(MGW.srv64bits[i],nxt64bits,coin->name,addrs[i],pubkeys[i]);
-                printf("G%d: add %s pubkey.(%s)\n",i,addrs[i],NXTpubkey!=0?NXTpubkey:"");
-            }
-        }
-        //if ( (str= fix_msigaddr(coin,NXTaddr,"myacctpubkey")) != 0 )
-        {
-            //printf("FIXED? (%s)]\n",str);
-            //strcpy(retbuf,str);
-            //free(str);
-            struct multisig_addr *get_NXT_msigaddr(int32_t forceflag,uint64_t *srv64bits,int32_t m,int32_t n,uint64_t nxt64bits,char *coinstr,char coinaddrs[][256],char pubkeys[][1024],char *userNXTpubkey,int32_t buyNXT);
-            get_NXT_msigaddr(1,MGW.srv64bits,MGW.M,SUPERNET.numgateways,nxt64bits,coin->name,coinaddrs,pubkeys,NXTpubkey,0);
-        }
-    } else strcpy(retbuf,"{\"error\":\"need NXT, addr0, addr1, addr2 and msigaddr\"}");
-}
-
-int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
+int32_t get_redeemscript(struct destbuf *redeemScript,char *normaladdr,char *coinstr,char *serverport,char *userpass,char *multisigaddr)
 {
     cJSON *json,*array,*json2;
     char args[1024],addr[1024],*retstr,*retstr2;
     int32_t i,n,ismine = 0;
-    redeemScript[0] = normaladdr[0] = 0;
+    redeemScript->buf[0] = normaladdr[0] = 0;
     sprintf(args,"\"%s\"",multisigaddr);
     if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",args)) != 0 )
     {
@@ -556,7 +752,7 @@ int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char 
                 for (i=0; i<n; i++)
                 {
                     ismine = 0;
-                    copy_cJSON(addr,cJSON_GetArrayItem(array,i));
+                    copy_cJSON2(addr,sizeof(addr),cJSON_GetArrayItem(array,i));
                     if ( addr[0] != 0 )
                     {
                         sprintf(args,"\"%s\"",addr);
@@ -582,10 +778,10 @@ int32_t get_redeemscript(char *redeemScript,char *normaladdr,char *coinstr,char 
     return(ismine);
 }
 
-int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *userpass,char *normaladdr,char *msigaddr,int32_t gatewayid,int32_t numgateways) //could map to rawind, but this is rarely called
+int32_t _map_msigaddr(struct destbuf *redeemScript,char *coinstr,char *serverport,char *userpass,char *normaladdr,char *msigaddr,int32_t gatewayid,int32_t numgateways) //could map to rawind, but this is rarely called
 {
     int32_t ismine,len; char buf[8192]; struct multisig_addr *msig;
-    redeemScript[0] = normaladdr[0] = 0; len = sizeof(buf);
+    redeemScript->buf[0] = normaladdr[0] = 0; len = sizeof(buf);
     if ( (msig= find_msigaddr((struct multisig_addr *)buf,&len,coinstr,msigaddr)) == 0 )
     {
         strcpy(normaladdr,msigaddr);
@@ -593,12 +789,12 @@ int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *us
             printf("cant find_msigaddr.(%s %s)\n",coinstr,msigaddr);
         return(0);
     }
-    if ( msig->redeemScript[0] != 0 && gatewayid >= 0 && gatewayid < numgateways )
+    if ( msig->redeemScript.buf[0] != 0 && gatewayid >= 0 && gatewayid < numgateways )
     {
         strcpy(normaladdr,msig->pubkeys[gatewayid].coinaddr);
-        strcpy(redeemScript,msig->redeemScript);
+        strcpy(redeemScript->buf,msig->redeemScript.buf);
         if ( Debuglevel > 2 )
-            printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript);
+            printf("_map_msigaddr.(%s) -> return (%s) redeem.(%s)\n",msigaddr,normaladdr,redeemScript->buf);
         return(1);
     }
     ismine = get_redeemscript(redeemScript,normaladdr,coinstr,serverport,userpass,msig->multisigaddr);
@@ -607,6 +803,58 @@ int32_t _map_msigaddr(char *redeemScript,char *coinstr,char *serverport,char *us
     strcpy(normaladdr,msigaddr);
     return(-1);
 }
+
+/*int32_t generate_multisigaddr(char *multisigaddr,struct destbuf *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params)
+{
+    char addr[1024],*retstr; struct destbuf tmp; cJSON *json,*redeemobj,*msigobj; int32_t flag = 0;
+    if ( addmultisig != 0 )
+    {
+        if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"addmultisigaddress",params)) != 0 )
+        {
+            strcpy(multisigaddr,retstr);
+            free(retstr);
+            sprintf(addr,"\"%s\"",multisigaddr);
+            if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"validateaddress",addr)) != 0 )
+            {
+                json = cJSON_Parse(retstr);
+                if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+                else
+                {
+                    if ( (redeemobj= cJSON_GetObjectItem(json,"hex")) != 0 )
+                    {
+                        copy_cJSON(redeemScript,redeemobj);
+                        flag = 1;
+                    } else printf("missing redeemScript in (%s)\n",retstr);
+                    free_json(json);
+                }
+                free(retstr);
+            }
+        } else printf("error creating multisig address\n");
+    }
+    else
+    {
+        if ( (retstr= bitcoind_passthru(coinstr,serverport,userpass,"createmultisig",params)) != 0 )
+        {
+            json = cJSON_Parse(retstr);
+            if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+            else
+            {
+                if ( (msigobj= cJSON_GetObjectItem(json,"address")) != 0 )
+                {
+                    if ( (redeemobj= cJSON_GetObjectItem(json,"redeemScript")) != 0 )
+                    {
+                        copy_cJSON(&tmp,msigobj); strcpy(multisigaddr,tmp.buf);
+                        copy_cJSON(redeemScript,redeemobj);
+                        flag = 1;
+                    } else printf("missing redeemScript in (%s)\n",retstr);
+                } else printf("multisig missing address in (%s) params.(%s)\n",retstr,params);
+                free_json(json);
+            }
+            free(retstr);
+        } else printf("error issuing createmultisig.(%s)\n",params);
+    }
+    return(flag);
+}*/
 
 char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n,char *acctparm)
 {
@@ -635,7 +883,7 @@ char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n
     return(paramstr);
 }
 
-int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,struct multisig_addr *msig)
+int32_t issue_createmultisig(char *coinstr,char *serverport,char *userpass,int32_t use_addmultisig,struct multisig_addr *msig)
 {
     int32_t flag = 0;
     char *params;
@@ -643,7 +891,7 @@ int32_t issue_createmultisig(char *multisigaddr,char *redeemScript,char *coinstr
     flag = 0;
     if ( params != 0 )
     {
-        flag = generate_multisigaddr(msig->multisigaddr,msig->redeemScript,coinstr,serverport,userpass,use_addmultisig,params);
+        flag = generate_multisigaddr(msig->multisigaddr,&msig->redeemScript,coinstr,serverport,userpass,use_addmultisig,params);
         free(params);
     } else printf("error generating msig params\n");
     return(flag);
@@ -683,7 +931,8 @@ struct multisig_addr *get_NXT_msigaddr(int32_t forceflag,uint64_t *srv64bits,int
     key[i+1] = nxt64bits;
     keylen = (int32_t)(sizeof(*key) * (i+2));
     len = sizeof(multisigaddr);
-    if ( forceflag == 0 && db777_read(multisigaddr,&len,0,DB_msigs,key,keylen,0) != 0 )
+    coin = coin777_find(coinstr,0);
+    if ( forceflag == 0 &&  db777_read(multisigaddr,&len,0,coin->mgw.DB_msigs,key,keylen,0) != 0 )
     {
         len = sizeof(databuf);
         if ( (msig= find_msigaddr((void *)databuf,&len,coinstr,multisigaddr)) != 0 )
@@ -694,7 +943,7 @@ struct multisig_addr *get_NXT_msigaddr(int32_t forceflag,uint64_t *srv64bits,int
     }
     msig = alloc_multisig_addr(coinstr,m,n,NXTaddr,NXTpubkey,0);
     memset(databuf,0,sizeof(databuf)), memcpy(databuf,msig,msig->size), free(msig), msig = (struct multisig_addr *)databuf;
-    if ( (coin= coin777_find(coinstr,0)) != 0 )
+    if ( coin != 0 )
     {
         if ( buyNXT > 100 )
             buyNXT = 100;
@@ -706,11 +955,11 @@ struct multisig_addr *get_NXT_msigaddr(int32_t forceflag,uint64_t *srv64bits,int
             strcpy(msig->pubkeys[i].pubkey,pubkeys[i]);
             msig->pubkeys[i].nxt64bits = srv64bits[i];
         }
-        flag = issue_createmultisig(msig->multisigaddr,msig->redeemScript,coinstr,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,msig);
+        flag = issue_createmultisig(coinstr,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,msig);
         if ( flag == 0 )
             return(0);
         save_msigaddr(coinstr,NXTaddr,msig);
-        if ( db777_write(0,DB_msigs,key,keylen,msig->multisigaddr,(int32_t)strlen(msig->multisigaddr)+1) != 0 )
+        if ( db777_write(0,coin->mgw.DB_msigs,key,keylen,msig->multisigaddr,(int32_t)strlen(msig->multisigaddr)+1) != 0 )
             printf("error saving msig.(%s)\n",msig->multisigaddr);
     } else printf("cant find coin.(%s)\n",coinstr);
     return(msig);
@@ -740,7 +989,7 @@ char *create_multisig_jsonstr(struct multisig_addr *msig,int32_t truncated)
         pubkeyjsontxt[0] = 0;
         for (i=0; i<msig->n; i++)
             len += calc_pubkey_jsontxt(truncated,pubkeyjsontxt+strlen(pubkeyjsontxt),&msig->pubkeys[i],(i<(msig->n - 1)) ? ", " : "");
-        sprintf(jsontxt,"{%s\"NXT\":\"%s\",\"serviceNXT\":\"%s\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"NXTpubkey\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"gotmsigaddr\",":"",SUPERNET.NXTADDR,SUPERNET.SERVICENXT,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,msig->NXTpubkey,rsacct,msig->multisigaddr,msig->redeemScript,msig->coinstr,gatewayid,pubkeyjsontxt);
+        sprintf(jsontxt,"{%s\"NXT\":\"%s\",\"serviceNXT\":\"%s\",\"buyNXT\":%u,\"created\":%u,\"M\":%d,\"N\":%d,\"NXTaddr\":\"%s\",\"NXTpubkey\":\"%s\",\"RS\":\"%s\",\"address\":\"%s\",\"redeemScript\":\"%s\",\"coin\":\"%s\",\"gatewayid\":\"%d\",\"pubkey\":[%s]}",truncated==0?"\"requestType\":\"plugin\",\"plugin\":\"coins\",\"method\":\"gotmsigaddr\",":"",SUPERNET.NXTADDR,SUPERNET.SERVICENXT,msig->buyNXT,msig->created,msig->m,msig->n,msig->NXTaddr,msig->NXTpubkey,rsacct,msig->multisigaddr,msig->redeemScript.buf,msig->coinstr,gatewayid,pubkeyjsontxt);
         //if ( (MGW_initdone == 0 && Debuglevel > 2) || MGW_initdone != 0 )
         //    printf("(%s) pubkeys len.%ld msigjsonlen.%ld\n",jsontxt,len,strlen(jsontxt));
         //printf("-> (%s)\n",jsontxt);
@@ -762,7 +1011,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
         if ( g == SUPERNET.gatewayid && (coin= coin777_find(coinstr,0)) != 0 )
         {
             get_acct_coinaddr(coinaddrs[g],coin->name,coin->serverport,coin->userpass,NXTaddr);
-            get_pubkey(pubkeys[g],coin->name,coin->serverport,coin->userpass,coinaddrs[g]);
+            get_pubkey2(pubkeys[g],coin->name,coin->serverport,coin->userpass,coinaddrs[g]);
             printf("ensure_NXT_msigaddr %s new address.(%s) -> (%s) (%s)\n",coin->name,NXTaddr,coinaddrs[g],pubkeys[g]);
             add_NXT_coininfo(MGW.srv64bits[g],nxt64bits,coinstr,coinaddrs[g],pubkeys[g]);
         }
@@ -782,6 +1031,7 @@ int32_t ensure_NXT_msigaddr(char *msigjsonstr,char *coinstr,char *NXTaddr,char *
             fprintf(stderr,"updatemsig (%s)\n",msigjsonstr);
             update_MGW_jsonfile(set_MGW_msigfname,extract_jsonints,jsonstrcmp,0,msigjsonstr,"coin","address");
             update_MGW_jsonfile(set_MGW_msigfname,extract_jsonints,jsonstrcmp,NXTaddr,msigjsonstr,"coin","address");
+            
             retval = 1;
             free(str);
         } else printf("error creating msigaddr\n");
@@ -795,11 +1045,11 @@ int32_t process_acctpubkey(int32_t *havemsigp,cJSON *item,int32_t gatewayid,uint
     uint64_t gbits,nxt64bits; int32_t buyNXT,g,updated = 0;
     char msigjsonstr[MAX_JSON_FIELD],userNXTpubkey[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
     *havemsigp = 0;
-    copy_cJSON(coinstr,cJSON_GetObjectItem(item,"coin"));
-    copy_cJSON(NXTaddr,cJSON_GetObjectItem(item,"userNXT"));
-    copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"coinaddr"));
-    copy_cJSON(pubkey,cJSON_GetObjectItem(item,"pubkey"));
-    copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(item,"userpubkey"));
+    copy_cJSON2(coinstr,sizeof(coinstr),cJSON_GetObjectItem(item,"coin"));
+    copy_cJSON2(NXTaddr,sizeof(NXTaddr),cJSON_GetObjectItem(item,"userNXT"));
+    copy_cJSON2(coinaddr,sizeof(coinaddr),cJSON_GetObjectItem(item,"coinaddr"));
+    copy_cJSON2(pubkey,sizeof(pubkey),cJSON_GetObjectItem(item,"pubkey"));
+    copy_cJSON2(userNXTpubkey,sizeof(userNXTpubkey),cJSON_GetObjectItem(item,"userpubkey"));
     buyNXT = get_API_int(cJSON_GetObjectItem(item,"buyNXT"),0);
     g = get_API_int(cJSON_GetObjectItem(item,"gatewayid"),-1);
     gbits = get_API_nxt64bits(cJSON_GetObjectItem(item,"gatewayNXT"));
@@ -851,20 +1101,19 @@ cJSON *msig_itemjson(char *coinstr,char *account,char *coinaddr,char *pubkey,int
 
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method)
 {
-    cJSON *msigjson,*array; struct destbuf coinaddr,pubkey; char *retstr = 0; uint64_t nxt64bits;
+    cJSON *msigjson,*array; char coinaddr[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],*retstr = 0; uint64_t nxt64bits;
     if ( coin != 0 && NXTaddr != 0 && NXTaddr[0] != 0 && SUPERNET.gatewayid >= 0 )
     {
         nxt64bits = conv_acctstr(NXTaddr), expand_nxt64bits(NXTaddr,nxt64bits);
         get_acct_coinaddr(coinaddr,coin->name,coin->serverport,coin->userpass,NXTaddr);
-        get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
-        printf("%s new address.(%s) -> (%s) (%s)\n",coin->name,NXTaddr,coinaddr,pubkey.buf);
+        get_pubkey2(pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
+        printf("%s new address.(%s) -> (%s) (%s)\n",coin->name,NXTaddr,coinaddr,pubkey);
         if ( (msigjson= mgw_stdjson(coin->name,SUPERNET.NXTADDR,SUPERNET.gatewayid,method)) != 0 )
         {
             array = cJSON_CreateArray();
-            cJSON_AddItemToArray(array,msig_itemjson(coin->name,NXTaddr,coinaddr,pubkey.buf,1));
+            cJSON_AddItemToArray(array,msig_itemjson(coin->name,NXTaddr,coinaddr,pubkey,1));
             cJSON_AddItemToObject(msigjson,"pubkeys",array);
             retstr = cJSON_Print(msigjson), _stripwhite(retstr,' ');
- 
         } else printf("couldnt generate mgw_stdjson\n");
     }
     return(retstr);
@@ -881,7 +1130,7 @@ int32_t process_acctpubkeys(char *coinstr,int32_t gatewayid,uint64_t gatewaybits
             for (i=0; i<n; i++)
             {
                 item = cJSON_GetArrayItem(array,i);
-                copy_cJSON(userNXT,cJSON_GetObjectItem(item,"userNXT"));
+                copy_cJSON2(userNXT,sizeof(userNXT),cJSON_GetObjectItem(item,"userNXT"));
                 updated += process_acctpubkey(&havemsig,item,gatewayid,gatewaybits);
                 count += havemsig;
             }
@@ -892,30 +1141,35 @@ int32_t process_acctpubkeys(char *coinstr,int32_t gatewayid,uint64_t gatewaybits
     return(updated);
 }
 
-char *mgw_other_redeem(char *signedtx,uint64_t redeemtxid,uint64_t gatewaybits)
+char *mgw_other_redeem(struct mgw777 *mgw,char *signedtx,uint64_t redeemtxid,uint64_t gatewaybits)
 {
     uint64_t key[2]; int32_t len = 65536;
     key[0] = redeemtxid, key[1] = gatewaybits;
+    if ( mgw->DB_redeems == 0 )
+    {
+        printf("mgw_other_redeem: null DB_redeem\n");
+        return(0);
+    }
     if ( signedtx == 0 )
     {
         signedtx = malloc(len);
-        if ( db777_read(signedtx,&len,0,DB_redeems,key,sizeof(key),0) != 0 )
+        if ( db777_read(signedtx,&len,0,mgw->DB_redeems,key,sizeof(key),0) != 0 )
             return(signedtx);
         free(signedtx);
     }
     else
     {
         printf("WRITE.(%s) %llu G.%llu\n",signedtx,(long long)redeemtxid,(long long)gatewaybits);
-        db777_write(0,DB_redeems,key,sizeof(key),signedtx,(int32_t)strlen(signedtx)+1);
+        db777_write(0,mgw->DB_redeems,key,sizeof(key),signedtx,(int32_t)strlen(signedtx)+1);
     }
     return(0);
 }
 
-int32_t mgw_other_redeems(char *signedtxs[NUM_GATEWAYS],uint64_t redeemtxid)
+int32_t mgw_other_redeems(struct mgw777 *mgw,char *signedtxs[NUM_GATEWAYS],uint64_t redeemtxid)
 {
     int32_t gatewayid,flags = 0;
     for (gatewayid=0; gatewayid<NUM_GATEWAYS; gatewayid++)
-        if ( (signedtxs[gatewayid]= mgw_other_redeem(0,redeemtxid,MGW.srv64bits[gatewayid])) != 0 )
+        if ( (signedtxs[gatewayid]= mgw_other_redeem(mgw,0,redeemtxid,MGW.srv64bits[gatewayid])) != 0 )
             flags |= (1 << gatewayid);
     return(flags);
 }
@@ -924,28 +1178,31 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
 {
     uint64_t redeemtxid; char *signedtx,*buf,*cointxid; struct coin777 *coin;
     if ( (coin= coin777_find(coinstr,0)) == 0 )
+    {
+        printf("process_redeem: cant find coin.(%s)\n",coinstr);
         return(-1);
+    }
     if ( (redeemtxid= get_API_nxt64bits(cJSON_GetObjectItem(json,"redeemtxid"))) != 0 )
     {
         if ( (cointxid= cJSON_str(cJSON_GetObjectItem(json,"cointxid"))) != 0 )
         {
+            if ( (coin= coin777_find(coinstr,0)) != 0 )
             {
                 NXT_mark_withdrawdone(&coin->mgw,redeemtxid);
-                mgw_other_redeem(jsonstr,redeemtxid,0);
+                mgw_other_redeem(&coin->mgw,jsonstr,redeemtxid,0);
             }
         }
         if ( (signedtx= cJSON_str(cJSON_GetObjectItem(json,"signedtx"))) != 0 )
         {
-            if ( (buf= mgw_other_redeem(0,redeemtxid,gatewaybits)) == 0 || strcmp(signedtx+12,buf+12) != 0 )
+            if ( (buf= mgw_other_redeem(&coin->mgw,0,redeemtxid,gatewaybits)) == 0 || strcmp(signedtx+12,buf+12) != 0 )
             {
-                mgw_other_redeem(signedtx,redeemtxid,gatewaybits);
+                mgw_other_redeem(&coin->mgw,signedtx,redeemtxid,gatewaybits);
                 sprintf(retbuf,"{\"result\":\"success\",\"coin\":\"%s\",\"redeemtxid\":\"%llu\",\"gatewayid\":%d,\"gatewayNXT\":\"%llu\",\"signedtx\":\"%s\"}",coinstr,(long long)redeemtxid,gatewayid,(long long)gatewaybits,signedtx!=0?signedtx:"");
-                //printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
+                printf("G%d NEW REDEEM.(%s)\n",gatewayid,retbuf);
                 fprintf(stderr,"updateredeem (%s)\n",retbuf);
-                update_MGW_jsonfile(set_MGW_redeemfname,extract_jsonints,jsonstrcmp,0,retbuf,"cointxid","redeemtxid");
+                update_MGW_jsonfile(set_MGW_moneysentfname,extract_jsonints,jsonstrcmp,0,retbuf,"cointxid","redeemtxid");
                 char redeemstr[64]; expand_nxt64bits(redeemstr,redeemtxid);
-                fprintf(stderr,"updateredeem.%s (%s)\n",redeemstr,retbuf);
-                update_MGW_jsonfile(set_MGW_redeemfname,extract_jsonints,jsonstrcmp,redeemstr,retbuf,"cointxid","redeemtxid");
+                update_MGW_jsonfile(set_MGW_moneysentfname,extract_jsonints,jsonstrcmp,redeemstr,retbuf,"cointxid","redeemtxid");
             }
             if ( buf != 0 )
                 free(buf);
@@ -957,21 +1214,25 @@ int32_t process_redeem(char *coinstr,int32_t gatewayid,uint64_t gatewaybits,char
 int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
 {
     char coinstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],gatewayNXT[MAX_JSON_FIELD],*methodstr,*str;
-    uint64_t gatewaybits; int32_t gatewayid,retval = 0; struct coin777 *coin; cJSON *array;
-    printf("MGW PROCESS.(%s)\n",jsonstr);
+    uint64_t gatewaybits; int32_t gatewayid,retval = 0,flag = 0; struct coin777 *coin; cJSON *array;
     if ( (methodstr= cJSON_str(cJSON_GetObjectItem(json,"method"))) != 0 )
     {
-        copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
+        copy_cJSON2(coinstr,sizeof(coinstr),cJSON_GetObjectItem(json,"coin"));
         gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
-        copy_cJSON(gatewayNXT,cJSON_GetObjectItem(json,"gatewayNXT"));
+        copy_cJSON2(gatewayNXT,sizeof(gatewayNXT),cJSON_GetObjectItem(json,"gatewayNXT"));
         gatewaybits = calc_nxt64bits(gatewayNXT);
         coin = coin777_find(coinstr,0);
+        if ( coin == 0 )
+        {
+            printf("mgw_processbus: skip.(%s) inative coin\n",coinstr);
+            return(-1);
+        }
         if ( strncmp(methodstr,"myacctpubkeys",strlen("myacctpubkey")) == 0 )
             retval = process_acctpubkeys(coinstr,gatewayid,gatewaybits,retbuf,jsonstr,json,methodstr);
         else if ( strcmp(methodstr,"askacctpubkey") == 0 )
         {
             if ( (array= cJSON_GetObjectItem(json,"pubkeys")) != 0 )
-                copy_cJSON(NXTaddr,cJSON_GetObjectItem(cJSON_GetArrayItem(array,0),"userNXT"));
+                copy_cJSON2(NXTaddr,sizeof(NXTaddr),cJSON_GetObjectItem(cJSON_GetArrayItem(array,0),"userNXT"));
             if ( NXTaddr[0] != 0 && (str= fix_msigaddr(coin,NXTaddr,"myacctpubkey")) != 0 )
             {
                 strcpy(retbuf,str);
@@ -981,10 +1242,12 @@ int32_t mgw_processbus(char *retbuf,char *jsonstr,cJSON *json)
             }
         }
         else if ( strcmp(methodstr,"redeemtxid") == 0 )
-            retval = process_redeem(coinstr,gatewayid,gatewaybits,retbuf,jsonstr,json);
+            retval = process_redeem(coinstr,gatewayid,gatewaybits,retbuf,jsonstr,json), flag = 1;
         else if ( strcmp(methodstr,"audit") == 0 )
             retval = MGW_audit(retbuf,coin,json);
     }
+    if ( flag != 0 )
+        printf("MGW PROCESS.(%s)\n",jsonstr);
     return(retval);
 }
 
@@ -1023,15 +1286,15 @@ char *get_msig_pubkeys(char *coinstr,char *serverport,char *userpass)
                 {
                     fprintf(stderr,".");
                     item = cJSON_GetArrayItem(json,i);
-                    copy_cJSON(account,cJSON_GetObjectItem(item,"account"));
+                    copy_cJSON2(account,sizeof(account),cJSON_GetObjectItem(item,"account"));
                     if ( is_decimalstr(account) > 0 )
                     {
                         nxt64bits = calc_nxt64bits(account);
                         expand_nxt64bits(NXTaddr,nxt64bits);
                         if ( strcmp(account,NXTaddr) == 0 )
                         {
-                            copy_cJSON(coinaddr,cJSON_GetObjectItem(item,"address"));
-                            if ( get_pubkey(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
+                            copy_cJSON2(coinaddr,sizeof(coinaddr),cJSON_GetObjectItem(item,"address"));
+                            if ( get_pubkey2(pubkey,coinstr,serverport,userpass,coinaddr) != 0 )
                                 cJSON_AddItemToArray(array,msig_itemjson(coinstr,account,coinaddr,pubkey,1));
                         }
                         else printf("decimal.%d (%s) -> (%s)? ",is_decimalstr(account),account,NXTaddr);
@@ -1053,7 +1316,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
     char nxtaddr[64],userNXTpubkey[MAX_JSON_FIELD],msigjsonstr[MAX_JSON_FIELD],NXTaddr[MAX_JSON_FIELD],coinstr[1024],*str,*addr;
     if ( SUPERNET.gatewayid >= 0 )
     {
-        copy_cJSON(NXTaddr,cJSON_GetObjectItem(json,"userNXT"));
+        copy_cJSON2(NXTaddr,sizeof(NXTaddr),cJSON_GetObjectItem(json,"userNXT"));
         if ( NXTaddr[0] != 0 )
         {
             if ( (nxt64bits= conv_acctstr(NXTaddr)) != 0 )
@@ -1062,11 +1325,11 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         if ( nxt64bits == 0 )
             return(clonestr("{\"error\":\"illegal NXT addr\"}"));
         //printf("NXTaddr.(%s) %llu\n",nxtaddr,(long long)nxt64bits);
-        copy_cJSON(coinstr,cJSON_GetObjectItem(json,"coin"));
-        copy_cJSON(userNXTpubkey,cJSON_GetObjectItem(json,"userpubkey"));
+        copy_cJSON2(coinstr,sizeof(coinstr),cJSON_GetObjectItem(json,"coin"));
+        copy_cJSON2(userNXTpubkey,sizeof(userNXTpubkey),cJSON_GetObjectItem(json,"userpubkey"));
         buyNXT = get_API_int(cJSON_GetObjectItem(json,"buyNXT"),0);
         printf("NXTaddr.(%s) %llu %s\n",nxtaddr,(long long)nxt64bits,coinstr);
-        if ( nxtaddr[0] != 0 && coinstr != 0 && (coin= coin777_find(coinstr,0)) != 0 )
+        if ( nxtaddr[0] != 0 && coinstr[0] != 0 && (coin= coin777_find(coinstr,0)) != 0 )
         {
             for (i=0; i<1; i++)
             {
@@ -1086,7 +1349,7 @@ char *devMGW_command(char *jsonstr,cJSON *json)
         {
             if ( (str= fix_msigaddr(coin,nxtaddr,"myacctpubkey")) == 0 )
             {
-                sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr!=0?coinstr:"",nxtaddr);
+                sprintf(msigjsonstr,"{\"error\":\"cant find multisig address\",\"coin\":\"%s\",\"userNXT\":\"%s\"}",coinstr[0]!=0?coinstr:"",nxtaddr);
                 _stripwhite(msigjsonstr,' ');
                 str = clonestr(msigjsonstr);
             }
@@ -1141,10 +1404,10 @@ int32_t msigcmp(struct multisig_addr *ref,struct multisig_addr *msig)
             printf("B ref.(%s) vs msig.(%s)\n",ref->NXTaddr,msig->NXTaddr);
         return(2);
     }
-    if ( strcmp(ref->redeemScript,msig->redeemScript) != 0 )
+    if ( strcmp(ref->redeemScript.buf,msig->redeemScript.buf) != 0 )
     {
         if ( Debuglevel > 3 )
-            printf("C ref.(%s) vs msig.(%s)\n",ref->redeemScript,msig->redeemScript);
+            printf("C ref.(%s) vs msig.(%s)\n",ref->redeemScript.buf,msig->redeemScript.buf);
         return(3);
     }
     for (i=0; i<ref->n; i++)
@@ -1192,14 +1455,14 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
         return(0);
     }
     nameobj = cJSON_GetObjectItem(obj,"coin");
-    copy_cJSON(coinstr,nameobj);
+    copy_cJSON2(coinstr,sizeof(coinstr),nameobj);
     if ( coinstr[0] == 0 )
     {
         if ( (idobj = cJSON_GetObjectItem(obj,"coinid")) != 0 )
         {
-            copy_cJSON(numstr,idobj);
+            copy_cJSON2(numstr,sizeof(numstr),idobj);
             if ( numstr[0] != 0 )
-                set_legacy_coinid(coinstr,myatoi(numstr,256));
+                set_legacy_coinid(coinstr,atoi(numstr));
         }
     }
     if ( coinstr[0] != 0 )
@@ -1210,7 +1473,7 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
         nxtobj = cJSON_GetObjectItem(obj,"NXTaddr");
         if ( nxtobj != 0 )
         {
-            copy_cJSON(nxtstr,nxtobj);
+            copy_cJSON2(nxtstr,sizeof(numstr),nxtobj);
             if ( NXTaddr != 0 && strcmp(nxtstr,NXTaddr) != 0 )
                 printf("WARNING: mismatched NXTaddr.%s vs %s\n",nxtstr,NXTaddr);
         }
@@ -1219,23 +1482,23 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
         {
             n = cJSON_GetArraySize(pubkeysobj);
             M = (int32_t)get_API_int(cJSON_GetObjectItem(obj,"M"),n-1);
-            copy_cJSON(NXTpubkey,cJSON_GetObjectItem(obj,"NXTpubkey"));
+            copy_cJSON2(NXTpubkey,sizeof(NXTpubkey),cJSON_GetObjectItem(obj,"NXTpubkey"));
             if ( NXTpubkey[0] == 0 )
                 set_NXTpubkey(NXTpubkey,nxtstr);
             msig = alloc_multisig_addr(coinstr,M,n,nxtstr,NXTpubkey,sender);
             safecopy(msig->coinstr,coinstr,sizeof(msig->coinstr));
-            copy_cJSON(msig->redeemScript,redeemobj);
-            copy_cJSON(msig->multisigaddr,addrobj);
+            copy_cJSON(&msig->redeemScript,redeemobj);
+            copy_cJSON2(msig->multisigaddr,sizeof(msig->multisigaddr),addrobj);
             msig->buyNXT = (uint32_t)get_API_int(cJSON_GetObjectItem(obj,"buyNXT"),10);
             for (j=0; j<n; j++)
             {
                 pobj = cJSON_GetArrayItem(pubkeysobj,j);
                 if ( pobj != 0 )
                 {
-                    copy_cJSON(msig->pubkeys[j].coinaddr,cJSON_GetObjectItem(pobj,"address"));
-                    copy_cJSON(msig->pubkeys[j].pubkey,cJSON_GetObjectItem(pobj,"pubkey"));
+                    copy_cJSON2(msig->pubkeys[j].coinaddr,sizeof(msig->pubkeys[j].coinaddr),cJSON_GetObjectItem(pobj,"address"));
+                    copy_cJSON2(msig->pubkeys[j].pubkey,sizeof(msig->pubkeys[j].pubkey),cJSON_GetObjectItem(pobj,"pubkey"));
                     msig->pubkeys[j].nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(pobj,"srv"));
-                    copy_cJSON(ipaddr,cJSON_GetObjectItem(pobj,"ipaddr"));
+                    copy_cJSON2(ipaddr,sizeof(ipaddr),cJSON_GetObjectItem(pobj,"ipaddr"));
                     if ( Debuglevel > 2 )
                         fprintf(stderr,"{(%s) (%s) %llu ip.(%s)}.%d ",msig->pubkeys[j].coinaddr,msig->pubkeys[j].pubkey,(long long)msig->pubkeys[j].nxt64bits,ipaddr,j);
                     //if ( ipaddr[0] == 0 && j < 3 )
@@ -1254,9 +1517,10 @@ struct multisig_addr *decode_msigjson(char *NXTaddr,cJSON *obj,char *sender)
 }
 
 void *extract_jsonkey(cJSON *item,void *arg,void *arg2)
+
 {
     char *redeemstr = calloc(1,MAX_JSON_FIELD);
-    copy_cJSON(redeemstr,cJSON_GetObjectItem(item,arg));
+    copy_cJSON2(redeemstr,MAX_JSON_FIELD,cJSON_GetObjectItem(item,arg));
     return(redeemstr);
 }
 
@@ -1280,7 +1544,7 @@ void *extract_jsonints(cJSON *item,void *arg,void *arg2)
 void *extract_jsonmsig(cJSON *item,void *arg,void *arg2)
 {
     char sender[MAX_JSON_FIELD];
-    copy_cJSON(sender,cJSON_GetObjectItem(item,"sender"));
+    copy_cJSON2(sender,MAX_JSON_FIELD,cJSON_GetObjectItem(item,"sender"));
     return(decode_msigjson(0,item,sender));
 }
 
@@ -1446,10 +1710,10 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
     expand_nxt64bits(NXTaddr,nxt64bits);
     conv_rsacctstr(rsacct,nxt64bits);
     issue_getpubkey(&haspubkey,rsacct);
-    if ( haspubkey != 0 )//&& depositors_pubkey[0] == 0 )
+    if ( haspubkey != 0 && depositors_pubkey[0] == 0 )
     {
         set_NXTpubkey(depositors_pubkey,NXTaddr);
-        printf("set.%s pubkey.(%s)\n",NXTaddr,depositors_pubkey);
+        printf("set pubkey.(%s)\n",depositors_pubkey);
     }
     expand_nxt64bits(NXTaddr,nxt64bits);
     //sprintf(comment,"{\"coin\":\"%s\",\"coinaddr\":\"%s\",\"cointxid\":\"%s\",\"coinv\":%u,\"amount\":\"%.8f\",\"sender\":\"%s\",\"receiver\":\"%llu\",\"timestamp\":%u,\"quantity\":\"%llu\"}",coin->name,coinaddr,txidstr,vout,dstr(value),SUPERNET.NXTADDR,(long long)nxt64bits,(uint32_t)time(NULL),(long long)(value/coin->mgw.ap_mult));
@@ -1487,7 +1751,7 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
             str = cJSON_Print(pair);
             _stripwhite(str,' ');
             expand_nxt64bits(assetidstr,coin->mgw.assetidbits);
-            depositid = issue_transferAsset(&errjsontxt,0,SUPERNET.NXTACCTSECRET,NXTaddr,(iter == 0) ? assetidstr : nxtassetidstr,(iter == 0) ? (value/coin->mgw.ap_mult) : buyNXT*SATOSHIDEN,MIN_NQTFEE,deadline,str,depositors_pubkey!=0&&depositors_pubkey[0]!=0?depositors_pubkey:0);
+            depositid = issue_transferAsset(&errjsontxt,0,SUPERNET.NXTACCTSECRET,NXTaddr,(iter == 0) ? assetidstr : nxtassetidstr,(iter == 0) ? (value/coin->mgw.ap_mult) : buyNXT*SATOSHIDEN,MIN_NQTFEE,deadline,str,0);
             free(str);
             if ( depositid != 0 && errjsontxt == 0 )
             {
@@ -1511,7 +1775,7 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
                 {
                     if ( (item= cJSON_GetObjectItem(errjson,"error")) != 0 )
                     {
-                        copy_cJSON(buf,item);
+                        copy_cJSON2(buf,sizeof(buf),item);
                         cJSON_AddItemToObject(pair,(iter == 0) ? "depositerror" : "converterror",cJSON_CreateString(buf));
                     }
                     free_json(errjson);
@@ -1555,27 +1819,27 @@ int32_t _is_limbo_redeem(struct mgw777 *mgw,uint64_t redeemtxidbits)
     expand_nxt64bits(str,redeemtxidbits);
     return(in_jsonarray(mgw->limbo,str));
 }
-    
+
 int32_t mgw_depositstatus(struct coin777 *coin,struct multisig_addr *msig,char *txidstr,int32_t vout)
 {
     int32_t i,n,flag = 0; struct extra_info extra;
-    NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
+    NXT_revassettxid(coin->mgw.DB_NXTtxids,&extra,coin->mgw.assetidbits,0), n = extra.ind;
     for (i=1; i<=n; i++)
     {
-        if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
+        if ( NXT_revassettxid(coin->mgw.DB_NXTtxids,&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
         {
             //printf("(%d) ",flag);
             if ( (extra.flags & MGW_DEPOSITDONE) != 0 )
             {
                 if ( extra.vout == vout && strcmp(txidstr,extra.coindata) == 0 )
                 {
-                    printf("MGW_DEPOSITDONE pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
+                    //  printf("pendingxfer.(%s).v%d vs (%s).v%d\n",extra.coindata,extra.vout,txidstr,vout);
                     flag = MGW_DEPOSITDONE;
                     break;
                 }
             }
-            //else if ( (extra.flags & MGW_IGNORE) != 0 )
-             //   flag = MGW_IGNORE;
+            else if ( (extra.flags & MGW_IGNORE) != 0 )
+                flag = MGW_IGNORE;
         } else printf("error loading assettxid[%d] for %llu\n",i,(long long)coin->mgw.assetidbits);
     }
     //printf("n.%d ",n);
@@ -1590,50 +1854,50 @@ int32_t mgw_unspentkey(uint8_t *key,int32_t maxlen,char *txidstr,uint16_t vout)
     return(slen);
 }
 
-int32_t mgw_unspentstatus(char *txidstr,uint16_t vout)
+int32_t mgw_unspentstatus(struct mgw777 *mgw,char *txidstr,uint16_t vout)
 {
     uint8_t key[1024]; int32_t status,keylen,len = sizeof(status);
     keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
-    if ( db777_read(&status,&len,0,DB_MGW,key,keylen,0) != 0 )
+    if ( db777_read(&status,&len,0,mgw->DB_MGW,key,keylen,0) != 0 )
         return(status);
     return(0);
 }
 
-int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
+int32_t mgw_markunspent(struct mgw777 *mgw,char *txidstr,int32_t vout,int32_t status)
 {
     uint8_t key[1024]; int32_t keylen;
     if ( status < 0 )
         status = MGW_ERRORSTATUS;
-    status |= mgw_unspentstatus(txidstr,vout);
+    status |= mgw_unspentstatus(mgw,txidstr,vout);
     keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
     printf("(%s v%d) <- MGW status.%d\n",txidstr,vout,status);
-    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
+    return(db777_write(0,mgw->DB_MGW,key,keylen,&status,sizeof(status)));
 }
 
-int32_t mgw_clearunspent(char *txidstr,int32_t vout)
+int32_t mgw_clearunspent(struct mgw777 *mgw,char *txidstr,int32_t vout)
 {
     uint8_t key[1024]; int32_t keylen,status = 0;
     keylen = mgw_unspentkey(key,sizeof(key),txidstr,vout);
     printf("mgw_clearunspent (%s v%d) <- MGW status.%d\n",txidstr,vout,status);
-    return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
+    return(db777_write(0,mgw->DB_MGW,key,keylen,&status,sizeof(status)));
 }
 
 int32_t mgw_setstate(struct coin777 *coin,char *txidstr,int32_t vout,int32_t newstatus)
 {
     int32_t i,n,flag = 0; struct extra_info extra;
     if ( newstatus == 0 )
-        mgw_clearunspent(txidstr,vout);
-    else mgw_markunspent(txidstr,vout,newstatus);
-    NXT_revassettxid(&extra,coin->mgw.assetidbits,newstatus), n = extra.ind;
+        mgw_clearunspent(&coin->mgw,txidstr,vout);
+    else mgw_markunspent(&coin->mgw,txidstr,vout,newstatus);
+    NXT_revassettxid(coin->mgw.DB_NXTtxids,&extra,coin->mgw.assetidbits,newstatus), n = extra.ind;
     for (i=1; i<=n; i++)
     {
-        if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
+        if ( NXT_revassettxid(coin->mgw.DB_NXTtxids,&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
         {
             if ( extra.vout == vout && strcmp(txidstr,extra.coindata) == 0 )
             {
                 printf("set %d revassettxid.%d %llu for (%s/v%d)\n",newstatus,i,(long long)extra.txidbits,extra.coindata,extra.vout);
                 extra.flags = newstatus;
-                NXT_set_revassettxid(coin->mgw.assetidbits,i,&extra);
+                NXT_set_revassettxid(coin->mgw.DB_NXTtxids,coin->mgw.assetidbits,i,&extra);
             }
         } else printf("error loading assettxid[%d] for %llu\n",i,(long long)coin->mgw.assetidbits);
     }
@@ -1669,7 +1933,7 @@ uint64_t mgw_decode_OP_RETURN(uint8_t *script,int32_t scriptlen)
     else return(0);
     for (redeemtxid=j=0; j<(int32_t)sizeof(uint64_t); j++)
         redeemtxid <<= 8, redeemtxid |= (scriptptr[7 - j] & 0xff);
-//printf("(REDEEMTXID.%llx %llu) ",(long long)redeemtxid,(long long)redeemtxid);
+    //printf("(REDEEMTXID.%llx %llu) ",(long long)redeemtxid,(long long)redeemtxid);
     return(redeemtxid);
 }
 
@@ -1792,7 +2056,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                 printf("height.%u MATCHED REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
                 return(MGW_WITHDRAWDONE);
             }
-            printf("height.%u NO REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
+            //printf("height.%u NO REDEEM: (%llu %.8f -> %s) script.(%s) scriptind.%d\n",extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,scriptstr,scriptind);
             if ( (addrind= coin777_addrind(&firstblocknum,coin,extra->coindata)) != 0 && coin777_RWmmap(0,&L,coin,&coin->ramchain.ledger,addrind) == 0 )
             {
                 for (i=0; i<L.numaddrtx; i++)
@@ -1817,7 +2081,7 @@ int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra)
                 }
                 else
                 {
-                    printf("[numconfs.%d] height.%u PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",mgw->RTNXT_height-extra->height,extra->height,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
+                    printf("[numconfs.%d] height.%u %s PENDING WITHDRAW: (%llu %.8f -> %s) addrind.%u numaddrtx.%d\n",mgw->RTNXT_height-extra->height,extra->height,mgw->coinstr,(long long)extra->txidbits,dstr(extra->amount),extra->coindata,addrind,L.numaddrtx);
                     if ( coin->mgw.numwithdraws < sizeof(coin->mgw.withdraws)/sizeof(*coin->mgw.withdraws) )
                     {
                         coin->mgw.withdrawsum += extra->amount;
@@ -1849,15 +2113,18 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
         atx_value = coin777_Uvalue(&U,coin,unspentind), U.rawind_or_blocknum = unspentind;
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
-            Ustatus = mgw_unspentstatus(txidstr,vout);
+            Ustatus = mgw_unspentstatus(mgw,txidstr,vout);
             if ( (Ustatus & MGW_ALREADYSPENT) != 0 )
+            {
+                //printf("%s/v%d ALREADYSPENT\n",txidstr,vout);
                 continue;
+            }
             if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
                 if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout,0)) != 0 )
                 {
-                    printf("ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                    mgw_markunspent(txidstr,vout,Ustatus | MGW_ISINTERNAL);
+                    printf("%s ISINTERNAL.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",coin->name,unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                    mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | MGW_ISINTERNAL);
                 }
                 else
                 {
@@ -1865,13 +2132,13 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     {
                         if ( (status & MGW_DEPOSITDONE) != 0 )
                         {
-                            printf("DEPOSIT DONE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                            mgw_markunspent(txidstr,vout,Ustatus | status);
+                            printf("%s DEPOSIT DONE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",coin->name,unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                            mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | status);
                         }
                         else if ( (status & MGW_IGNORE) != 0 )
                         {
-                            printf("MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                            mgw_markunspent(txidstr,vout,Ustatus | status);
+                            printf("%s MGW_IGNORE.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",coin->name,unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
+                            mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | status);
                         }
                         else printf("UNKNOWN.%u (%s).v%d %.8f -> %s Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
                     }
@@ -1895,27 +2162,24 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                 {
                     if ( (Ustatus & MGW_PENDINGXFER) != 0 )
                     {
-                        printf("G%d PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
+                        printf("G%d %s PENDINGXFER.%u (%s).v%d %.8f -> %s\n",(int32_t)(nxt64bits % msig->n),mgw->coinstr,unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr);
                         if ( (status= mgw_depositstatus(coin,msig,txidstr,vout)) == MGW_DEPOSITDONE )
-                            mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                            mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                     }
-                    else if ( coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind )
+                    else if ( atx_value >= coin->mgw.txfee && (coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind) )
                     {
-                        printf("pending deposit.%u (%s).v%d %.8f -> %s nxt.%llu pubkey.%s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,(long long)nxt64bits,msig->NXTpubkey,Ustatus,status);
+                        printf("%s pending deposit.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d nxt.%llu g%d\n",mgw->coinstr,unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status,(long long)nxt64bits,(int32_t)(nxt64bits % msig->n));
                         if ( (nxt64bits % msig->n) == SUPERNET.gatewayid )
                         {
-                            if ( mgw_isrealtime(coin) != 0 )
-                            {
-                                if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
-                                    mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
-                            }
-                        } else mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                            if ( mgw_isrealtime(coin) != 0 && MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
+                                mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                        } else mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                     else
                     {
                         sum += U.value;
                         mgw->unspents = realloc(mgw->unspents,sizeof(*mgw->unspents) * (mgw->numunspents + 1)), mgw->unspents[mgw->numunspents++] = U;
-                        mgw_markunspent(txidstr,vout,Ustatus | MGW_DEPOSITDONE);
+                        mgw_markunspent(&coin->mgw,txidstr,vout,Ustatus | MGW_DEPOSITDONE);
                     }
                 }
                 else if ( (Ustatus & MGW_DEPOSITDONE) != 0 )
@@ -2003,7 +2267,7 @@ char *mgw_OP_RETURN(int32_t opreturn,char *rawtx,int32_t do_opreturn,uint64_t re
 
 cJSON *mgw_create_vins(cJSON **keysobjp,char *coinstr,char *serverport,char *userpass,struct cointx_info *cointx,int32_t gatewayid,int32_t numgateways)
 {
-    int32_t i,ret,nonz; cJSON *json,*array,*keysobj; char normaladdr[1024],redeemScript[4096],*privkey; struct cointx_input *vin;
+    int32_t i,ret,nonz; cJSON *json,*array,*keysobj; struct destbuf redeemScript; char normaladdr[1024],*privkey; struct cointx_input *vin;
     array = cJSON_CreateArray();
     keysobj = cJSON_CreateArray();
     for (i=nonz=0; i<cointx->numinputs; i++)
@@ -2013,9 +2277,9 @@ cJSON *mgw_create_vins(cJSON **keysobjp,char *coinstr,char *serverport,char *use
         cJSON_AddItemToObject(json,"txid",cJSON_CreateString(vin->tx.txidstr));
         cJSON_AddItemToObject(json,"vout",cJSON_CreateNumber(vin->tx.vout));
         cJSON_AddItemToObject(json,"scriptPubKey",cJSON_CreateString(vin->sigs));
-        if ( (ret= _map_msigaddr(redeemScript,coinstr,serverport,userpass,normaladdr,cointx->inputs[i].coinaddr,gatewayid,numgateways)) >= 0 )
+        if ( (ret= _map_msigaddr(&redeemScript,coinstr,serverport,userpass,normaladdr,cointx->inputs[i].coinaddr,gatewayid,numgateways)) >= 0 )
         {
-            cJSON_AddItemToObject(json,"redeemScript",cJSON_CreateString(redeemScript));
+            cJSON_AddItemToObject(json,"redeemScript",cJSON_CreateString(redeemScript.buf));
             if ( (privkey= dumpprivkey(coinstr,serverport,userpass,normaladdr)) == 0 )
                 printf("error getting privkey to (%s)\n",normaladdr);
             else
@@ -2025,7 +2289,7 @@ cJSON *mgw_create_vins(cJSON **keysobjp,char *coinstr,char *serverport,char *use
                 free(privkey);
             }
         }
-        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript,normaladdr,vin->coinaddr);
+        else printf("ret.%d redeemScript.(%s) (%s) for (%s)\n",ret,redeemScript.buf,normaladdr,vin->coinaddr);
         //printf("vin.(%s)\n",cJSON_Print(json));
         cJSON_AddItemToArray(array,json);
     }
@@ -2061,7 +2325,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
         cJSON_AddItemToArray(array,cJSON_Duplicate(voutsobj,1));
         paramstr = cJSON_Print(array), free_json(array), _stripwhite(paramstr,' ');
         if ( Debuglevel > 1 )
-            fprintf(stderr,"len.%ld calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
+            fprintf(stderr,"len.%d calc_rawtransaction.%llu txbytes.(%s) params.(%s)\n",(int32_t)strlen(txbytes),(long long)redeemtxid,txbytes,paramstr);
         txbytes = bitcoind_passthru(coinstr,serverport,userpass,"createrawtransaction",paramstr);
         free(paramstr);
         if ( txbytes == 0 )
@@ -2080,7 +2344,7 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
             printf("opreturn txbytes.(%s)\n",txbytes);
         }
         array = cJSON_CreateArray();
-        if ( (flags= mgw_other_redeems(signedtxs,redeemtxid)) != 0 )
+        if ( (flags= mgw_other_redeems(mgw,signedtxs,redeemtxid)) != 0 )
         {
             if ( (txbytes2= signedtxs[(SUPERNET.gatewayid + 1) % NUM_GATEWAYS]) != 0 )
                 free(txbytes), txbytes = txbytes2, signedtxs[(SUPERNET.gatewayid + 1) % NUM_GATEWAYS] = 0;
@@ -2134,12 +2398,26 @@ struct cointx_info *mgw_createrawtransaction(struct mgw777 *mgw,char *coinstr,ch
 
 struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struct unspent_info *unspents,int32_t numunspents,uint64_t value)
 {
-    int32_t i; uint64_t above,below,gap,atx_value; struct unspent_info *vin,*abovevin,*belowvin;
+    int32_t i; uint32_t txidind,unspentind; uint64_t above,below,gap,atx_value; struct unspent_info *vin,*abovevin,*belowvin; struct cointx_input I; struct coin777_addrinfo A;
+    struct unspent_info U;
     abovevin = belowvin = 0;
     *valuep = 0;
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
+        coin777_RWmmap(0,&A,coin,&coin->ramchain.addrinfos,vin->addrind);
+        memset(&I,0,sizeof(I));
+        strcpy(I.coinaddr,A.coinaddr);
+        unspentind = vin->rawind_or_blocknum;
+        coin777_RWmmap(0,&U,coin,&coin->ramchain.unspents,unspentind);
+        coin777_scriptstr(coin,I.sigs,sizeof(I.sigs),U.rawind_or_blocknum,U.addrind);
+        I.tx.vout = coin777_unspentmap(&txidind,I.tx.txidstr,coin,unspentind);
+        
+        if ( strcmp("e6db47446ad5368c3ab5bf5999f1a358cd9f7087b86e69c70cb49977787798f7",I.tx.txidstr) == 0 )
+        {
+            printf("skip ALREADYSPENT\n");
+            continue;
+        }
         *valuep = atx_value = vin->value;
         if ( atx_value == value )
             return(vin);
@@ -2168,7 +2446,7 @@ struct unspent_info *coin777_bestfit(uint64_t *valuep,struct coin777 *coin,struc
 int64_t coin777_inputs(uint64_t *changep,uint32_t *nump,struct coin777 *coin,struct cointx_input *inputs,int32_t max,uint64_t amount,uint64_t txfee)
 {
     int64_t remainder,sum = 0; int32_t i,numinputs = 0; uint32_t txidind,unspentind; uint64_t value;
-    struct unspent_info U,*vin; struct cointx_input I; struct coin777_addrinfo A; struct mgw777 *mgw = &coin->mgw;
+    struct unspent_info *vin,U; struct cointx_input I; struct coin777_addrinfo A; struct mgw777 *mgw = &coin->mgw;
     *nump = 0;
     remainder = amount + txfee;
     for (i=0; i<mgw->numunspents&&i<max-1; i++)
@@ -2216,7 +2494,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
     strcpy(cointx->coinstr,coin->name);
     cointx->redeemtxid = redeemtxid;
     cointx->gatewayid = SUPERNET.gatewayid;
-    MGWfee = (value >> 11) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
+    MGWfee = 0*(value >> 11) + (2 * (mgw->txfee + mgw->NXTfee_equiv)) - opreturn_amount - mgw->txfee;
     if ( value <= MGWfee + opreturn_amount + mgw->txfee )
     {
         printf("%s redeem.%llu withdraw %.8f < MGWfee %.8f + minoutput %.8f + txfee %.8f\n",coin->name,(long long)redeemtxid,dstr(value),dstr(MGWfee),dstr(opreturn_amount),dstr(mgw->txfee));
@@ -2239,7 +2517,6 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
         cointx->outputs[cointx->numoutputs++].value = opreturn_amount;
     }
     cointx->amount = amount = value - mgw->txfee;//(MGWfee + value + opreturn_amount + mgw->txfee);
-    printf("total %.8f: value %.8f txfee %.8f MGWfee %.8f\n",dstr(cointx->amount),dstr(value),dstr(mgw->txfee),dstr(MGWfee));
     if ( mgw->balance >= 0 )
     {
         cointx->inputsum = coin777_inputs(&cointx->change,&cointx->numinputs,coin,cointx->inputs,sizeof(cointx->inputs)/sizeof(*cointx->inputs),amount,mgw->txfee);
@@ -2278,8 +2555,9 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
 
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
-    struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
-    cJSON *json,*retjson,*item,*waiting,*pending; char buf[1024],numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
+    static int dispflag;
+    struct multisig_addr **msigs; int32_t i,M=0,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
+    cJSON *array,*json,*retjson,*item,*waiting,*pending; char numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
     ramchain_prepare(coin,&coin->ramchain);
     if ( mgw->unspents != 0 )
         free(mgw->unspents);
@@ -2293,32 +2571,44 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         return(0);
     }
     retjson = cJSON_CreateObject(), waiting = cJSON_CreateArray(), pending = cJSON_CreateArray();
-    if ( mgw->marker_addrind == 0 && mgw->marker != 0 )
+    if ( mgw->marker_addrind == 0 && mgw->marker[0] != 0 )
         mgw->marker_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker);
-    if ( mgw->marker2_addrind == 0 && mgw->marker2 != 0 )
+    if ( mgw->marker2_addrind == 0 && mgw->marker2[0] != 0 )
         mgw->marker2_addrind = coin777_addrind(&firstblocknum,coin,mgw->marker2);
-    if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,DB_msigs,"value",0)) != 0 )
+    if ( (msigs= (struct multisig_addr **)db777_copy_all(&n,coin->mgw.DB_msigs,"value",0)) != 0 )
     {
         for (smallest=i=m=0; i<n; i++)
         {
             if ( msigs[i]->sig != stringbits("multisig") )
             {
-                printf("warning: msig.(%s) has bad sig %x\n",msigs[i]->multisigaddr,(int32_t)msigs[i]->sig);
+                //printf("invalid msig sig for %s %x\n",msigs[i]->multisigaddr,(int32_t)msigs[i]->sig);
                 free(msigs[i]);
                 continue;
             }
-            if ( strcmp(msigs[i]->coinstr,coin->name) == 0 && (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
+            if ( strcmp(msigs[i]->coinstr,coin->name) == 0 )
             {
                 m++;
-                unspent += val;
-                if ( smallest == 0 || val < smallest )
+                if ( (val= coin777_unspents(mgw_unspentsfunc,coin,msigs[i]->multisigaddr,msigs[i])) != 0 )
                 {
-                    smallest = val;
-                    strcpy(smallestaddrB,smallestaddr);
-                    strcpy(smallestaddr,msigs[i]->multisigaddr);
+                    M++;
+                    if ( dispflag == 0 )
+                        printf("(%s -> %s %.8f) ",msigs[i]->multisigaddr,msigs[i]->NXTaddr,dstr(val));
+                    unspent += val;
+                    if ( smallest == 0 || val < smallest )
+                    {
+                        smallest = val;
+                        strcpy(smallestaddrB,smallestaddr);
+                        strcpy(smallestaddr,msigs[i]->multisigaddr);
+                    }
+                    else if ( smallestaddrB[0] == 0 && strcmp(smallestaddr,msigs[i]->multisigaddr) != 0 )
+                        strcpy(smallestaddrB,msigs[i]->multisigaddr);
                 }
-                else if ( smallestaddrB[0] == 0 && strcmp(smallestaddr,msigs[i]->multisigaddr) != 0 )
-                    strcpy(smallestaddrB,msigs[i]->multisigaddr);
+                if ( dispflag == 0 )
+                {
+                    array = cJSON_CreateArray();
+                    mgw_auditjson(array,msigs[i]);
+                    mgw_sendaudit(coin->name,array);
+                }
             }
             free(msigs[i]);
         }
@@ -2326,17 +2616,18 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         if ( Debuglevel > 2 )
             printf("smallest (%s %.8f)\n",smallestaddr,dstr(smallest));
     }
+    if ( M != 0 )
+        dispflag = 1;
     mgw->circulation = circulation = calc_circulation(0,mgw,0);
     mgw->unspent = unspent;
     balance = (unspent - circulation - mgw->withdrawsum);
-    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),m);
+    printf("%s circulation %.8f vs unspents %.8f numwithdraws.%d withdrawsum %.8f [balance %.8f] nummsigs.%d %d\n",coin->name,dstr(circulation),dstr(unspent),mgw->numwithdraws,dstr(mgw->withdrawsum),dstr(balance),M,m);
     cJSON_AddItemToObject(retjson,"coin",cJSON_CreateString(coin->name));
     cJSON_AddItemToObject(retjson,"circulation",cJSON_CreateNumber(dstr(circulation)));
     cJSON_AddItemToObject(retjson,"unspent",cJSON_CreateNumber(dstr(unspent)));
     cJSON_AddItemToObject(retjson,"numwithdraws",cJSON_CreateNumber(mgw->numwithdraws));
     cJSON_AddItemToObject(retjson,"withdrawsum",cJSON_CreateNumber(dstr(mgw->withdrawsum)));
     cJSON_AddItemToObject(retjson,"balance",cJSON_CreateNumber(dstr(balance)));
-    sprintf(buf,"G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d<BR>",SUPERNET.gatewayid,dstr(balance),coin->name,dstr(mgw->S.sentNXT),balance<=0?0:dstr(mgw->S.sentNXT)/dstr(balance),dstr(unspent),dstr(circulation),dstr(coin->ramchain.addrsum),dstr(mgw->withdrawsum),dstr(0),_get_NXTheight(0),coin->name,coin->ramchain.RTblocknum);
     if ( balance >= -SATOSHIDEN && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
@@ -2385,7 +2676,6 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         coin->mgw.lastupdate = (milliseconds() + 60000);
     cJSON_AddItemToObject(retjson,"waiting",waiting);
     cJSON_AddItemToObject(retjson,"pending",pending);
-    cJSON_AddItemToObject(retjson,"summary",cJSON_CreateString(buf));
     if ( mgw->retjson != 0 )
         free_json(mgw->retjson);
     mgw->retjson = retjson;
@@ -2452,7 +2742,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             for (i=0; i<n; i++)
             {
-                copy_cJSON(NXTaddr,cJSON_GetArrayItem(array,i));
+                copy_cJSON2(NXTaddr,sizeof(NXTaddr),cJSON_GetArrayItem(array,i));
                 nxt64bits = calc_nxt64bits(NXTaddr);//conv_rsacctstr(NXTaddr,0);
                 for (j=0; j<MGW.numissuers; j++)
                     if ( nxt64bits == MGW.issuers[j] )
@@ -2466,8 +2756,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             for (i=j=0; i<n/2&&i<MAX_MGWSERVERS; i++)
             {
-                copy_cJSON(ipaddr,cJSON_GetArrayItem(array,i<<1));
-                copy_cJSON(nxtaddr,cJSON_GetArrayItem(array,(i<<1)+1));
+                copy_cJSON2(ipaddr,sizeof(ipaddr),cJSON_GetArrayItem(array,i<<1));
+                copy_cJSON2(nxtaddr,sizeof(nxtaddr),cJSON_GetArrayItem(array,(i<<1)+1));
                 if ( nxtaddr[0] != 0 )
                     nxt64bits = conv_acctstr(nxtaddr);
                 else nxt64bits = 0;
@@ -2494,7 +2784,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     else
     {
         if ( plugin_result(retbuf,json,tag) > 0 )
-            return((int32_t)strlen(retbuf) + (retbuf[0]!=0));
+            return((int32_t)strlen(retbuf));
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
         coinstr = cJSON_str(cJSON_GetObjectItem(json,"coin"));
@@ -2514,7 +2804,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             struct coin777 *coin;
             if ( sender[0] != 0 )
-                sprintf(retbuf,"{\"error\":\"fixmsigaddr can only be done locally\"}");
+                sprintf(retbuf,"{\"error\":\"audit can only be done locally\"}");
             else
             {
                 if ( (coin= coin777_find(coinstr,0)) != 0 )
@@ -2554,21 +2844,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"myacctpubkeys") == 0 || strcmp(methodstr,"myacctpubkey") == 0 || strcmp(methodstr,"askacctpubkey") == 0 )
             mgw_processbus(retbuf,jsonstr,json);
-        else if ( strcmp(methodstr,"fixmsigaddr") == 0 )
-        {
-            struct coin777 *coin;
-            if ( sender[0] != 0 )
-                sprintf(retbuf,"{\"error\":\"fixmsigaddr can only be done locally\"}");
-            else
-            {
-                if ( (coin= coin777_find(coinstr,0)) != 0 )
-                {
-                    mgw_fixmsigaddr(retbuf,coin,json);
-                    sprintf(retbuf,"{\"result\":\"fixmsigaddr issued\"}");
-                }
-                else sprintf(retbuf,"{\"error\":\"coin not active\"}");
-            }
-        }
         else if ( strcmp(methodstr,"clearstate") == 0 )
         {
             struct coin777 *coin;
@@ -2581,6 +2856,18 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     mgw_setstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0),0);
                     sprintf(retbuf,"{\"result\":\"clearstate issued\"}");
                 }
+                else sprintf(retbuf,"{\"error\":\"coin not active\"}");
+            }
+        }
+        else if ( strcmp(methodstr,"fixmsigaddr") == 0 )
+        {
+            struct coin777 *coin;
+            if ( sender[0] != 0 )
+                sprintf(retbuf,"{\"error\":\"fixmsigaddr can only be done locally\"}");
+            else
+            {
+                if ( (coin= coin777_find(coinstr,0)) != 0 )
+                    mgw_fixmsigaddr(retbuf,coin,json);
                 else sprintf(retbuf,"{\"error\":\"coin not active\"}");
             }
         }
@@ -2614,10 +2901,14 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 else sprintf(retbuf,"{\"error\":\"coin not active\"}");
             }
         }
+        if ( retstr != 0 )
+        {
+            strncpy(retbuf,retstr,maxlen-1);
+            free(retstr);
+        }
     }
-    return(plugin_copyretstr(retbuf,maxlen,retstr));
+    return((int32_t)strlen(retbuf) + retbuf[0] != 0);
 }
-
 int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
 {
     if ( retcode == 0 )  // this means parent process died, otherwise _process_json returned negative value
@@ -2626,6 +2917,3 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     return(retcode);
 }
 #include "../agents/plugin777.c"
-#endif
-#include <stdint.h>
-extern int32_t Debuglevel;

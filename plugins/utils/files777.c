@@ -397,12 +397,16 @@ void ensure_dir(char *dirname)
 {
     FILE *fp;
     char fname[512],cmd[512];
+    PostMessage("ensure_dir.(%s)\n",dirname);
     sprintf(fname,"%s/tmp",dirname);
     if ( (fp= fopen(os_compatible_path(fname),"rb")) == 0 )
     {
         sprintf(cmd,"mkdir %s",os_compatible_path(dirname));
         if ( system(os_compatible_path(cmd)) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+        {
+            PostMessage("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+            ensure_directory(dirname);
+        }
         fp = fopen(os_compatible_path(fname),"wb");
         if ( fp != 0 )
             fclose(fp);

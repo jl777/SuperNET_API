@@ -25,6 +25,7 @@
 #define BALANCES huobi ## _balances
 #define PARSEBALANCE huobi ## _parsebalance
 #define WITHDRAW huobi ## _withdraw
+#define CHECKBALANCE huobi ## _checkbalance
 
 double UPDATE(struct prices777 *prices,int32_t maxdepth)
 {
@@ -39,13 +40,14 @@ int32_t SUPPORTS(char *base,char *rel)
     return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
-cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload)
+cJSON *SIGNPOST(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *payload)
 {
-    static CURL *cHandle;
     char *data; cJSON *json;
     json = 0;
     //if ( (data= curl_post(&cHandle,"https://api.huobi.com/apiv3",0,payload,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
-    if ( (data= curl_post(&cHandle,"https://api.huobi.com/apiv3",0,payload,"",0,0,0)) != 0 )
+    if ( dotrade == 0 )
+        data = exchange_would_submit(payload,"","","","");
+    else if ( (data= curl_post(cHandlep,"https://api.huobi.com/apiv3",0,payload,"",0,0,0)) != 0 )
         json = cJSON_Parse(data);
     if ( retstrp != 0 )
         *retstrp = data;
@@ -54,7 +56,7 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload)
     return(json);
 }
 
-cJSON *huobi_issue_auth(struct exchange_info *exchange,char *method,char *buf)
+cJSON *huobi_issue_auth(void **cHandlep,struct exchange_info *exchange,char *method,char *buf)
 {
     char payload[1024],digest[33],tmp[1024]; uint64_t nonce;
     nonce = exchange_nonce(exchange);
@@ -64,38 +66,7 @@ cJSON *huobi_issue_auth(struct exchange_info *exchange,char *method,char *buf)
     calc_md5(digest,payload,(int32_t)strlen(payload));
     sprintf(payload,"%s&sign=%s",tmp,digest);
     //printf("-> (%s)\n",payload);
-    return(SIGNPOST(0,exchange,payload));
-}
-
-uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
-{
-    char payload[1024],pairstr[64],pricestr[64],*extra,*method; cJSON *json; int32_t type; uint64_t txid = 0;
-    if ( (extra= *retstrp) != 0 )
-        *retstrp = 0;
-    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
-    {
-        printf("cant find baserel (%s/%s)\n",base,rel);
-        return(0);
-    }
-    if ( extra != 0 && strcmp(extra,"market") == 0 )
-        method = (dir > 0) ? "buy_market" : "sell_market";
-    else method = (dir > 0) ? "buy" : "sell", sprintf(pricestr,"&price=%.2f",price);
-    if ( strcmp(pairstr,"btccny") == 0 )
-        type = 1;
-    else if ( strcmp(pairstr,"ltccny") == 0 )
-        type = 2;
-    else
-    {
-        printf("cant find baserel (%s/%s)\n",base,rel);
-        return(0);
-    }
-    sprintf(payload,"&amount=%.4f&coin_type=%d%s",volume,type,pricestr);
-    if ( (json= huobi_issue_auth(exchange,method,payload)) != 0 )
-    {
-        txid = j64bits(json,"order_id");
-        free_json(json);
-    }
-    return(txid);
+    return(SIGNPOST(cHandlep,1,0,exchange,payload));
 }
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
@@ -118,36 +89,69 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-cJSON *BALANCES(struct exchange_info *exchange)
+cJSON *BALANCES(void **cHandlep,struct exchange_info *exchange)
 {
-    return(huobi_issue_auth(exchange,"get_account_info",""));
+    return(huobi_issue_auth(cHandlep,exchange,"get_account_info",""));
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+#include "checkbalance.c"
+
+uint64_t TRADE(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+{
+    char payload[1024],pairstr[64],pricestr[64],*extra,*method; cJSON *json; int32_t type; uint64_t txid = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
+    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s%s",dir,&price,&volume,base,rel)) == 0 )
+    {
+        printf("cant find baserel (%s/%s)\n",base,rel);
+        return(0);
+    }
+    if ( extra != 0 && strcmp(extra,"market") == 0 )
+        method = (dir > 0) ? "buy_market" : "sell_market";
+    else method = (dir > 0) ? "buy" : "sell", sprintf(pricestr,"&price=%.2f",price);
+    if ( strcmp(pairstr,"btccny") == 0 )
+        type = 1;
+    else if ( strcmp(pairstr,"ltccny") == 0 )
+        type = 2;
+    else
+    {
+        printf("cant find baserel (%s/%s)\n",base,rel);
+        return(0);
+    }
+    sprintf(payload,"&amount=%.4f&coin_type=%d%s",volume,type,pricestr);
+    if ( CHECKBALANCE(retstrp,dotrade,exchange,dir,base,rel,price,volume) == 0 && (json= huobi_issue_auth(cHandlep,exchange,method,payload)) != 0 )
+    {
+        txid = j64bits(json,"order_id");
+        free_json(json);
+    }
+    return(txid);
+}
+
+char *ORDERSTATUS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024];
     sprintf(payload,"&id=%llu&coin_type=1",(long long)quoteid);
-    return(jprint(huobi_issue_auth(exchange,"order_info",payload),1));
+    return(jprint(huobi_issue_auth(cHandlep,exchange,"order_info",payload),1));
 }
 
-char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+char *CANCELORDER(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024];
     sprintf(payload,"&id=%llu&coin_type=1",(long long)quoteid);
-    return(jprint(huobi_issue_auth(exchange,"cancel_order",payload),1));
+    return(jprint(huobi_issue_auth(cHandlep,exchange,"cancel_order",payload),1));
 }
 
-char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
+char *OPENORDERS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
-    return(jprint(huobi_issue_auth(exchange,"get_orders","&coin_type=1"),1));
+    return(jprint(huobi_issue_auth(cHandlep,exchange,"get_orders","&coin_type=1"),1));
 }
 
-char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
+char *TRADEHISTORY(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     return(clonestr("{\"error\":\"huobi doesnt seem to have trade history api!\"}"));
 }
 
-char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
+char *WITHDRAW(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],*base,*destaddr,*method; double amount;
     if ( (base= jstr(argjson,"base")) == 0 || strcmp(base,"BTC") != 0 )
@@ -158,7 +162,7 @@ char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
         return(clonestr("{\"error\":\"amount not specified\"}"));
     method = "withdraw_coin";
     sprintf(payload,"&coin_type=1&withdraw_address=%s&withdraw_amount=%.4f",destaddr,amount);
-    return(jprint(huobi_issue_auth(exchange,method,payload),1));
+    return(jprint(huobi_issue_auth(cHandlep,exchange,method,payload),1));
 }
 
 struct exchange_funcs huobi_funcs = EXCHANGE_FUNCS(huobi,EXCHANGE_NAME);
@@ -175,4 +179,5 @@ struct exchange_funcs huobi_funcs = EXCHANGE_FUNCS(huobi,EXCHANGE_NAME);
 #undef PARSEBALANCE
 #undef WITHDRAW
 #undef EXCHANGE_NAME
+#undef CHECKBALANCE
 

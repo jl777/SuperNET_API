@@ -119,7 +119,7 @@ To delete a snapshot, sp_drop(3) or sp_destroy(3) should be called on snapshot o
 
 // sp_set(ctl, "db.database.lockdetect", a) == 1;
 
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
 void *sophia_ptr(char *str)
 {
     void *ptr = 0;
@@ -130,11 +130,11 @@ void *sophia_ptr(char *str)
 
 void *sophia_fieldptr(cJSON *json,char *fieldstr)
 {
-    void *ptr = 0;
-    char str[MAX_JSON_FIELD];
-    copy_cJSON(str,cJSON_GetObjectItem(json,fieldstr));
-    if ( strlen(str) == (2 * sizeof(ptr)) )
-        decode_hex((uint8_t *)&ptr,sizeof(ptr),str);
+    void *ptr = 0; struct destbuf str;
+    //char str[MAX_JSON_FIELD];
+    copy_cJSON(&str,cJSON_GetObjectItem(json,fieldstr));
+    if ( strlen(str.buf) == (2 * sizeof(ptr)) )
+        decode_hex((uint8_t *)&ptr,sizeof(ptr),str.buf);
     return(ptr);
 }
 
@@ -154,10 +154,10 @@ void sophia_retintstr(char *retbuf,char *resultname,int32_t retval)
 
 void *sophia_funcptrcall(char *retbuf,int32_t max,cJSON *json,int32_t (*funcp)(void *,...),char *argfield)
 {
-    void *arg;
-    char argptrstr[MAX_JSON_FIELD];
-    copy_cJSON(argptrstr,cJSON_GetObjectItem(json,argfield));
-    if ( (arg= sophia_ptr(argptrstr)) != 0 )
+    void *arg; struct destbuf argptrstr;
+   // char argptrstr[MAX_JSON_FIELD];
+    copy_cJSON(&argptrstr,cJSON_GetObjectItem(json,argfield));
+    if ( (arg= sophia_ptr(argptrstr.buf)) != 0 )
         (*funcp)(retbuf,(arg));
     return(arg);
 }
@@ -420,63 +420,63 @@ struct db777 *db777_create(char *specialpath,char *subdir,char *name,char *compr
     strcat(path,"/"), strcat(path,name), os_compatible_path(path), ensure_directory(path);
     strcpy(DB->backupdir,path), strcat(DB->backupdir,"/backups"), os_compatible_path(DB->backupdir);
     strcpy(dbname,namestr);
-    printf("SOPHIA.(%s) MGW.(%s) create path.(%s).(%s) -> [%s %s].%s restore.(%s)\n",SOPHIA.PATH,MGW.PATH,name,compression,path,dbname,compression,restorepath);
+    PostMessage("SOPHIA.(%s) MGW.(%s) create path.(%s).(%s) -> [%s %s].%s restore.(%s)\n",SOPHIA.PATH,MGW.PATH,name,compression,path,dbname,compression,restorepath);
     if ( (err= sp_set(DB->ctl,"sophia.path",restoreflag == 0 ? path : restorepath)) != 0 )
     {
-        printf("err.%d setting path\n",err);
+        PostMessage("err.%d setting path\n",err);
         return(db777_abort(DB));
     }
     if ( (err= sp_set(DB->ctl,"scheduler.threads","1")) != 0 )
     {
-        printf("err.%d setting scheduler.threads\n",err);
+        PostMessage("err.%d setting scheduler.threads\n",err);
         return(db777_abort(DB));
     }
     sprintf(DB->dbname,"db.%s",dbname);
     if ( (err= sp_set(DB->ctl,"db",dbname)) != 0 )
     {
-        printf("err.%d setting name\n",err);
+        PostMessage("err.%d setting name\n",err);
         return(db777_abort(DB));
     }
     if ( (err= sp_set(DB->ctl,"backup.path",DB->backupdir)) != 0 )
-        printf("error.%d setting backup.path (%s)\n",err,DB->backupdir);
+        PostMessage("error.%d setting backup.path (%s)\n",err,DB->backupdir);
     if ( compression != 0 )
     {
         sprintf(dbname,"db.%s.compression",name);
         if ( strcmp(compression,"lz4") == 0 )
         {
             if ( sp_set(DB->ctl,"db.lz4.compression","lz4") != 0 )
-                printf("error setting lz4.(%s)\n",dbname);
+                PostMessage("error setting lz4.(%s)\n",dbname);
         }
         else if ( strcmp(compression,"zstd") == 0 )
         {
             if ( sp_set(DB->ctl,"db.zstd.compression","zstd") != 0 )
-                printf("error setting zstd.(%s)\n",dbname);
+                PostMessage("error setting zstd.(%s)\n",dbname);
         }
-        else printf("compression.(%s) not supported\n",compression), compression = "";
+        else PostMessage("compression.(%s) not supported\n",compression), compression = "";
     } else compression = "";
     if ( (err= sp_open(DB->env)) != 0 )
     {
-        printf("err.%d setting sp_open\n",err);
+        PostMessage("err.%d setting sp_open\n",err);
         return(db777_abort(DB));
     }
     if ( (DB->db= sp_get(DB->ctl,DB->dbname)) == 0 )
     {
         if ( (err= sp_open(DB->db)) != 0 )
         {
-            printf("err.%d sp_open db.(%s)\n",err,DB->dbname);
+            PostMessage("err.%d sp_open db.(%s)\n",err,DB->dbname);
             return(db777_abort(DB));
         }
-        printf("created.(%s)\n",DB->dbname);
+        PostMessage("created.(%s)\n",DB->dbname);
     }
     else
     {
         DB->asyncdb = sp_async(DB->db);
-        printf("opened.(%s) env.%p ctl.%p db.%p asyncdb.%p\n",DB->dbname,DB->env,DB->ctl,DB->db,DB->asyncdb);
+        PostMessage("opened.(%s) env.%p ctl.%p db.%p asyncdb.%p\n",DB->dbname,DB->env,DB->ctl,DB->db,DB->asyncdb);
     }
     if ( restoreflag != 0 && (json= db777_json(DB->env,DB)) != 0 )
     {
         str = cJSON_Print(json);
-        printf("%s\n",str);
+        PostMessage("%s\n",str);
         free(str);
         free_json(json);
     }
@@ -500,7 +500,7 @@ void db777_path(char *path,char *coinstr,char *subdir,int32_t useramdisk)
         strcat(path,"/"), strcat(path,coinstr), ensure_directory(path);
     if ( subdir[0] != 0 )
         strcat(path,"/"), strcat(path,subdir), ensure_directory(path);
-   // printf("db777_path.(%s)\n",path);
+   // PostMessage("db777_path.(%s)\n",path);
 }
 
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize)
@@ -512,15 +512,15 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
         DBs->ctl = sp_ctl(DBs->env);
         db777_path(path,DBs->coinstr,DBs->subdir,flags & DB777_RAMDISK);
         if ( (err= sp_set(DBs->ctl,"sophia.path",path)) != 0 )
-            printf("err.%d setting path (%s)\n",err,path);
+            PostMessage("err.%d setting path (%s)\n",err,path);
         if ( SOPHIA.RAMDISK[0] != 0 )
              db777_path(path,DBs->coinstr,DBs->subdir,0);
         strcpy(bdir,path), strcat(bdir,"/backups"), ensure_directory(bdir);
         if ( (err= sp_set(DBs->ctl,"backup.path",bdir)) != 0 )
-            printf("error.%d settingB backup.path (%s)\n",err,bdir);
-        else printf("set backup path to.(%s)\n",bdir);
+            PostMessage("error.%d settingB backup.path (%s)\n",err,bdir);
+        else PostMessage("set backup path to.(%s)\n",bdir);
         if ( (err= sp_set(DBs->ctl,"scheduler.threads","1")) != 0 )
-            printf("err.%d setting scheduler.threads\n",err);
+            PostMessage("err.%d setting scheduler.threads\n",err);
     }
     if ( DBs->env != 0 && DBs->numdbs < (int32_t)(sizeof(DBs->dbs)/sizeof(*DBs->dbs)) )
     {
@@ -536,15 +536,15 @@ struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *co
             safecopy(DB->compression,compression,sizeof(DB->compression));
         sprintf(DB->dbname,"db.%s",name);
         if ( (err= sp_set(DBs->ctl,"db",name)) != 0 )
-            printf("err.%d setting name\n",err);
+            PostMessage("err.%d setting name\n",err);
         else
         {
-            printf("path.(%s) name.(%s)\n",path,name);
+            PostMessage("path.(%s) name.(%s)\n",path,name);
             if ( compression != 0 )
             {
                 sprintf(compname,"db.%s.compression",name);
                 if ( sp_set(DBs->ctl,compname,compression) != 0 )
-                    printf("error setting (%s).%s\n",compname,compression);
+                    PostMessage("error setting (%s).%s\n",compname,compression);
             }
             DBs->numdbs++;
             return(DB);
@@ -560,10 +560,10 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
     {
         if ( (err= sp_open(DB->db)) != 0 )
         {
-            //printf("err.%d sp_open will error if already exists\n",err);
+            PostMessage("err.%d sp_open will error if already exists\n",err);
         }
         DB->asyncdb = 0;//sp_async(DB->db);
-        //printf("DB->db.%p for %s\n",DB->db,DB->dbname);
+        PostMessage("DB->db.%p for %s\n",DB->db,DB->dbname);
         return(0);
     }
     return(err);
@@ -572,9 +572,9 @@ int32_t db777_dbopen(void *ctl,struct db777 *DB)
 int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
 {
     uint32_t matrixkey; int32_t allocsize,err,i,j; struct db777 *DB; cJSON *json; char *str; void *ptr;
-    fprintf(stderr,"Open environment\n");
+    PostMessage("Open environment\n");
     if ( (err= sp_open(DBs->env)) != 0 )
-        printf("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
+        PostMessage("err.%d setting sp_open for DBs->env %p\n",err,DBs->env);
     DBs->start_RTblocknum = RTblocknum;
     DBs->matrixentries = ((RTblocknum * 10) / DB777_MATRIXROW) + 16;
     for (i=0; i<DBs->numdbs; i++)
@@ -594,29 +594,29 @@ int32_t env777_start(int32_t dispflag,struct env777 *DBs,uint32_t RTblocknum)
                     matrixkey = (j * DB777_MATRIXROW);
                     DB->matrix[j] = calloc(DB->valuesize,DB777_MATRIXROW);
                     allocsize = DB->valuesize * DB777_MATRIXROW;
-                   // fprintf(stderr,"%s allocsize.%d read\n",DB->name,allocsize);
+                   PostMessage("%s allocsize.%d read\n",DB->name,allocsize);
                     if ( (ptr= db777_read(DB->matrix[j],&allocsize,0,DB,&matrixkey,sizeof(matrixkey),1)) != 0 && allocsize == DB->valuesize * DB777_MATRIXROW )
-                        fprintf(stderr,"+[%d] ",matrixkey);
+                        PostMessage("+[%d] ",matrixkey);
                     else
                     {
-                        printf("got allocsize.%d vs %d | ptr.%p vs matrix[] %p\n",allocsize,DB->valuesize * DB777_MATRIXROW,ptr,DB->matrix[j]);
+                        PostMessage("got allocsize.%d vs %d | ptr.%p vs matrix[] %p\n",allocsize,DB->valuesize * DB777_MATRIXROW,ptr,DB->matrix[j]);
                         break;
                     }
                 }
-                fprintf(stderr,"loaded matrix.%d from DB\n",j);
+                PostMessage("loaded matrix.%d from DB\n",j);
             }
             if ( dispflag != 0 && (json= db777_json(DBs->env,DB)) != 0 )
             {
                 str = cJSON_Print(json);
-                printf("%s\n",str);
+                PostMessage("%s\n",str);
                 free(str);
                 free_json(json);
             }
-            printf("opened %s.(%s/%s) env.%p ctl.%p db.%p asyncdb.%p matrixalloc.%d | RAM.%d KEY32.%d valuesize.%d\n",DBs->coinstr,DBs->subdir,DB->name,DBs->env,DBs->ctl,DB->db,DB->asyncdb,DB->matrixentries,DB->flags & DB777_RAM,DB->flags & DB777_KEY32,DB->valuesize);
+            PostMessage("opened %s.(%s/%s) env.%p ctl.%p db.%p asyncdb.%p matrixalloc.%d | RAM.%d KEY32.%d valuesize.%d\n",DBs->coinstr,DBs->subdir,DB->name,DBs->env,DBs->ctl,DB->db,DB->asyncdb,DB->matrixentries,DB->flags & DB777_RAM,DB->flags & DB777_KEY32,DB->valuesize);
         }
         else
         {
-            printf("error opening (%s)\n",DB->dbname);
+            PostMessage("error opening (%s)\n",DB->dbname);
             if ( DB->db != 0 )
                 sp_destroy(DB->db), DB->db = DB->asyncdb = 0;
         }
@@ -639,11 +639,11 @@ int32_t env777_close(struct env777 *DBs,int32_t reopenflag)
                 errs += (db777_dbopen(DBs->ctl,&DBs->dbs[i]) != 0);
         }
         if ( errs != 0 )
-            printf("env777_close reopenflag.%d errs.%d env (%s/%s)\n",reopenflag,errs,DBs->coinstr,DBs->subdir);
+            PostMessage("env777_close reopenflag.%d errs.%d env (%s/%s)\n",reopenflag,errs,DBs->coinstr,DBs->subdir);
     }
     return(errs);
 }
-#endif
+//#endif
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
@@ -736,9 +736,10 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     if ( retcode == 0 )  // this means parent process died, otherwise _process_json returned negative value
     {
     }
-#ifdef INSIDE_MGW
-    env777_close(&SUPERNET.DBs,0);
-#endif
+//#ifdef INSIDE_MGW
+//    if ( SUPERNET.DBs != 0 )
+//        env777_close(SUPERNET.DBs,0);
+//#endif
     
     return(retcode);
 }

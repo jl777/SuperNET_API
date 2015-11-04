@@ -34,12 +34,18 @@ extern int mprotect (void *__addr, size_t __len, int __prot) __THROW;
 extern int msync (void *__addr, size_t __len, int __flags);
 #endif
 
+void PostMessage(const char* format, ...);
+
 int32_t os_supports_mappedfiles() { return(0); }
 char *os_compatible_path(char *str)
 {
     static char fname[1024];
     if ( strncmp(str,"/persistent/",strlen("/persistent/")) == 0 )
         return(str);
+    if ( str[0] == '/' )
+        str++;
+    else if ( str[0] == '.' && str[1] == '/' )
+        str += 2;
     sprintf(fname,"/persistent/%s",str);
     return(fname);
 }
@@ -50,10 +56,18 @@ char *OS_rmstr() { return("rm"); }
 
 void ensure_directory(char *dirname)
 {
-    FILE *fp;
+    FILE *fp; int32_t retval;
+    PostMessage("ensure_directory.(%s)\n",dirname);
     if ( (fp= fopen(os_compatible_path(dirname),"rb")) == 0 )
-        mkdir(dirname,511);
-    else fclose(fp);
+    {
+        retval = mkdir(dirname,511);
+        PostMessage("ensure_directory.(%s) retval.%d\n",os_compatible_path(dirname),retval);
+    }
+    else
+    {
+        fclose(fp);
+        PostMessage("%s exists\n",os_compatible_path(dirname));
+    }
 }
 
 void *map_file(char *fname,uint64_t *filesizep,int32_t enablewrite)

@@ -5,7 +5,7 @@
 //  Created by James on 4/9/15.
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
 
 #ifdef DEFINES_ONLY
 #ifndef crypto777_db777_h
@@ -15,10 +15,10 @@
 #include <stdint.h>
 #include <math.h>
 #include "sophia.h"
-#include "../includes/cJSON.h"
-#include "../common/system777.c"
-#include "../coins/coins777.c"
-#include "../KV/kv777.c"
+#include "../../includes/cJSON.h"
+#include "../../common/system777.c"
+#include "../../coins/coins777.c"
+#include "../../KV/kv777.c"
 
 #define DB777_RAM 1
 #define DB777_HDD 2
@@ -791,7 +791,7 @@ int32_t db777_dump(struct db777 *DB,int32_t binarykey,int32_t binaryvalue)
     return(retval);
 }*/
 
-#endif
+//#endif
 #endif
 #endif
 #include <stdint.h>

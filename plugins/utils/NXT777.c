@@ -110,7 +110,8 @@ struct multisig_addr
     //UT_hash_handle hh;
     uint64_t sig,sender,modified;
     int32_t size,m,n,created,valid,buyNXT;
-    char NXTaddr[MAX_NXTADDR_LEN],multisigaddr[MAX_COINADDR_LEN],NXTpubkey[96],redeemScript[2048],coinstr[16],email[128];
+    char NXTaddr[MAX_NXTADDR_LEN],multisigaddr[MAX_COINADDR_LEN],NXTpubkey[96],coinstr[16],email[128];
+    struct destbuf redeemScript;
     struct pubkey_info pubkeys[];
 };
 
@@ -161,7 +162,7 @@ uint64_t conv_acctstr(char *acctstr);
 int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename);
 void set_NXTpubkey(char *NXTpubkey,char *NXTacct);
 
-char *NXT_assettxid(uint64_t assettxid);
+char *NXT_assettxid(struct db777 *DB_NXTtxids,uint64_t assettxid);
 uint64_t assetmult(char *assetidstr);
 cJSON *NXT_convjson(cJSON *array);
 char *issue_calculateFullHash(char *unsignedtxbytes,char *sighash);
@@ -193,8 +194,7 @@ int32_t RS_encode(char *rsaddr,uint64_t id);
 
 
 struct nodestats *get_nodestats(uint64_t nxt64bits);
-int32_t get_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
-int32_t add_NXT_coininfo(uint64_t srvbits,uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey);
+
 cJSON *http_search(char *destip,char *type,char *file);
 struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr);
 int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sender);
@@ -872,12 +872,6 @@ int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *ra
     return(0);
 }
 
-int32_t _in_specialNXTaddrs(struct mgw777 *mgw,char *NXTaddr)
-{
-    //printf("%s -> %d\n",NXTaddr,in_jsonarray(mgw->special,NXTaddr));
-    return(in_jsonarray(mgw->special,NXTaddr));
-}
-
 uint64_t calc_decimals_mult(int32_t decimals)
 {
     int32_t i; uint64_t mult = 1;
@@ -1222,181 +1216,6 @@ uint64_t get_assetmult(uint64_t assetid)
 double get_minvolume(uint64_t assetid)
 {
     return(dstr(get_assetmult(assetid)));
-}
-
-uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height)
-{
-    uint64_t quantity,circulation = 0; char cmd[4096],*retstr = 0; cJSON *json,*array,*item; uint32_t i,n; struct destbuf acct;
-    mgw->RTNXT_height = _get_NXTheight(0);
-    if ( minconfirms != 0 )
-        height = mgw->RTNXT_height - minconfirms;
-    sprintf(cmd,"requestType=getAssetAccounts&asset=%llu",(long long)mgw->assetidbits);
-    if ( height > 0 )
-        sprintf(cmd+strlen(cmd),"&height=%u",height);
-    if ( (retstr= issue_NXTPOST(cmd)) != 0 )
-    {
-        //printf("(%s) -> (%s)\n",cmd,retstr);
-        if ( (json= cJSON_Parse(retstr)) != 0 )
-        {
-            if ( (array= cJSON_GetObjectItem(json,"accountAssets")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    item = cJSON_GetArrayItem(array,i);
-                    copy_cJSON(&acct,cJSON_GetObjectItem(item,"account"));
-                    if ( acct.buf[0] != 0 && _in_specialNXTaddrs(mgw,acct.buf) == 0 && (quantity= get_API_nxt64bits(cJSON_GetObjectItem(item,"quantityQNT"))) != 0 )
-                        circulation += quantity;
-                }
-            }
-            free_json(json);
-        }
-        free(retstr);
-    }
-    return(circulation * mgw->ap_mult);
-}
-
-uint64_t _set_NXT_sender(struct destbuf *sender,cJSON *txobj)
-{
-    cJSON *senderobj;
-    senderobj = cJSON_GetObjectItem(txobj,"sender");
-    if ( senderobj == 0 )
-        senderobj = cJSON_GetObjectItem(txobj,"accountId");
-    else if ( senderobj == 0 )
-        senderobj = cJSON_GetObjectItem(txobj,"account");
-    copy_cJSON(sender,senderobj);
-    if ( sender->buf[0] != 0 )
-        return(calc_nxt64bits(sender->buf));
-    else return(0);
-}
-
-int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,struct destbuf *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj)
-{
-    struct destbuf AMstr,coinstr,sender,receiver,assetidstr,txid,comment,buf;
-    cJSON *attachment,*message,*assetjson,*commentobj,*json = 0,*obj; struct NXT_AMhdr *hdr;
-    uint64_t units,estNXT; uint32_t buyNXT,height = 0; int32_t funcid,numconfs,coinv = -1,timestamp=0;
-    int64_t type,subtype,n,satoshis,assetoshis = 0;
-    *flagp = MGW_IGNORE*0, *amountp = *senderbitsp = *receiverbitsp = *heightp = 0;
-    if ( txobj != 0 )
-    {
-        hdr = 0, sender.buf[0] = receiver.buf[0] = 0;
-        *heightp = height = (uint32_t)get_cJSON_int(txobj,"height");
-        if ( confirmed != 0 )
-        {
-            if ( (numconfs= juint(txobj,"confirmations")) == 0 )
-                numconfs = (_get_NXTheight(0) - height);
-        } else numconfs = 0;
-        copy_cJSON(&txid,cJSON_GetObjectItem(txobj,"transaction"));
-        type = get_cJSON_int(txobj,"type");
-        subtype = get_cJSON_int(txobj,"subtype");
-        timestamp = (int32_t)get_cJSON_int(txobj,"blockTimestamp");
-        *senderbitsp = _set_NXT_sender(&sender,txobj);
-        copy_cJSON(&receiver,cJSON_GetObjectItem(txobj,"recipient"));
-        if ( receiver.buf[0] != 0 )
-            *receiverbitsp = calc_nxt64bits(receiver.buf);
-        attachment = cJSON_GetObjectItem(txobj,"attachment");
-        if ( attachment != 0 )
-        {
-            message = cJSON_GetObjectItem(attachment,"message");
-            assetjson = cJSON_GetObjectItem(attachment,"asset");
-            memset(comment.buf,0,sizeof(comment));
-            if ( message != 0 && type == 1 )
-            {
-                copy_cJSON(&AMstr,message);
-                n = strlen(AMstr.buf);
-                if ( is_hexstr(AMstr.buf) != 0 )
-                {
-                    if ( (n&1) != 0 || n > 2000 )
-                        printf("warning: odd message len?? %ld\n",(long)n);
-                    decode_hex((void *)buf.buf,(int32_t)(n>>1),AMstr.buf);
-                    buf.buf[(n>>1)] = 0;
-                    hdr = (struct NXT_AMhdr *)buf.buf;
-                    //_process_AM_message(mgw,height,(void *)hdr,sender,receiver,txid);
-                }
-            }
-            else if ( assetjson != 0 && type == 2 && subtype == 1 )
-            {
-                commentobj = cJSON_GetObjectItem(attachment,"comment");
-                if ( commentobj == 0 )
-                    commentobj = message;
-                copy_cJSON(&comment,commentobj);
-                if ( comment.buf[0] != 0 )
-                {
-                    unstringify(comment.buf);
-                    json = cJSON_Parse(comment.buf);
-                }
-                copy_cJSON(&assetidstr,cJSON_GetObjectItem(attachment,"asset"));
-                assetoshis = get_cJSON_int(attachment,"quantityQNT");
-                if ( mgw->NXTfee_equiv != 0 && mgw->txfee != 0 )
-                    estNXT = (((double)mgw->NXTfee_equiv / mgw->txfee) * assetoshis / SATOSHIDEN);
-                else estNXT = 0;
-                *amountp = assetoshis * mgw->ap_mult;
-                //printf("%s [%s] vs [%s] txid.(%s) (%s) -> %.8f estNXT %.8f json.%p\n",mgw->coinstr,mgw->assetidstr,assetidstr,txid,comment,dstr(assetoshis * mgw->ap_mult),dstr(estNXT),json);
-                if ( assetidstr.buf[0] != 0 && strcmp(mgw->assetidstr,assetidstr.buf) == 0 )
-                {
-                    if ( json != 0 )
-                    {
-                        copy_cJSON(&coinstr,cJSON_GetObjectItem(json,"coin"));
-                        copy_cJSON(coindata,cJSON_GetObjectItem(json,"withdrawaddr"));
-                        if ( coindata->buf[0] != 0 )
-                        {
-                            if ( *receiverbitsp == mgw->issuerbits )
-                                *flagp = MGW_PENDINGREDEEM;
-                            else printf("%llu != issuer.%llu ",(long long)*receiverbitsp,(long long)mgw->issuerbits);
-                        }
-                        else
-                        {
-                            if ( (obj= cJSON_GetObjectItem(json,"coinv")) == 0 )
-                                obj = cJSON_GetObjectItem(json,"vout");
-                            coinv = (uint32_t)get_API_int(obj,-1);
-                            copy_cJSON(coindata,cJSON_GetObjectItem(json,"cointxid"));
-                            if ( coindata->buf[0] != 0 )
-                                *flagp = MGW_DEPOSITDONE;
-                        }
-                        free_json(json);
-                        if ( coindata->buf[0] != 0 )
-                            unstringify(coindata->buf);
-                    }
-                }
-            }
-            else
-            {
-                copy_cJSON(&comment,message);
-                unstringify(comment.buf);
-                commentobj = comment.buf[0] != 0 ? cJSON_Parse(comment.buf) : 0;
-                if ( type == 5 && subtype == 3 )
-                {
-                    copy_cJSON(&assetidstr,cJSON_GetObjectItem(attachment,"currency"));
-                    units = juint(attachment,"units");
-                    if ( commentobj != 0 )
-                    {
-                        funcid = (int32_t)get_API_int(cJSON_GetObjectItem(commentobj,"funcid"),-1);
-                        //if ( funcid >= 0 && (commentobj= _process_MGW_message(mgw,height,funcid,commentobj,calc_nxt64bits(assetidstr),units,sender,receiver,txid)) != 0 )
-                        //    free_json(commentobj);
-                    }
-                }
-                else if ( type == 0 && subtype == 0 && commentobj != 0 )
-                {
-                    if ( _in_specialNXTaddrs(mgw,sender.buf) != 0 )
-                    {
-                        buyNXT = juint(commentobj,"buyNXT");
-                        satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
-                        if ( buyNXT*SATOSHIDEN == satoshis )
-                        {
-                            mgw->S.sentNXT += buyNXT * SATOSHIDEN;
-                            printf("%s sent %d NXT, total sent %.0f\n",sender.buf,buyNXT,dstr(mgw->S.sentNXT));
-                        }
-                        else if ( buyNXT != 0 )
-                            printf("unexpected QNT %.8f vs %d\n",dstr(satoshis),buyNXT);
-                    }
-                    //if ( strcmp(sender,mgw->srvNXTADDR) == 0 )
-                    //    ram_gotpayment(mgw,comment,commentobj);
-                }
-            }
-        }
-    }
-    else printf("unexpected error iterating timestamp.(%d) txid.(%s)\n",timestamp,txid.buf);
-    //fprintf(stderr,"finish type.%d subtype.%d txid.(%s)\n",(int)type,(int)subtype,txid);
-    return(coinv);
 }
 
 uint64_t calc_txid(unsigned char *buf,int32_t len)

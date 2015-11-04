@@ -466,7 +466,7 @@ static void nn_btcp_start_listening (struct nn_btcp *self)
         nn_assert (0);
 
     /*  Start listening for incoming connections. */
-    rc = nn_usock_start (&self->usock, ss.ss_family, SOCK_STREAM, 0);
+    rc = nn_usock_start (&self->usock, ss.ss_family, SOCK_STREAM, 0,addr);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);
         self->state = NN_BTCP_STATE_WAITING;

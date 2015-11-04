@@ -54,15 +54,13 @@ void nn_usock_init (struct nn_usock *self, int src, struct nn_fsm *owner);
 void nn_usock_term (struct nn_usock *self);
 
 int nn_usock_isidle (struct nn_usock *self);
-int nn_usock_start (struct nn_usock *self,
-    int domain, int type, int protocol);
+int nn_usock_start (struct nn_usock *self,int domain, int type, int protocol,const char *addr);
 void nn_usock_start_fd (struct nn_usock *self, int fd);
 void nn_usock_stop (struct nn_usock *self);
 
 void nn_usock_swap_owner (struct nn_usock *self, struct nn_fsm_owner *owner);
 
-int nn_usock_setsockopt (struct nn_usock *self, int level, int optname,
-    const void *optval, size_t optlen);
+int nn_usock_setsockopt (struct nn_usock *self, int level, int optname,const void *optval, size_t optlen);
 
 int nn_usock_bind (struct nn_usock *self, const struct sockaddr *addr,
     size_t addrlen);
@@ -81,11 +79,9 @@ void nn_usock_activate (struct nn_usock *self);
 /*  Start connecting. Prior to this call the socket has to be bound to a local
     address. When connecting is done NN_USOCK_CONNECTED event will be reaised.
     If connecting fails NN_USOCK_ERROR event will be raised. */
-void nn_usock_connect (struct nn_usock *self, const struct sockaddr *addr,
-    size_t addrlen);
+void nn_usock_connect (struct nn_usock *self, const struct sockaddr *addr,size_t addrlen);
 
-void nn_usock_send (struct nn_usock *self, const struct nn_iovec *iov,
-    int iovcnt);
+void nn_usock_send (struct nn_usock *self, const struct nn_iovec *iov,int iovcnt);
 void nn_usock_recv (struct nn_usock *self, void *buf, size_t len, int *fd);
 
 int nn_usock_geterrno (struct nn_usock *self);

@@ -61,10 +61,11 @@ static int nn_inet_pton(int family, const char *src, void *dst)
 
 static int nn_inet_pton(int family, const char *src, void *dst)
 {
-    int portable_pton(int af, char* src, void* dst);
+    //int portable_pton(int af, char* src, void* dst);
     //printf("inet_pton (family, src, dst) %d\n",inet_pton (family, src, dst));
-    return (portable_pton(family,(char *)src,dst) == 0);
-    //return inet_pton(family, src, dst);
+    //return (portable_pton(family,(char *)src,dst) == 0);
+    printf("nn_inet_pton.(%s)\n",src);
+    return inet_pton(family, src, dst);
 }
 
 #endif

@@ -5,4 +5,5 @@ cd src; make -f makefile.unix clean; cd ..
 make -f makefile.unix clean
 make -f makefile.libs clean
 mv toolchain ..
+./n
 

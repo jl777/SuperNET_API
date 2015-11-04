@@ -14,7 +14,7 @@
  ******************************************************************************/
 
 
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
 
 #define BUNDLED
 #define PLUGINSTR "ramchain"
@@ -30,6 +30,10 @@
 #include "ramchain.c"
 #undef DEFINES_ONLY
 
+//int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain);
+//int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms);
+//int32_t ramchain_func(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *method);
+
 STRUCTNAME RAMCHAINS;
 #define PUB_METHODS "ledgerhash", "richlist", "txid", "txidind", "addr", "addrind", "script", "scriptind", "balance", "unspents", "notify"
 
@@ -39,14 +43,15 @@ char *PLUGNAME(_authmethods)[] = { PUB_METHODS, "signrawtransaction", "dumpprivk
 
 int32_t ramchain_idle(struct plugin_info *plugin)
 {
-    int32_t i,flag = 0;
+    int32_t i,lag,flag = 0;
     struct coin777 *coin; struct ramchain *ramchain;
     for (i=0; i<COINS.num; i++)
     {
         if ( (coin= COINS.LIST[i]) != 0 )
         {
             ramchain = &coin->ramchain;
-            if ( ramchain->readyflag != 0 && (SUPERNET.gatewayid >= 0 || milliseconds() > ramchain->lastupdate+6000) )
+            lag = (ramchain->RTblocknum - ramchain->blocknum);
+            if ( ramchain->readyflag != 0 && (lag > 10 || SUPERNET.gatewayid >= 0 || milliseconds() > ramchain->lastupdate+6000) )
             {
                 flag += ramchain_update(coin,ramchain);
                 ramchain->lastupdate = milliseconds();
@@ -138,6 +143,6 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
 }
 #include "../agents/plugin777.c"
 
-#endif
-#include <stdint.h>
-extern int32_t Debuglevel;
+//#endif
+//#include <stdint.h>
+//extern int32_t Debuglevel;

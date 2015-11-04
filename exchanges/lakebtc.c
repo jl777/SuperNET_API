@@ -25,6 +25,7 @@
 #define BALANCES lakebtc ## _balances
 #define PARSEBALANCE lakebtc ## _parsebalance
 #define WITHDRAW lakebtc ## _withdraw
+#define CHECKBALANCE lakebtc ## _checkbalance
 
 double UPDATE(struct prices777 *prices,int32_t maxdepth)
 {
@@ -48,9 +49,8 @@ int32_t SUPPORTS(char *base,char *rel)
     return(polarity);
 }
 
-cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,char *hdr1,uint64_t tonce)
+cJSON *SIGNPOST(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *payload,char *hdr1,uint64_t tonce)
 {
-    static CURL *cHandle;
     char hdr2[512],cmdbuf[1024],buf64[1024],hdr3[512],dest[1025],hdr4[512],*sig,*data = 0; cJSON *json;
     hdr2[0] = hdr3[0] = hdr4[0] = 0;
     json = 0;
@@ -60,7 +60,9 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,char
         nn_base64_encode((void *)cmdbuf,strlen(cmdbuf),buf64,sizeof(buf64));
         sprintf(hdr1,"Authorization:Basic %s",buf64);
         sprintf(hdr2,"Json-Rpc-Tonce: %llu",(long long)tonce);
-        if ( (data= curl_post(&cHandle,"https://www.LakeBTC.com/api_v1",0,payload,hdr1,hdr2,hdr3,hdr4)) != 0 )
+        if ( dotrade == 0 )
+            data = exchange_would_submit(payload,hdr1,hdr2,hdr3,hdr4);
+        else if ( (data= curl_post(cHandlep,"https://www.LakeBTC.com/api_v1",0,payload,hdr1,hdr2,hdr3,hdr4)) != 0 )
             json = cJSON_Parse(data);
     }
     if ( retstrp != 0 )
@@ -143,31 +145,6 @@ if ( (sig= hmac_sha1_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apis
                 }
 */
 
-uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
-{
-    char payload[1024],jsonbuf[1024],pairstr[64],paramstr[512],*extra,*method;
-    cJSON *json; uint64_t tonce,txid = 0;
-    if ( (extra= *retstrp) != 0 )
-        *retstrp = 0;
-    tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
-    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
-    {
-        printf("cant find baserel (%s/%s)\n",base,rel);
-        return(0);
-    }
-    method = (dir > 0) ? "buyOrder" : "sellOrder";
-    touppercase(rel);
-    sprintf(paramstr,"%.2f,%.4f,%s",price,volume,rel);
-    sprintf(payload,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=%s",(long long)tonce,exchange->userid,method,paramstr);
-    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,paramstr);
-    if ( (json= SIGNPOST(retstrp,exchange,jsonbuf,payload,tonce)) != 0 )
-    {
-        txid = j64bits(json,"order_id");
-        free_json(json);
-    }
-    return(txid);
-}
-
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //lakebtc.({"balance":{"BTC":0.1},"locked":{"BTC":0.0},"profile":{"email":"jameslee777@yahoo.com","id":"U137561934","btc_deposit_addres":"1RyKrNJjezeFfvYaicnJEozHfhWfYzbuh"}})
@@ -192,43 +169,70 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-cJSON *BALANCES(struct exchange_info *exchange)
+cJSON *BALANCES(void **cHandlep,struct exchange_info *exchange)
 {
     char payload[1024],jsonbuf[1024],*method; uint64_t tonce;
     method = "getAccountInfo";
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     sprintf(payload,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=",(long long)tonce,exchange->userid,method);
     sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,"");
-    return(SIGNPOST(0,exchange,jsonbuf,payload,tonce));
+    return(SIGNPOST(cHandlep,1,0,exchange,jsonbuf,payload,tonce));
 }
 
-char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+#include "checkbalance.c"
+
+uint64_t TRADE(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+{
+    char payload[1024],jsonbuf[1024],pairstr[64],paramstr[512],*extra,*method;
+    cJSON *json; uint64_t tonce,txid = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
+    tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
+    if ( (dir= flipstr_for_exchange(exchange,pairstr,"%s_%s",dir,&price,&volume,base,rel)) == 0 )
+    {
+        printf("cant find baserel (%s/%s)\n",base,rel);
+        return(0);
+    }
+    method = (dir > 0) ? "buyOrder" : "sellOrder";
+    touppercase(rel);
+    sprintf(paramstr,"%.2f,%.4f,%s",price,volume,rel);
+    sprintf(payload,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=%s",(long long)tonce,exchange->userid,method,paramstr);
+    sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,paramstr);
+    if ( CHECKBALANCE(retstrp,dotrade,exchange,dir,base,rel,price,volume) == 0 && (json= SIGNPOST(cHandlep,dotrade,retstrp,exchange,jsonbuf,payload,tonce)) != 0 )
+    {
+        txid = j64bits(json,"order_id");
+        free_json(json);
+    }
+    return(txid);
+}
+
+char *CANCELORDER(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
     method = "cancelOrder";
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%llu\"],\"id\":1}",method,(long long)quoteid);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized cancelorder
 }
 
-char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
+char *OPENORDERS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],jsonbuf[1024],*method,*retstr = 0; cJSON *json; uint64_t tonce;
     method = "getOrders";
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,"");
-    if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized open orders
 }
 
-char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
+char *TRADEHISTORY(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],jsonbuf[1024],timestr[64],*method,*retstr = 0;
     cJSON *json; uint64_t tonce; uint32_t starttime;
@@ -238,17 +242,17 @@ char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
     else timestr[0] = 0;
     tonce = (exchange_nonce(exchange) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[%s],\"id\":1}",method,timestr);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,jsonbuf,tonce)) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized tradehistory
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+char *ORDERSTATUS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char *status,*retstr;
-    status = OPENORDERS(exchange,argjson);
+    status = OPENORDERS(cHandlep,exchange,argjson);
     if ( (retstr= exchange_extractorderid(0,status,quoteid,"id")) != 0 )
     {
         free(status);
@@ -258,7 +262,7 @@ char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid
     return(clonestr("{\"error\":\"cant find quoteid\"}"));
 }
 
-char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
+char *WITHDRAW(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     return(clonestr("{\"error\":\"lakebtc doesnt seem to have withdraw api!\"}"));
 }
@@ -277,4 +281,5 @@ struct exchange_funcs lakebtc_funcs = EXCHANGE_FUNCS(lakebtc,EXCHANGE_NAME);
 #undef PARSEBALANCE
 #undef WITHDRAW
 #undef EXCHANGE_NAME
+#undef CHECKBALANCE
 

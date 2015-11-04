@@ -18,7 +18,7 @@
 */
 
 /* {{{ */
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
 
 #define SOPHIA_BUILD ""
 
@@ -51,7 +51,31 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifndef _WIN32
+#ifdef __PNACL
+#include <glibc-compat/sys/uio.h>
+#include <sys/socket.h>
+ssize_t writev(int fildes, const struct iovec *iov, int iovcnt)
+{
+    int i;
+    int32_t bytes_written = 0;
+    for (i = 0; i < iovcnt; i++)
+    {
+        int len = send(fildes, iov[i].iov_base, iov[i].iov_len, 0);
+        if (len < 0)
+        {
+            //DWORD err = GetLastError();
+            //errno = ewin_to_posix_error(err);
+            bytes_written = -1;
+            break;
+        }
+        bytes_written += len;
+    }
+    
+    return bytes_written;
+}
+#else
 #include <sys/uio.h>
+#endif
 #include <sys/mman.h>
 #else
 #include <windows.h>
@@ -2562,7 +2586,7 @@ static inline ssize_t sr_atoi(char *s)
 {
 	size_t v = 0;
 	while (*s && *s != '.') {
-		if (srunlikely(! isdigit(*s)))
+		if (srunlikely(! isdigit((uint32_t)*s)))
 			return -1;
 		v = (v * 10) + *s - '0';
 		s++;
@@ -3153,7 +3177,7 @@ static inline ssize_t sr_diridof(char *s)
 {
 	size_t v = 0;
 	while (*s && *s != '.') {
-		if (srunlikely(!isdigit(*s)))
+		if (srunlikely(!isdigit((uint32_t)*s)))
 			return -1;
 		v = (v * 10) + *s - '0';
 		s++;
@@ -21974,7 +21998,7 @@ si_processid(char **str) {
 	char *s = *str;
 	size_t v = 0;
 	while (*s && *s != '.') {
-		if (srunlikely(!isdigit(*s)))
+		if (srunlikely(!isdigit((uint32_t)*s)))
 			return -1;
 		v = (v * 10) + *s - '0';
 		s++;
@@ -22361,7 +22385,7 @@ se_processid(char **str) {
 	char *s = *str;
 	size_t v = 0;
 	while (*s && *s != '.') {
-		if (srunlikely(!isdigit(*s)))
+		if (srunlikely(!isdigit((uint32_t)*s)))
 			return -1;
 		v = (v * 10) + *s - '0';
 		s++;
@@ -27989,6 +28013,6 @@ SP_API void *sp_type(void *o, ...)
 */
 /* }}} */
 
-#endif
-#include <stdint.h>
-extern int32_t Debuglevel;
+//#endif
+//#include <stdint.h>
+//extern int32_t Debuglevel;

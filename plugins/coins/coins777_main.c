@@ -42,7 +42,7 @@ int32_t coins_idle(struct plugin_info *plugin)
         {
             if ( (coin= COINS.LIST[i]) != 0 )
             {
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
                 if ( SUPERNET.gatewayid >= 0 )
                 {
                     if ( coin->mgw.assetidstr[0] != 0 && milliseconds() > coin->mgw.lastupdate+60000 )
@@ -62,7 +62,7 @@ int32_t coins_idle(struct plugin_info *plugin)
                         coin->ramchain.paused = 0;
                     }*/
                 }
-#endif
+//#endif
             }
         }
     }
@@ -458,7 +458,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             if ( coinstr == 0 )
                 coinstr = zerobuf;
             else coin = coin777_find(coinstr,1);
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
             if ( strcmp(methodstr,"acctpubkeys") == 0 )
             {
                 if ( SUPERNET.gatewayid >= 0 )
@@ -484,7 +484,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     printf("GOTMSIG.(%s)\n",jsonstr);
             }
             else
-#endif
+//#endif
                 sprintf(retbuf,"{\"error\":\"unsupported method\",\"method\":\"%s\"}",methodstr);
         }
     }

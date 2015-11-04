@@ -394,7 +394,8 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
     size_t sz;
 
     /*  Try to start the underlying socket. */
-    rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0);
+    addr = nn_epbase_getaddr (&self->epbase);
+    rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0,addr);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);
         self->state = NN_CIPC_STATE_WAITING;
@@ -405,13 +406,11 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
     sz = sizeof (val);
     nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_SNDBUF, &val, &sz);
     nn_assert (sz == sizeof (val));
-    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_SNDBUF,
-        &val, sizeof (val));
+    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_SNDBUF,&val, sizeof (val));
     sz = sizeof (val);
     nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_RCVBUF, &val, &sz);
     nn_assert (sz == sizeof (val));
-    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_RCVBUF,
-        &val, sizeof (val));
+    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_RCVBUF,&val, sizeof (val));
 
     /*  Create the IPC address from the address string. */
     addr = nn_epbase_getaddr (&self->epbase);

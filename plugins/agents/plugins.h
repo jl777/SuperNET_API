@@ -269,13 +269,14 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
 //printf("tag.%llu str.%p retstr.%p\n",(long long)tag,str,retstr);
     if ( tag != 0 )
     {
-        if ( (dest= get_tagstr(&retsock,dp,tag)) != 0 )
-            *dest = str;
+        dest = get_tagstr(&retsock,dp,tag);
         if ( retsock >= 0 && str != 0 )
         {
             if ( (sendlen= nn_send(retsock,str,(int32_t)strlen(str)+1,0)) != (int32_t)strlen(str)+1 )
                 printf("sendlen.%d != len.%d (%s)\n",sendlen,len,str);
         }
+        else if ( dest != 0 )
+            *dest = str;
         if ( dest == 0 )
             free(str);
     } else free(str);
@@ -374,10 +375,10 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         else if ( strcmp(dp->name,"dcnet") == 0 ) return(dcnet_main(n,args));
         else if ( strcmp(dp->name,"pangea") == 0 ) return(pangea_main(n,args));
         //else if ( strcmp(dp->name,"teleport") == 0 ) return(teleport_main(n,args));
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
         else if ( strcmp(dp->name,"ramchain") == 0 ) return(ramchain_main(n,args));
         else if ( strcmp(dp->name,"MGW") == 0 ) return(MGW_main(n,args));
-#endif
+//#endif
         else return(-1);
     }
     else return(OS_launch_process(args));
@@ -387,9 +388,9 @@ int32_t is_bundled_plugin(char *plugin)
 {
     if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"kv777") == 0 || strcmp(plugin,"coins") == 0 || strcmp(plugin,"relay") == 0 ||strcmp(plugin,"prices") == 0 || strcmp(plugin,"dcnet") == 0 || strcmp(plugin,"jumblr") == 0 ||
         strcmp(plugin,"pangea") == 0 || //strcmp(plugin,"teleport") == 0
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
         strcmp(plugin,"ramchain") == 0 || strcmp(plugin,"MGW") == 0 ||
-#endif
+//#endif
         0 )
         return(1);
     else return(0);

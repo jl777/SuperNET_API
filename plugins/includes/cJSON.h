@@ -184,6 +184,7 @@ extern "C"
     void jaddi64bits(cJSON *json,uint64_t nxt64bits);
 
     void copy_cJSON(struct destbuf *dest,cJSON *obj);
+    void copy_cJSON2(char *dest,int32_t maxlen,cJSON *obj);
     cJSON *gen_list_json(char **list);
     int32_t extract_cJSON_str(char *dest,int32_t max,cJSON *json,char *field);
 

@@ -5,8 +5,8 @@ http://askubuntu.com/questions/510056/how-to-install-google-chrome
 
 launch chrome with  --allow-nacl-socket-api=localhost command line arg
 
-git clone https://github.com/jl777/SuperNET_API
-cd SuperNET_API
+git clone https://github.com/jl777/SuperNET_API;
+cd SuperNET_API;
 tools/httpd.py -C . -p 7777 &
 
 now you can go to http://localhost:7777 

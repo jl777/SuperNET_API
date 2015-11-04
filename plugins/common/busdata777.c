@@ -1204,7 +1204,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                 }
                 else
                 {
-                    //if ( Debuglevel > 2 )
+                    if ( Debuglevel > 2 )
                         printf("LBsend.(%s)\n",data);
                     retstr = nn_loadbalanced((uint8_t *)data,datalen);
                     submethod = cJSON_str(cJSON_GetObjectItem(json,"submethod"));

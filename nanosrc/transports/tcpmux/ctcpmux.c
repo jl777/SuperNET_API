@@ -667,7 +667,7 @@ static void nn_ctcpmux_start_connecting (struct nn_ctcpmux *self,
         nn_assert (0);
 
     /*  Try to start the underlying socket. */
-    rc = nn_usock_start (&self->usock, remote.ss_family, SOCK_STREAM, 0);
+    rc = nn_usock_start (&self->usock, remote.ss_family, SOCK_STREAM, 0,addr);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);
         self->state = NN_CTCPMUX_STATE_WAITING;

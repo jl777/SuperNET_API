@@ -26,6 +26,7 @@
 #define PARSEBALANCE btc38 ## _parsebalance
 #define WITHDRAW btc38 ## _withdraw
 #define EXCHANGE_AUTHURL "http://www.btc38.com/trade/t_api"
+#define CHECKBALANCE btc38 ## _checkbalance
 
 double UPDATE(struct prices777 *prices,int32_t maxdepth)
 {
@@ -40,8 +41,8 @@ double UPDATE(struct prices777 *prices,int32_t maxdepth)
 
 int32_t SUPPORTS(char *_base,char *_rel)
 {
-    char *cnypairs[] = { "BTC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "YBC", "BILS", "BOST", "PPC", "APC", "ZCC", "XPM", "DGC", "MEC", "WDC", "QRK", "BEC", "ANC", "UNC", "RIC", "SRC", "TAG" };
-    char *btcpairs[] = { "TMC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "XEM", "VPN", "BILS", "BOST", "WDC", "ANC", "XCN", "VOOT", "SYS", "NRS", "NAS", "SYNC", "MED", "EAC" };
+    char *cnypairs[] = { "BTC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "BC", "VPN", "BILS", "BOST", "PPC", "APC", "ZCC", "XPM", "DGC", "MEC", "WDC", "QRK", "BEC", "ANC", "UNC", "RIC", "SRC", "TAG" };
+    char *btcpairs[] = { "TMC", "LTC", "DOGE", "XRP", "BTS", "XEM", "VPN", "XCN", "VOOT", "SYS", "NRS", "NAS", "SYNC", "MED", "EAC" };
     int32_t i; char base[64],rel[64];
     strcpy(base,_base), strcpy(rel,_rel);
     touppercase(base), touppercase(rel);
@@ -79,9 +80,8 @@ int32_t SUPPORTS(char *_base,char *_rel)
     return(0);
 }
 
-cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,char *path)
+cJSON *SIGNPOST(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *payload,char *path)
 {
-    static CURL *cHandle;
     char cmdbuf[2048],url[1024],buf[1024],hdr1[512],hdr2[512],hdr3[512],hdr4[512],digest[33],*data;
     cJSON *json; uint64_t nonce;
     hdr1[0] = hdr2[0] = hdr3[0] = hdr4[0] = 0;
@@ -92,7 +92,9 @@ cJSON *SIGNPOST(char **retstrp,struct exchange_info *exchange,char *payload,char
     calc_md5(digest,buf,(int32_t)strlen(buf));
     sprintf(cmdbuf,"key=%s&time=%llu&md5=%s%s",exchange->apikey,(long long)nonce,digest,payload);
     sprintf(url,"%s/%s",EXCHANGE_AUTHURL,path);
-    if ( (data= curl_post(&cHandle,url,0,cmdbuf,hdr1,hdr2,hdr3,hdr4)) != 0 )
+    if ( dotrade == 0 )
+        data = exchange_would_submit(payload,hdr1,hdr2,hdr3,hdr4);
+    else if ( (data= curl_post(cHandlep,url,0,cmdbuf,hdr1,hdr2,hdr3,hdr4)) != 0 )
         json = cJSON_Parse(data);
     if ( retstrp != 0 )
         *retstrp = data;
@@ -174,52 +176,9 @@ free(data);
 return(txid);
 */
 
-uint64_t TRADE(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+cJSON *BALANCES(void **cHandlep,struct exchange_info *exchange)
 {
-    char payload[1024],market[16],coinname[16],fmtstr[512],*pricefmt,*extra,*volfmt = "%.3f";
-    cJSON *json,*resultobj; uint64_t txid = 0;
-    if ( (extra= *retstrp) != 0 )
-        *retstrp = 0;
-    if ( (dir= cny_flip(market,coinname,base,rel,dir,&price,&volume)) == 0 )
-    {
-        fprintf(stderr,"btc38_trade illegal base.(%s) or rel.(%s)\n",base,rel);
-        return(0);
-    }
-    if ( strcmp(market,"cny") == 0 )
-        pricefmt = "%.5f";
-    else pricefmt = "%.6f";
-    //sprintf(fmtstr,"key=%%s&time=%%llu&md5=%%s&type=%%s&mk_type=%%s&coinname=%%s&price=%s&amount=%s",pricefmt,volfmt);
-    //sprintf(payload,fmtstr,exchange->apikey,(long long)nonce,digest,dir>0?"1":"2",market,coinname,price,volume);
-    sprintf(fmtstr,"&type=%%s&mk_type=%%s&coinname=%%s&price=%s&amount=%s",pricefmt,volfmt);
-    sprintf(payload,fmtstr,dir>0?"1":"2",market,coinname,price,volume);
-    if ( (json= SIGNPOST(retstrp,exchange,payload,"submitOrder.php")) != 0 )
-    {
-        if ( juint(json,"success") > 0 && (resultobj= jobj(json,"return")) != 0 )
-        {
-            if ( (txid= j64bits(resultobj,"order_id")) == 0 )
-            {
-                if ( j64bits(resultobj,"remains") == 0 )
-                    txid = _crc32(0,payload,strlen(payload));
-            }
-        }
-        free_json(json);
-        if ( retstrp != 0 && *retstrp != 0 )
-        {
-            if ( (json= cJSON_Parse(*retstrp)) == 0 )
-            {
-                json = cJSON_CreateObject();
-                jaddstr(json,"result",*retstrp);
-                free(*retstrp);
-                *retstrp = jprint(json,1);
-            } else free_json(json);
-        }
-    }
-    return(txid);
-}
-
-cJSON *BALANCES(struct exchange_info *exchange)
-{
-    return(SIGNPOST(0,exchange,"","getMyBalance.php"));
+    return(SIGNPOST(cHandlep,1,0,exchange,"","getMyBalance.php"));
 }
 
 char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr)
@@ -247,20 +206,65 @@ char *PARSEBALANCE(struct exchange_info *exchange,double *balancep,char *coinstr
     return(itemstr);
 }
 
-char *CANCELORDER(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+#include "checkbalance.c"
+
+uint64_t TRADE(void **cHandlep,int32_t dotrade,char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+{
+    char payload[1024],market[16],coinname[16],fmtstr[512],*pricefmt,*extra,*volfmt = "%.3f";
+    cJSON *json,*resultobj; uint64_t txid = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
+    if ( (dir= cny_flip(market,coinname,base,rel,dir,&price,&volume)) == 0 )
+    {
+        fprintf(stderr,"btc38_trade illegal base.(%s) or rel.(%s)\n",base,rel);
+        return(0);
+    }
+    if ( strcmp(market,"cny") == 0 )
+        pricefmt = "%.5f";
+    else pricefmt = "%.6f";
+    //sprintf(fmtstr,"key=%%s&time=%%llu&md5=%%s&type=%%s&mk_type=%%s&coinname=%%s&price=%s&amount=%s",pricefmt,volfmt);
+    //sprintf(payload,fmtstr,exchange->apikey,(long long)nonce,digest,dir>0?"1":"2",market,coinname,price,volume);
+    sprintf(fmtstr,"&type=%%s&mk_type=%%s&coinname=%%s&price=%s&amount=%s",pricefmt,volfmt);
+    sprintf(payload,fmtstr,dir>0?"1":"2",market,coinname,price,volume);
+    if ( CHECKBALANCE(retstrp,dotrade,exchange,dir,base,rel,price,volume) == 0 && (json= SIGNPOST(cHandlep,dotrade,retstrp,exchange,payload,"submitOrder.php")) != 0 )
+    {
+        if ( juint(json,"success") > 0 && (resultobj= jobj(json,"return")) != 0 )
+        {
+            if ( (txid= j64bits(resultobj,"order_id")) == 0 )
+            {
+                if ( j64bits(resultobj,"remains") == 0 )
+                    txid = _crc32(0,payload,strlen(payload));
+            }
+        }
+        free_json(json);
+        if ( retstrp != 0 && *retstrp != 0 )
+        {
+            if ( (json= cJSON_Parse(*retstrp)) == 0 )
+            {
+                json = cJSON_CreateObject();
+                jaddstr(json,"result",*retstrp);
+                free(*retstrp);
+                *retstrp = jprint(json,1);
+            } else free_json(json);
+        }
+    }
+    return(txid);
+}
+
+char *CANCELORDER(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char payload[1024],*rel,*retstr = 0; cJSON *json;
     if ( (rel= jstr(argjson,"rel")) == 0 )
         rel = "cny";
     sprintf(payload,"&mk_type=%s&order_id=%llu",rel,(long long)quoteid);
-   if ( (json= SIGNPOST(&retstr,exchange,payload,"cancelOrder.php")) != 0 )
+   if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,"cancelOrder.php")) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized cancelorder
 }
 
-char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
+char *OPENORDERS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     char payload[1024],*base,*rel,*retstr = 0; cJSON *json;
     if ( (rel= jstr(argjson,"rel")) == 0 )
@@ -268,27 +272,27 @@ char *OPENORDERS(struct exchange_info *exchange,cJSON *argjson)
     sprintf(payload,"&mk_type=%s",rel);
     if ( (base= jstr(argjson,"base")) != 0 )
         sprintf(payload + strlen(payload),"&coinname=%s",base);
-    if ( (json= SIGNPOST(&retstr,exchange,payload,"getOrderList.php")) != 0 )
+    if ( (json= SIGNPOST(cHandlep,1,&retstr,exchange,payload,"getOrderList.php")) != 0 )
     {
         free_json(json);
     }
     return(retstr); // return standardized open orders
 }
 
-char *TRADEHISTORY(struct exchange_info *exchange,cJSON *argjson)
+char *TRADEHISTORY(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     return(clonestr("{\"error\":\"btc38 doesnt seem to have trade history api!\"}"));
 }
 
-char *WITHDRAW(struct exchange_info *exchange,cJSON *argjson)
+char *WITHDRAW(void **cHandlep,struct exchange_info *exchange,cJSON *argjson)
 {
     return(clonestr("{\"error\":\"btc38 doesnt seem to have withdraw api!\"}"));
 }
 
-char *ORDERSTATUS(struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
+char *ORDERSTATUS(void **cHandlep,struct exchange_info *exchange,cJSON *argjson,uint64_t quoteid)
 {
     char *status,*retstr;
-    status = OPENORDERS(exchange,argjson);
+    status = OPENORDERS(cHandlep,exchange,argjson);
     if ( (retstr= exchange_extractorderid(0,status,quoteid,"order_id")) != 0 )
     {
         free(status);
@@ -313,4 +317,5 @@ struct exchange_funcs btc38_funcs = EXCHANGE_FUNCS(btc38,EXCHANGE_NAME);
 #undef WITHDRAW
 #undef EXCHANGE_NAME
 #undef EXCHANGE_AUTHURL
+#undef CHECKBALANCE
 

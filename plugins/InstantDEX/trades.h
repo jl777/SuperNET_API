@@ -208,7 +208,7 @@ void free_pending(struct pending_trade *pend)
     free(pend);
 }
 
-void InstantDEX_history(int32_t action,struct pending_trade *pend,char *str)
+void oldInstantDEX_history(int32_t action,struct pending_trade *pend,char *str)
 {
     uint8_t txbuf[32768]; char *tmpstr; uint16_t n; long len = 0;
     // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
@@ -319,7 +319,7 @@ struct pending_trade *InstantDEX_historyi(int32_t *actionp,char **strp,int32_t i
     return(pend);
 }
 
-int32_t InstantDEX_inithistory(int32_t firsti,int32_t endi)
+int32_t oldInstantDEX_inithistory(int32_t firsti,int32_t endi)
 {
     int32_t i,action; uint8_t txbuf[32768]; char *str; struct pending_trade *pend;
     printf("InstantDEX_inithistory firsti.%d endi.%d\n",firsti,endi);
@@ -375,7 +375,7 @@ char *InstantDEX_withdraw(cJSON *argjson)
     {
         if ( exchange->issue.withdraw != 0 )
         {
-            if ( (str= (*exchange->issue.withdraw)(exchange,argjson)) == 0 )
+            if ( (str= (*exchange->issue.withdraw)(&exchange->cHandle,exchange,argjson)) == 0 )
                 str = clonestr("{\"result\":\"nothing returned from exchange\"}");
             return(str);
         }
@@ -392,7 +392,7 @@ char *InstantDEX_tradehistory(cJSON *argjson,int32_t firsti,int32_t endi)
     {
         if ( exchange->issue.tradehistory != 0 )
         {
-            if ( (str= (*exchange->issue.tradehistory)(exchange,argjson)) == 0 )
+            if ( (str= (*exchange->issue.tradehistory)(&exchange->cHandle,exchange,argjson)) == 0 )
                 str = clonestr("{\"result\":\"nothing returned from exchange\"}");
             return(str);
         }
@@ -573,21 +573,25 @@ uint64_t prices777_swapbuf(char *sendphased,char *phasesecret,uint64_t *txidp,ch
     return(txid);
 }
 
-char *prices777_finishswap(int32_t type,struct pending_trade *pend,struct InstantDEX_quote *iQ,char *swapbuf,char *triggertx,char *txbytes)
+char *prices777_finishswap(int32_t dotrade,int32_t type,struct pending_trade *pend,char *swapbuf,char *triggertx,char *txbytes)
 {
     uint32_t nonce; char *str;
     if ( triggertx[0] != 0 )
         pend->triggertx = clonestr(triggertx);
     if ( txbytes[0] != 0 )
         pend->txbytes = clonestr(txbytes);
+    pend->order.s.swap = 1;
     pend->tradesjson = cJSON_Parse(swapbuf);
     pend->type = type;
-    iQ->s.swap = 1;
-    printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-    if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
-        free(str);
-    queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
-    InstantDEX_history(0,pend,swapbuf);
+    printf("quoteid.%llu and pending.%d\n",(long long)pend->order.s.quoteid,pend->order.s.pending);
+    if ( dotrade != 0 )
+    {
+        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
+            free(str);
+        pend->queueflag = 1;
+        queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+    }
+    //InstantDEX_history(0,pend,swapbuf);
     return(clonestr(swapbuf));
 }
 
@@ -623,10 +627,11 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
                 if ( err == 0 && errcode == 0 && errcode2 == 0 )
                 {
                     iQ->s.matched = 1;
-                    InstantDEX_history(1,pend,0);
-                } else InstantDEX_history(-1,pend,0);
+                    //InstantDEX_history(1,pend,0);
+                } //else InstantDEX_history(-1,pend,0);
                 printf("errs.(%d %d %d) COMPLETED %llu/%llu %d %f %f with txids %llu %llu\n",err,errcode,errcode2,(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,(long long)pend->triggertxid,(long long)pend->txid);
-                free_pending(pend);
+                pend->queueflag = 1;
+                pend->finishtime = (uint32_t)time(NULL);
                 return(1);
             }
             queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
@@ -635,23 +640,142 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
     return(-1);
 }
 
-char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 *prices,int32_t dir,double price,double volume,struct InstantDEX_quote *iQ,struct prices777_order *order,uint64_t orderid,char *extra)
+char *prices777_tradewallet(struct pending_trade *pend)
 {
-    struct InstantDEX_quote _iQ; char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce;
-    char swapbuf[8192],triggertx[4096],txbytes[4096],buf[1024]; uint64_t txid,sendasset,recvasset; int32_t deadline;
+    struct coin777 *recvcoin,*sendcoin; cJSON *walletitem,*item;
+    char fieldA[64],fieldB[64],triggertx[4096],txbytes[4096],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64];
+    char swapbuf[8192],buf[1024],*rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0;
+    char *sendstr=0,*refundtx,*redeemscript,*str; int32_t finishin,deadline; uint32_t nonce;
+    uint64_t sendamount,recvamount,sendasset,recvasset; struct destbuf base,rel;
+    if ( pend->item != 0 && (item= jitem(pend->item,0)) != 0 && (walletitem= jobj(item,"wallet")) != 0 )
+    {
+        finishin = (pend->extra[0] == 0) ? 200 : myatoi(pend->extra,10000);
+        if ( finishin < FINISH_HEIGHT )
+            finishin = FINISH_HEIGHT;
+        copy_cJSON(&base,jobj(item,"base"));
+        copy_cJSON(&rel,jobj(item,"rel"));
+        if ( (recvamount= j64bits(item,"recvbase")) != 0 && (sendamount= j64bits(item,"sendrel")) != 0 )
+            recvstr = base.buf, sendstr = rel.buf, recvasset = pend->order.s.baseid, sendasset = pend->order.s.relid;
+        else if ( (recvamount= j64bits(item,"recvrel")) != 0 && (sendamount= j64bits(item,"sendbase")) != 0 )
+            recvstr = rel.buf, sendstr = base.buf, recvasset = pend->order.s.relid, sendasset = pend->order.s.baseid;
+        else
+        {
+            return(clonestr("{\"error\":\"need recvbase/sendrel or recvrel/sendbase\"}\n"));
+        }
+        recvcoin = coin777_find(recvstr,1), sendcoin = coin777_find(sendstr,1);
+        // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
+        if ( strcmp(recvstr,"NXT") != 0 ) // placeask COIN/NXT or placebid NXT/COIN
+        {
+            if ( recvamount < recvcoin->mgw.txfee )
+            {
+                printf("recvamount %.8f < txfee %.8f\n",dstr(recvamount),dstr(recvcoin->mgw.txfee));
+                return(clonestr("{\"error\":\"amount too small\"}\n"));
+            }
+            sprintf(fieldA,"%spubA",recvstr), rpubA = jstr(walletitem,fieldA);
+            sprintf(fieldB,"%spubB",recvstr), rpubB = jstr(walletitem,fieldB);
+            sprintf(fieldpkhash,"%spkhash",recvstr), rpkhash = jstr(walletitem,fieldpkhash);
+            if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 ) // Alice for recvcoin -> Bob, Bob sends NXT -> Alice
+            {
+                if ( recvcoin->funding.signedtransaction[0] == 0 && (refundtx= subatomic_fundingtx(refredeemscript,&recvcoin->funding,recvcoin,rpubA,rpubB,rpkhash,recvamount,finishin)) != 0 )
+                {
+                    deadline = 3600;
+                    gen_NXTtx(&recvcoin->trigger,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,pend->orderid,pend->order.s.quoteid,deadline,0,0,0,0);
+                    sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)pend->orderid,(long long)pend->order.s.quoteid,(long long)pend->order.s.offerNXT,SUPERNET.NXTADDR,(long long)recvamount,refundtx,refredeemscript,recvstr,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,recvcoin->trigger.fullhash,(long long)sendasset,(long long)sendamount,pend->prices->base,pend->prices->rel);
+                    recvcoin->refundtx = refundtx;
+                    pend->order.s.swap = 1;
+                    if ( pend->dotrade != 0 && (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
+                    {
+                        pend->queueflag = 1;
+                        queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+                    }
+                    return(clonestr(swapbuf));
+                } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
+            }
+            else
+            {
+                sprintf(buf,"{\"error\":\"sendNXT recvstr.(%s) rpubA.(%s) without %s rpubB.%p or %s rpkhash.%p\"}\n",recvstr,rpubA,fieldB,rpubB,fieldpkhash,rpkhash);
+                return(clonestr(buf));
+            }
+        }
+        else if ( strcmp(sendstr,"NXT") != 0 )
+        {
+            if ( sendamount < sendcoin->mgw.txfee )
+            {
+                printf("sendamount %.8f < txfee %.8f\n",dstr(sendamount),dstr(sendcoin->mgw.txfee));
+                return(clonestr("{\"error\":\"amount too small\"}\n"));
+            }
+            sprintf(fieldA,"%spubA",sendstr), spubA = jstr(walletitem,fieldA);
+            sprintf(fieldB,"%spubB",sendstr), spubB = jstr(walletitem,fieldB);
+            sprintf(fieldpkhash,"%spkhash",sendstr), spkhash = jstr(walletitem,fieldpkhash);
+            if ( spubA != 0 && spubB != 0 && spkhash[0] != 0 ) // Bob <- sendcoin from Alice, send NXT -> Alice
+            {
+                if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
+                {
+                    pend->triggertxid = prices777_swapbuf("yes",spkhash,&pend->txid,triggertx,txbytes,swapbuf,"wallet",pend->prices->base,pend->prices->rel,&pend->order,pend->orderid,finishin,0);
+                    sprintf(swapbuf+strlen(swapbuf)-1,",\"sendcoin\":\"%s\",\"sendamount\":\"%llu\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"recvasset\":\"%llu\",\"recvqty\":\"%llu\"}",sendstr,(long long)sendamount,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,(long long)recvasset,(long long)recvamount);
+                    free(redeemscript);
+                    pend->order.s.swap = 1;
+                    if ( pend->dotrade != 0 && (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
+                    {
+                        free(str);
+                        pend->queueflag = 1;
+                        queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+                    }
+                    return(clonestr(swapbuf));
+                }
+            }
+            else
+            {
+                sprintf(buf,"{\"error\":\"recvNXT sendstr.(%s) spubA.(%s) without %s spubB.(%s) or %s spkhash.(%s)\"}\n",sendstr,spubA,fieldB,spubB,fieldpkhash,spkhash);
+                return(clonestr(buf));
+            }
+        }
+        else if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 && spubA != 0 && spubB != 0 && spkhash[0] != 0 && (strcmp(sendstr,"BTC") == 0 || strcmp(recvstr,"BTC") == 0) )
+        {
+            if ( recvcoin->funding.signedtransaction[0] == 0 && (refundtx= subatomic_fundingtx(refredeemscript,&recvcoin->funding,recvcoin,rpubA,rpubB,rpkhash,recvamount,finishin)) != 0 )
+            {
+                if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
+                {
+                    pend->triggertxid = prices777_swapbuf(0,0,&pend->txid,triggertx,txbytes,swapbuf,"wallet",pend->prices->base,pend->prices->rel,&pend->order,pend->orderid,finishin,0);
+                    sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"sendcoin\":\"%s\",\"recvcoin\":\"%s\",\"sendamount\":\"%lld\",\"recvamount\":\"%lld\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)pend->orderid,(long long)pend->order.s.quoteid,(long long)pend->order.s.offerNXT,SUPERNET.NXTADDR,sendstr,recvstr,(long long)sendamount,(long long)recvamount,pend->prices->base,pend->prices->rel);
+                    sprintf(swapbuf+strlen(swapbuf)-1,",\"rtx\":\"%s\",\"rs\":\"%s\",\"rpubA\":\"%s\",\"rpubB\":\"%s\",\"rpkhash\":\"%s\",\"pubA\":\"%s\",\"pubB\":\"%s\",\"pkhash\":\"%s\"}",refundtx,refredeemscript,rpubA,rpubB,rpkhash,spubA,spubB,spkhash);
+                    free(redeemscript);
+                    free(refundtx);
+                    pend->order.s.swap = 1;
+                    if ( pend->dotrade != 0 && (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
+                    {
+                        free(str);
+                        pend->queueflag = 1;
+                        queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+                    }
+                    return(clonestr(swapbuf));
+                }
+                free(refundtx);
+            }
+            else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
+        }
+        else return(clonestr("{\"error\":\"one of wallets must be NXT or BTC\"}\n"));
+        printf("wallet swap finishin.%d trigger.%llu swapbuf.(%s)\n",finishin,(long long)pend->triggertxid,swapbuf);
+        return(prices777_finishswap(pend->dotrade,'A',pend,swapbuf,triggertx,txbytes));
+    }
+    else return(clonestr("{\"error\":\"need to have trades[] json item\"}\n"));
+}
+
+struct pending_trade *prices777_createpending(int32_t *curlingp,void *bot,void **cHandlep,int32_t dotrade,cJSON *item,char *activenxt,char *secret,struct prices777 *prices,int32_t dir,double price,double volume,struct InstantDEX_quote *iQ,struct prices777_order *order,uint64_t orderid,char *extra)
+{
+    struct InstantDEX_quote _iQ; struct exchange_info *exchange; struct pending_trade *pend;
+    char swapbuf[8192],triggertx[4096],txbytes[4096];
     if ( (exchange= find_exchange(0,prices->exchange)) == 0 && exchange->issue.trade != 0 )
     {
         printf("prices777_trade: need to have supported exchange\n");
-        return(clonestr("{\"error\":\"need to have supported exchange\"}\n"));
+        return(0);
     }
-    pend = calloc(1,sizeof(*pend));
-    pend->size = (int32_t)sizeof(*pend);
-    triggertx[0] = txbytes[0] = swapbuf[0] = 0;
-    pend->prices = prices, pend->dir = dir, pend->price = price, pend->volume = volume, pend->orderid = orderid;
+    if ( cHandlep == 0 )
+        cHandlep = &exchange->cHandle;
     if ( iQ == 0 && order == 0 )
     {
         printf("prices777_trade: need to have either iQ or order\n");
-        return(clonestr("{\"error\":\"need to have either iQ or order\"}\n"));
+        return(0);
     }
     else if ( iQ == 0 && (iQ= find_iQ(order->s.quoteid)) == 0 )
     {
@@ -662,158 +786,105 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
         if ( iQ->s.timestamp == 0 )
             iQ->s.timestamp = (uint32_t)time(NULL);
         iQ = create_iQ(iQ,0);
-        //printf("prices777_trade: need to have iQ \n");
-        //return(clonestr("{\"error\":\"need to have iQ\"}\n"));
     } else iQ = create_iQ(iQ,0);
+    pend = calloc(1,sizeof(*pend));
+    pend->bot = bot;
+    safecopy((char *)pend->nxtsecret,secret,sizeof(pend->nxtsecret));
+    pend->size = (int32_t)sizeof(*pend);
+    pend->my64bits = calc_nxt64bits(activenxt);
+    triggertx[0] = txbytes[0] = swapbuf[0] = 0;
+    pend->prices = prices, pend->dir = dir, pend->price = price, pend->volume = volume, pend->orderid = orderid;
     iQ->s.pending = 1;
+    pend->curlingp = curlingp;
     pend->quoteid = iQ->s.quoteid;
     if ( order != 0 )
         pend->order = *order;
     else pend->order.s = iQ->s;
     pend->timestamp = (uint32_t)time(NULL);
-    if ( strcmp(prices->exchange,"wallet") == 0 )
+    pend->expiration = pend->timestamp + 60;
+    pend->cHandlep = cHandlep;
+    pend->dotrade = dotrade;
+    pend->item = item;
+    pend->exchange = exchange;
+    safecopy(pend->extra,extra,sizeof(pend->extra));
+    return(pend);
+}
+
+char *prices777_issuepending(struct pending_trade *pend)
+{
+    char swapbuf[8192],triggertx[4096],txbytes[4096],*retstr;
+    struct prices777 *prices; struct exchange_info *exchange;
+    if ( (prices= pend->prices) == 0 || (exchange= pend->exchange) == 0 )
+        retstr = clonestr("{\"error\":\"no prices ptr\"}");
+    else if ( strcmp(prices->exchange,"wallet") == 0 )
+        retstr = prices777_tradewallet(pend);
+    else if ( strcmp(prices->exchange,INSTANTDEX_NAME) == 0 )
     {
-        cJSON *walletitem; struct coin777 *recvcoin,*sendcoin; 
-        char fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64];
-        char *rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0,*sendstr=0,*refundtx,*redeemscript,*str;
-        int32_t finishin; uint64_t sendamount,recvamount; struct destbuf base,rel;
-        if ( item != 0 && (item= jitem(item,0)) != 0 && (walletitem= jobj(item,"wallet")) != 0 )
-        {
-            finishin = (extra == 0) ? 200 : myatoi(extra,10000);
-            if ( finishin < FINISH_HEIGHT )
-                finishin = FINISH_HEIGHT;
-            copy_cJSON(&base,jobj(item,"base"));
-            copy_cJSON(&rel,jobj(item,"rel"));
-            if ( (recvamount= j64bits(item,"recvbase")) != 0 && (sendamount= j64bits(item,"sendrel")) != 0 )
-                recvstr = base.buf, sendstr = rel.buf, recvasset = iQ->s.baseid, sendasset = iQ->s.relid;
-            else if ( (recvamount= j64bits(item,"recvrel")) != 0 && (sendamount= j64bits(item,"sendbase")) != 0 )
-                recvstr = rel.buf, sendstr = base.buf, recvasset = iQ->s.relid, sendasset = iQ->s.baseid;
-            else return(clonestr("{\"error\":\"need recvbase/sendrel or recvrel/sendbase\"}\n"));
-            recvcoin = coin777_find(recvstr,1), sendcoin = coin777_find(sendstr,1);
-            // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
-            if ( strcmp(recvstr,"NXT") != 0 ) // placeask COIN/NXT or placebid NXT/COIN
-            {
-                if ( recvamount < recvcoin->mgw.txfee )
-                {
-                    printf("recvamount %.8f < txfee %.8f\n",dstr(recvamount),dstr(recvcoin->mgw.txfee));
-                    return(clonestr("{\"error\":\"amount too small\"}\n"));
-                }
-                sprintf(fieldA,"%spubA",recvstr), rpubA = jstr(walletitem,fieldA);
-                sprintf(fieldB,"%spubB",recvstr), rpubB = jstr(walletitem,fieldB);
-                sprintf(fieldpkhash,"%spkhash",recvstr), rpkhash = jstr(walletitem,fieldpkhash);
-                if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 ) // Alice for recvcoin -> Bob, Bob sends NXT -> Alice
-                {
-                    if ( recvcoin->funding.signedtransaction[0] == 0 && (refundtx= subatomic_fundingtx(refredeemscript,&recvcoin->funding,recvcoin,rpubA,rpubB,rpkhash,recvamount,finishin)) != 0 )
-                    {
-                        deadline = 3600;
-                        gen_NXTtx(&recvcoin->trigger,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,iQ->s.quoteid,deadline,0,0,0,0);
-                        sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,(long long)iQ->s.offerNXT,SUPERNET.NXTADDR,(long long)recvamount,refundtx,refredeemscript,recvstr,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,recvcoin->trigger.fullhash,(long long)sendasset,(long long)sendamount,prices->base,prices->rel);
-                        recvcoin->refundtx = refundtx;
-                        iQ->s.swap = 1;
-                        printf("sendstr quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-                        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
-                            free(str);
-                        return(clonestr(swapbuf));
-                    } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
-                }
-                else
-                {
-                    sprintf(buf,"{\"error\":\"sendNXT recvstr.(%s) rpubA.(%s) without %s rpubB.%p or %s rpkhash.%p\"}\n",recvstr,rpubA,fieldB,rpubB,fieldpkhash,rpkhash);
-                    return(clonestr(buf));
-                }
-            }
-            else if ( strcmp(sendstr,"NXT") != 0 )
-            {
-                if ( sendamount < sendcoin->mgw.txfee )
-                {
-                    printf("sendamount %.8f < txfee %.8f\n",dstr(sendamount),dstr(sendcoin->mgw.txfee));
-                    return(clonestr("{\"error\":\"amount too small\"}\n"));
-                }
-                sprintf(fieldA,"%spubA",sendstr), spubA = jstr(walletitem,fieldA);
-                sprintf(fieldB,"%spubB",sendstr), spubB = jstr(walletitem,fieldB);
-                sprintf(fieldpkhash,"%spkhash",sendstr), spkhash = jstr(walletitem,fieldpkhash);
-                if ( spubA != 0 && spubB != 0 && spkhash[0] != 0 ) // Bob <- sendcoin from Alice, send NXT -> Alice
-                {
-                    if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
-                    {
-                        pend->triggertxid = prices777_swapbuf("yes",spkhash,&pend->txid,triggertx,txbytes,swapbuf,"wallet",prices->base,prices->rel,order,orderid,finishin,0);
-                        sprintf(swapbuf+strlen(swapbuf)-1,",\"sendcoin\":\"%s\",\"sendamount\":\"%llu\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"recvasset\":\"%llu\",\"recvqty\":\"%llu\"}",sendstr,(long long)sendamount,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,(long long)recvasset,(long long)recvamount);
-                        free(redeemscript);
-                        iQ->s.swap = 1;
-                        printf("recvstr quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-                        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
-                            free(str);
-                        return(clonestr(swapbuf));
-                    }
-                }
-                else
-                {
-                    sprintf(buf,"{\"error\":\"recvNXT sendstr.(%s) spubA.(%s) without %s spubB.(%s) or %s spkhash.(%s)\"}\n",sendstr,spubA,fieldB,spubB,fieldpkhash,spkhash);
-                    return(clonestr(buf));
-                }
-            }
-            else if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 && spubA != 0 && spubB != 0 && spkhash[0] != 0 && (strcmp(sendstr,"BTC") == 0 || strcmp(recvstr,"BTC") == 0) )
-            {
-                if ( recvcoin->funding.signedtransaction[0] == 0 && (refundtx= subatomic_fundingtx(refredeemscript,&recvcoin->funding,recvcoin,rpubA,rpubB,rpkhash,recvamount,finishin)) != 0 )
-                {
-                    if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
-                    {
-                        pend->triggertxid = prices777_swapbuf(0,0,&pend->txid,triggertx,txbytes,swapbuf,"wallet",prices->base,prices->rel,order,orderid,finishin,0);
-                        sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"sendcoin\":\"%s\",\"recvcoin\":\"%s\",\"sendamount\":\"%lld\",\"recvamount\":\"%lld\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,(long long)iQ->s.offerNXT,SUPERNET.NXTADDR,sendstr,recvstr,(long long)sendamount,(long long)recvamount,prices->base,prices->rel);
-                        sprintf(swapbuf+strlen(swapbuf)-1,",\"rtx\":\"%s\",\"rs\":\"%s\",\"rpubA\":\"%s\",\"rpubB\":\"%s\",\"rpkhash\":\"%s\",\"pubA\":\"%s\",\"pubB\":\"%s\",\"pkhash\":\"%s\"}",refundtx,refredeemscript,rpubA,rpubB,rpkhash,spubA,spubB,spkhash);
-                        free(redeemscript);
-                        free(refundtx);
-                        iQ->s.swap = 1;
-                        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-                        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
-                            free(str);
-                        return(clonestr(swapbuf));
-                    }
-                    free(refundtx);
-                } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
-            }
-            else return(clonestr("{\"error\":\"one of wallets must be NXT or BTC\"}\n"));
-            printf("wallet swap finishin.%d trigger.%llu swapbuf.(%s)\n",finishin,(long long)pend->triggertxid,swapbuf);
-            return(prices777_finishswap('A',pend,iQ,swapbuf,triggertx,txbytes));
-        } else return(clonestr("{\"error\":\"need to have trades[] json item\"}\n"));
-    }
-    if ( strcmp(prices->exchange,INSTANTDEX_NAME) == 0 )
-    {
-        if ( order == 0 )
-        {
-            printf("must call prices777_trade with swapbuf or order to do InstantDEX swap trade\n");
-            return(clonestr("{\"error\":\"need to specify swapbuf\"}\n"));
-        }
-        pend->triggertxid = prices777_swapbuf("yes",0,&pend->txid,triggertx,txbytes,swapbuf,prices->exchange,prices->base,prices->rel,order,orderid,extra==0?0:myatoi(extra,10000),0);
-        return(prices777_finishswap('T',pend,iQ,swapbuf,triggertx,txbytes));
+        pend->expiration = pend->timestamp + INSTANTDEX_TRIGGERDEADLINE*60;
+        pend->triggertxid = prices777_swapbuf("yes",0,&pend->txid,triggertx,txbytes,swapbuf,prices->exchange,prices->base,prices->rel,&pend->order,pend->orderid,myatoi(pend->extra,10000),0);
+        retstr = prices777_finishswap(pend->dotrade,'T',pend,swapbuf,triggertx,txbytes);
     }
     else if ( strcmp(prices->exchange,"nxtae") == 0 )
     {
         pend->type = 'N';
-        retstr = fill_nxtae(&pend->txid,calc_nxt64bits(activenxt),secret,dir,price,volume,prices->baseid,prices->relid);
-        queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
-        InstantDEX_history(0,pend,retstr);
-        return(retstr);
+        retstr = fill_nxtae(pend->dotrade,&pend->txid,pend->my64bits,(char *)pend->nxtsecret,pend->dir,pend->price,pend->volume,prices->baseid,prices->relid);
+        if ( pend->dotrade != 0 )
+        {
+            pend->queueflag = 1;
+            queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+        }
     }
-    else if ( exchange != 0 )
+    else
     {
         if ( exchange->issue.trade != 0 )
         {
-            printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,prices->base,prices->rel,price,volume,prices->exchange);
-            retstr = extra;
-            if ( (txid= (*exchange->issue.trade)(&retstr,exchange,prices->base,prices->rel,dir,price,volume)) != 0 )
-                InstantDEX_history(0,pend,retstr);
+            printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",pend->dir,prices->base,prices->rel,pend->price,pend->volume,prices->exchange);
+            retstr = pend->extra;
+            if ( pend->curlingp != 0 )
+                *pend->curlingp = 1;
+            if ( (pend->txid= (*exchange->issue.trade)(pend->cHandlep,pend->dotrade,&retstr,exchange,prices->base,prices->rel,pend->dir,pend->price,pend->volume)) != 0 )
+            {
+                pend->queueflag = 1;
+                pend->finishtime = (uint32_t)time(NULL);
+            }
             else printf("no txid from trade\n");
-            pend->txid = txid;
+            if ( pend->curlingp != 0 )
+                *pend->curlingp = 0;
             if ( retstr != 0 )
             {
-                queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+                if ( pend->dotrade != 0 )
+                {
+                    pend->queueflag = 1;
+                    queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+                }
                 printf("returning.%p (%s)\n",retstr,retstr);
             }
-            return(retstr);
-        } else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
+        } else retstr = clonestr("{\"error\":\"no trade function for exchange\"}\n");
     }
-    return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
+    if ( retstr == 0 )
+        retstr = clonestr("{\"error\":\"no response\"}");
+    return(retstr);
+}
+
+char *prices777_trade(int32_t *curlingp,void *bot,struct pending_trade **pendp,void **cHandlep,int32_t dotrade,cJSON *item,char *activenxt,char *secret,struct prices777 *prices,int32_t dir,double price,double volume,struct InstantDEX_quote *iQ,struct prices777_order *order,uint64_t orderid,char *extra)
+{
+    struct pending_trade *pend; char *retstr;
+    if ( pendp != 0 )
+        *pendp = 0;
+    if ( (pend= prices777_createpending(curlingp,bot,cHandlep,dotrade,item,activenxt,secret,prices,dir,price,volume,iQ,order,orderid,extra)) != 0 )
+    {
+        if ( bot == 0 || dotrade == 0 )
+            retstr = prices777_issuepending(pend);
+        else if ( pend->queueflag != 0 )
+            retstr = clonestr("{\"result\":\"pending_trade created\"}");
+        else retstr = clonestr("{\"error\":\"pending_trade couldnt be created\"}");
+        if ( pend->queueflag == 0 )
+            free_pending(pend), pend = 0;
+        else if ( pendp != 0 )
+            *pendp = pend;
+        return(retstr);
+    }
+    else return(clonestr("{\"error\":\"couldnt createpending\"}"));
 }
 
 int32_t swap_verifyNXT(uint32_t *finishp,uint32_t *deadlinep,cJSON *origjson,char *offerNXT,char *exchangestr,uint64_t orderid,uint64_t quoteid,struct InstantDEX_quote *iQ,char *phasedtx)
@@ -934,7 +1005,8 @@ char *swap_responseNXT(int32_t type,char *offerNXT,uint64_t otherbits,uint64_t o
             if ( (pend= pending_swap(&str,type,orderid,quoteid,triggerhash,phaselink,txstr,txstr2)) != 0 && str != 0 )
             {
                 iQ->s.pending = iQ->s.swap = 1;
-                InstantDEX_history(0,pend,str);
+                //InstantDEX_history(0,pend,str);
+                pend->queueflag = 1;
                 queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
                 printf("BROADCAST fee.txid %llu and %llu (%s %s)\n",(long long)fee.txid,(long long)responsetx.txid,fee.fullhash,responsetx.fullhash);
             }
@@ -1239,54 +1311,6 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
     return(-1);
 }
 
-int offer_checkitem(struct pending_trade *pend,cJSON *item)
-{
-    uint64_t quoteid; struct InstantDEX_quote *iQ;
-    if ( (quoteid= j64bits(item,"quoteid")) != 0 && (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed != 0 )
-        return(0);
-    return(-1);
-}
-
-char *offer_statemachine(struct pending_trade *pend)
-{
-    int32_t i,n,pending = 0; cJSON *array,*item;
-    if ( time(NULL) > pend->timestamp+INSTANTDEX_TRIGGERDEADLINE*60 )
-    {
-        printf("now.%ld vs timestamp.%u + %u\n",(long)time(NULL),pend->timestamp,INSTANTDEX_TRIGGERDEADLINE*60);
-        return(clonestr("{\"status\":\"timeout\",\"trade sequence completed\"}"));
-    }
-    if ( pend->type == 'R' )
-    {
-        // wait for alice tx
-    }
-    else if ( pend->type == 'T' )
-    {
-        // already handled in unconf
-    }
-    else if ( pend->type == 'S' )
-    {
-        if ( pend->tradesjson != 0 && (array= jarray(&n,pend->tradesjson,"trades")) != 0 )
-        {
-            for (i=0; i<n; i++)
-            {
-                item = jitem(array,i);
-                if ( offer_checkitem(pend,item) < 0 )
-                    pending++;
-            }
-            if ( pending == 0 )
-            {
-                delete_iQ(pend->orderid);
-                return(clonestr("{\"status\":\"success\",\"trade sequence completed\"}"));
-            }
-        }
-    }
-    else
-    {
-        // exchange specific check status on trade
-    }
-    return(0);
-}
-
 int32_t is_unfunded_order(uint64_t nxt64bits,uint64_t assetid,uint64_t amount)
 {
     char assetidstr[64],NXTaddr[64],cmd[1024],*jsonstr;
@@ -1324,9 +1348,12 @@ int32_t is_unfunded_order(uint64_t nxt64bits,uint64_t assetid,uint64_t amount)
     return(0);
 }
 
-cJSON *InstantDEX_tradejson(cJSON *item,char *activenxt,char *secret,struct prices777_order *order,int32_t dotrade,uint64_t orderid,char *extra)
+cJSON *InstantDEX_tradejson(int32_t *curlingp,void *bot,struct pending_trade **pendp,void **cHandlep,cJSON *item,char *activenxt,char *secret,struct prices777_order *order,int32_t dotrade,uint64_t orderid,char *extra)
 {
-    char swapbuf[8192],buf[8192],triggertx[4096],txbytes[4096],*retstr,*exchange; uint64_t txid,qty,avail,priceNQT; struct prices777 *prices; cJSON *json = 0;
+    char swapbuf[8192],buf[8192],triggertx[4096],txbytes[4096],*retstr,*exchange; uint64_t txid,qty,avail,priceNQT;
+    struct prices777 *prices; cJSON *json = 0;
+    if ( pendp != 0 )
+        *pendp = 0;
     if ( (prices= order->source) != 0 )
     {
         exchange = prices->exchange;
@@ -1354,7 +1381,7 @@ cJSON *InstantDEX_tradejson(cJSON *item,char *activenxt,char *secret,struct pric
                 return(cJSON_Parse(swapbuf));
             }
         }
-        retstr = prices777_trade(item,activenxt,secret,prices,order->wt,order->s.price,order->s.vol,0,order,orderid,extra);
+        retstr = prices777_trade(curlingp,bot,pendp,cHandlep,dotrade,item,activenxt,secret,prices,order->wt,order->s.price,order->s.vol,0,order,orderid,extra);
         if ( retstr != 0 )
         {
             json = cJSON_Parse(retstr);
@@ -1364,42 +1391,32 @@ cJSON *InstantDEX_tradejson(cJSON *item,char *activenxt,char *secret,struct pric
     return(json);
 }
 
-char *InstantDEX_dotrades(char *activenxt,char *secret,cJSON *json,struct prices777_order *trades,int32_t numtrades,int32_t dotrade,char *extra)
+char *InstantDEX_dotrades(int32_t curlings[],void *bot,void *cHandles[],char *activenxt,char *secret,cJSON *json,struct prices777_order *trades,int32_t numtrades,int32_t dotrade,char *extra)
 {
-    struct destbuf exchangestr,gui,name,base,rel; struct InstantDEX_quote iQ;
-    cJSON *retjson,*retarray,*item; int32_t i; struct pending_trade *pend;
+    struct destbuf exchangestr,gui,name,base,rel; struct InstantDEX_quote iQ; cJSON *retjson,*retarray; int32_t i;
     bidask_parse(1,&exchangestr,&name,&base,&rel,&gui,&iQ,json);
     retjson = cJSON_CreateObject(), retarray = cJSON_CreateArray();
     for (i=0; i<numtrades; i++)
     {
         //printf("GOT%d.(%s)\n",i,jprint(json,0));
-        item = InstantDEX_tradejson(jobj(json,"trades"),activenxt,secret,&trades[i],dotrade,iQ.s.quoteid,extra);
-        jaddi(retarray,item);
+        if ( trades[i].retitem != 0 )
+            free_json(trades[i].retitem );
+        trades[i].retitem = InstantDEX_tradejson(curlings!=0?&curlings[i]:0,bot,&trades[i].pend,cHandles!=0?cHandles[i]:0,jobj(json,"trades"),activenxt,secret,&trades[i],dotrade,iQ.s.quoteid,extra);
+        jaddi(retarray,trades[i].retitem);
     }
     jadd(retjson,"traderesults",retarray);
-    if ( dotrade != 0 && numtrades > 1 )
-    {
-        pend = calloc(1,sizeof(*pend));
-        pend->dir = iQ.s.isask == 0 ? 1 : -1, pend->price = iQ.s.price, pend->volume = iQ.s.vol, pend->orderid = iQ.s.quoteid;
-        pend->tradesjson = json;
-        pend->type = 'S';
-        pend->timestamp = (uint32_t)time(NULL);
-        InstantDEX_history(0,pend,0);
-        queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
-    }
-    return(jprint(retjson,1));
+    return(jprint(retjson,0));
 }
 
-char *InstantDEX_tradesequence(char *activenxt,char *secret,cJSON *json)
+char *InstantDEX_tradesequence(int32_t curlings[],void *bot,void *cHandles[],int32_t *nump,struct prices777_order *trades,int32_t maxtrades,int32_t dotrade,char *activenxt,char *secret,cJSON *json)
 {
     //"trades":[[{"basket":"bid","rootwt":-1,"groupwt":1,"wt":-1,"price":40000,"volume":0.00015000,"group":0,"trade":"buy","exchange":"nxtae","asset":"17554243582654188572","base":"BTC","rel":"NXT","orderid":"3545444239044461477","orderprice":40000,"ordervolume":0.00015000}], [{"basket":"bid","rootwt":-1,"groupwt":1,"wt":1,"price":0.00376903,"volume":1297.41480000,"group":10,"trade":"sell","exchange":"coinbase","name":"BTC/USD","base":"BTC","rel":"USD","orderid":"1","orderprice":265.32000000,"ordervolume":4.89000000}]]}
-    cJSON *array,*item; int32_t i,n,dir; char *tradestr,*exchangestr; struct prices777_order trades[256],*order;
+    cJSON *array,*item; int32_t i,n,dir; char *tradestr,*exchangestr; struct prices777_order *order;
     uint64_t orderid,assetid,currency,baseid,relid,quoteid; int64_t sendbase,recvbase,sendrel,recvrel; struct destbuf base,rel,name;
     double orderprice,ordervolume; struct prices777 *prices; uint32_t timestamp;
-    memset(trades,0,sizeof(trades));
     if ( (array= jarray(&n,json,"trades")) != 0 )
     {
-        if ( n > sizeof(trades)/sizeof(*trades) )
+        if ( n > maxtrades )
             return(clonestr("{\"error\":\"exceeded max trades possible in a tradesequence\"}"));
         if ( n == 1 && is_cJSON_Array(jitem(array,0)) != 0 )
         {
@@ -1407,10 +1424,12 @@ char *InstantDEX_tradesequence(char *activenxt,char *secret,cJSON *json)
             array = jitem(array,0);
             n = cJSON_GetArraySize(array);
         }
+        *nump = n;
         timestamp = (uint32_t)time(NULL);
         for (i=0; i<n; i++)
         {
             order = &trades[i];
+            memset(order,0,sizeof(*order));
             item = jitem(array,i);
             tradestr = jstr(item,"trade"), exchangestr = jstr(item,"exchange");
             copy_cJSON(&base,jobj(item,"base")), copy_cJSON(&rel,jobj(item,"rel")), copy_cJSON(&name,jobj(item,"name"));
@@ -1456,7 +1475,7 @@ char *InstantDEX_tradesequence(char *activenxt,char *secret,cJSON *json)
                 return(clonestr("{\"error\":\"no trade specified\"}"));
             }
         }
-        return(InstantDEX_dotrades(activenxt,secret,json,trades,n,juint(json,"dotrade"),jstr(json,"extra")));
+        return(InstantDEX_dotrades(curlings,bot,cHandles,activenxt,secret,json,trades,n,dotrade,jstr(json,"extra")));
     }
     printf("error parsing.(%s)\n",jprint(json,0));
     return(clonestr("{\"error\":\"couldnt process trades\"}"));

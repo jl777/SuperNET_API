@@ -421,7 +421,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 #endif
 
     /*  Start listening for incoming connections. */
-    rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0);
+    rc = nn_usock_start (&self->usock, AF_UNIX, SOCK_STREAM, 0,addr);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);
         self->state = NN_BIPC_STATE_WAITING;

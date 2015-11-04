@@ -326,9 +326,9 @@ void SuperNET_apiloop(void *ipaddr)
             fprintf(stderr,"error binding to relaypoint sock.%d type.%d (%s) %s\n",sock,NN_BUS,SUPERNET_APIENDPOINT,nn_errstr());
         else
         {
-            if ( nn_settimeouts(sock,10,1) < 0 )
+            if ( nn_settimeouts(sock,10,10) < 0 )
                 fprintf(stderr,"error setting sendtimeout %s\n",nn_errstr());
-            fprintf(stderr,"BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
+            fprintf(stderr,"apiloop BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
             while ( 1 )
             {
                 if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
@@ -393,8 +393,12 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
         else strcat(SUPERNET.NXTAPIURL,"6876/nxt");
     }
     copy_cJSON(&tmp,cJSON_GetObjectItem(argjson,"userdir")), safecopy(SUPERNET.userhome,tmp.buf,sizeof(SUPERNET.userhome));
+#ifndef __PNACL
     if ( SUPERNET.userhome[0] == 0 )
+    {
         strcpy(SUPERNET.userhome,"/root");
+    }
+#endif
     strcpy(SUPERNET.NXTSERVER,SUPERNET.NXTAPIURL);
     strcat(SUPERNET.NXTSERVER,"?requestType");
     copy_cJSON(&tmp,cJSON_GetObjectItem(argjson,"myNXTacct")), safecopy(SUPERNET.myNXTacct,tmp.buf,sizeof(SUPERNET.myNXTacct));
@@ -456,6 +460,7 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
 void SuperNET_initconf(cJSON *json)
 {
     struct destbuf tmp; uint8_t mysecret[32],mypublic[32]; FILE *fp;
+    
     PostMessage("SuperNET_initconf.(%s)\n",jprint(json,0));
     MAX_DEPTH = get_API_int(cJSON_GetObjectItem(json,"MAX_DEPTH"),MAX_DEPTH);
     if ( MAX_DEPTH > _MAX_DEPTH )
@@ -511,26 +516,32 @@ void SuperNET_initconf(cJSON *json)
     copy_cJSON(&tmp,cJSON_GetObjectItem(json,"DBPATH")), safecopy(SUPERNET.DBPATH,tmp.buf,sizeof(SUPERNET.DBPATH));
     if ( SUPERNET.DBPATH[0] == 0 )
         strcpy(SUPERNET.DBPATH,"./DB");
+    printf("ensure.(%s)\n",SUPERNET.DBPATH);
     os_compatible_path(SUPERNET.DBPATH), ensure_directory(SUPERNET.DBPATH);
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
     char buf[512];
-    copy_cJSON(RAMCHAINS.pullnode,cJSON_GetObjectItem(json,"pullnode"));
-    copy_cJSON(SOPHIA.PATH,cJSON_GetObjectItem(json,"SOPHIA"));
-    copy_cJSON(SOPHIA.RAMDISK,cJSON_GetObjectItem(json,"RAMDISK"));
+    copy_cJSON2(RAMCHAINS.pullnode,sizeof(RAMCHAINS.pullnode),cJSON_GetObjectItem(json,"pullnode"));
+    copy_cJSON2(SOPHIA.PATH,sizeof(SOPHIA.PATH),cJSON_GetObjectItem(json,"SOPHIA"));
+    copy_cJSON2(SOPHIA.RAMDISK,sizeof(SOPHIA.RAMDISK),cJSON_GetObjectItem(json,"RAMDISK"));
     if ( SOPHIA.PATH[0] == 0 )
         strcpy(SOPHIA.PATH,"./DB");
     os_compatible_path(SOPHIA.PATH), ensure_directory(SOPHIA.PATH);
     MGW.port = get_API_int(cJSON_GetObjectItem(json,"MGWport"),7643);
-    copy_cJSON(MGW.PATH,cJSON_GetObjectItem(json,"MGWPATH"));
+    copy_cJSON2(MGW.PATH,sizeof(MGW.PATH),cJSON_GetObjectItem(json,"MGWPATH"));
     if ( MGW.PATH[0] == 0 )
+    {
         strcpy(MGW.PATH,"/var/www/html/MGW");
+        ensure_directory("/var");
+        ensure_directory("/var/www");
+        ensure_directory("/var/www/html");
+    }
     ensure_directory(MGW.PATH);
     sprintf(buf,"%s/msig",MGW.PATH), ensure_directory(buf);
     sprintf(buf,"%s/status",MGW.PATH), ensure_directory(buf);
     sprintf(buf,"%s/sent",MGW.PATH), ensure_directory(buf);
     sprintf(buf,"%s/deposit",MGW.PATH), ensure_directory(buf);
     printf("MGWport.%u >>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",MGW.port,SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
-#else
+//#else
     if ( 0 )
     {
         //struct kv777 *kv777_init(char *path,char *name,struct kv777_flags *flags); // kv777_init IS NOT THREADSAFE!
@@ -541,7 +552,7 @@ void SuperNET_initconf(cJSON *json)
         SUPERNET.NXTaccts = kv777_init(SUPERNET.DBPATH,"NXTaccts",0);
         SUPERNET.NXTtxids = kv777_init(SUPERNET.DBPATH,"NXT_txids",0);
     }
-#endif
+//#endif
     if ( SUPERNET.iamrelay != 0 )
     {
         SUPERNET.PM = kv777_init(SUPERNET.DBPATH,"PM",0);
@@ -689,6 +700,14 @@ char *SuperNET_setconfstr(char *field,char *valstr)
     return(confstr);
 }
 
+int32_t SuperNET_isactivated(char *agent)
+{
+    cJSON *array; int32_t n;
+    if ( SUPERNET.argjson != 0 && (array= jarray(&n,SUPERNET.argjson,"agents")) > 0 )
+        return(in_jsonarray(array,agent));
+    return(0);
+}
+
 int SuperNET_start(char *fname,char *myip)
 {
     void SuperNET_loop(void *_args);
@@ -696,12 +715,14 @@ int SuperNET_start(char *fname,char *myip)
     char *strs[16],*jsonargs=0,ipaddr[256]; cJSON *json; int32_t i,n = 0; uint64_t allocsize;
     portable_OS_init();
     //nanotests(1);
-    
+
     randombytes((void *)&i,sizeof(i));
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     printf("%p myip.(%s) rand.%llx fname.(%s)\n",myip,myip,(long long)i,fname);
+#ifdef __PNACL
     SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
+#endif
     if ( (jsonargs= loadfile(&allocsize,os_compatible_path(fname))) == 0 )
     {
         printf("ERROR >>>>>>>>>>> (%s) SuperNET.conf file doesnt exist\n",fname);
@@ -727,28 +748,28 @@ int SuperNET_start(char *fname,char *myip)
     strs[n++] = SuperNET_launch_agent("relay",jsonargs,&RELAYS.readyflag);
     if ( SUPERNET.iamrelay == 0 )
     {
-        if ( 0 )
+        if ( SuperNET_isactivated("jumblr") != 0 )
             strs[n++] = SuperNET_launch_agent("jumblr",jsonargs,0);
-        if ( 1 )
+        if ( SuperNET_isactivated("pangea") != 0 )
             strs[n++] = SuperNET_launch_agent("pangea",jsonargs,0);
-        if ( 0 )
+        if ( SuperNET_isactivated("dcnet") != 0 )
             strs[n++] = SuperNET_launch_agent("dcnet",jsonargs,0);
         if ( SUPERNET.gatewayid < 0 )
         {
-            if ( 1 )
+            if ( SuperNET_isactivated("prices") != 0 )
                 strs[n++] = SuperNET_launch_agent("prices",jsonargs,&PRICES.readyflag);
-            if ( 0 )
+            if ( SuperNET_isactivated("teleport") != 0 )
                 strs[n++] = SuperNET_launch_agent("teleport",jsonargs,&TELEPORT.readyflag);
-            if ( 0 )
+            if ( SuperNET_isactivated("cashier") != 0 )
                 strs[n++] = SuperNET_launch_agent("cashier",jsonargs,&CASHIER.readyflag);
-            if ( 1 )
+            if ( SuperNET_isactivated("InstantDEX") != 0 )
             {
                 strs[n++] = SuperNET_launch_agent("InstantDEX",jsonargs,&INSTANTDEX.readyflag);
                 void idle(); void idle2();
                 portable_thread_create((void *)idle,myip);
                 portable_thread_create((void *)idle2,myip);
             }
-            if ( SUPERNET.peggy != 0 )
+            if ( SuperNET_isactivated("peggy") != 0 )
             {
                 void crypto_update();
                 PostMessage("start peggy\n");
@@ -759,12 +780,16 @@ int SuperNET_start(char *fname,char *myip)
 #ifdef INSIDE_MGW
     if ( SUPERNET.gatewayid >= 0 )
     {
-        strs[n++] = SuperNET_launch_agent("MGW",jsonargs,&MGW.readyflag);
-        strs[n++] = SuperNET_launch_agent("ramchain",jsonargs,&RAMCHAINS.readyflag);
-        printf("MGW sock = %d\n",MGW.all.socks.both.bus);
+        if ( SuperNET_isactivated("ramchain") != 0 )
+        {
+            strs[n++] = SuperNET_launch_agent("ramchain",jsonargs,&RAMCHAINS.readyflag);
+            printf("MGW sock = %d\n",MGW.all.socks.both.bus);
+            if ( SuperNET_isactivated("MGW") != 0 )
+                strs[n++] = SuperNET_launch_agent("MGW",jsonargs,&MGW.readyflag);
+        }
     }
 #else
-    if ( 0 )
+    if ( SuperNET_isactivated("ramchain") != 0 )
         strs[n++] = SuperNET_launch_agent("ramchain",jsonargs,&RAMCHAINS.readyflag);
 #endif
     for (i=0; i<n; i++)

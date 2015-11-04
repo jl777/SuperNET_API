@@ -600,6 +600,16 @@ void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB
     portable_mutex_unlock(&prices->mutex);
 }
 
+char *orderbook_clonestr(struct prices777 *prices,int32_t invert,int32_t allflag)
+{
+    char *str,*clone = 0;
+    portable_mutex_lock(&prices->mutex);
+    if ( (str= prices->orderbook_jsonstrs[invert][allflag]) != 0 )
+        clone = clonestr(str);
+    portable_mutex_unlock(&prices->mutex);
+    return(clone);
+}
+
 void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJSON *asks,int32_t maxdepth,char *pricefield,char *volfield,uint32_t reftimestamp)
 {
     cJSON *item; int32_t i,slot,n=0,m=0,dir,bidask,numitems; uint64_t orderid,quoteid; uint32_t timestamp; double price,volume,hbla = 0.;
@@ -917,7 +927,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 prices777_volcalc(relvols,baseids,gp->ask.source->relid,a*av);
                 //printf("ask %f b %f bv %f %s %s %f\n",ask,a,av,gp->ask.source->base,gp->ask.source->rel,av*a);
             } else ask = 0.;
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
                 printf("%10s %10s/%10s %s (%s %s) wt:%f %2.0f/%2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f ask %.8f inv %f %f\n",prices->exchange,gp->bid.source->exchange,gp->ask.source->exchange,prices->contract,gp->bid.source->contract,gp->ask.source->contract,prices->groupwts[j],gp->bid.wt,gp->ask.wt,j,b,bv,a,av,bid,ask,1/bid,1/ask);
         }
         for (j=0; j<prices->numgroups; j++)
@@ -925,7 +935,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp = &OB.book[j][slot];
             if ( gp->bid.source == 0 || gp->ask.source == 0 )
             {
-                //printf("%s: null source slot.%d j.%d\n",prices->exchange,slot,j);
+                printf("%s: null source slot.%d j.%d\n",prices->exchange,slot,j);
                 break;
             }
             baseratio = prices777_volratio(basevols,baseids,gp->bid.source->baseid,gp->bid.s.vol);
@@ -933,7 +943,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp->bid.ratio = (baseratio < relratio) ? baseratio : relratio;
             if ( j == 0 )
                 bidvol = (gp->bid.ratio * gp->bid.s.vol);
-            //printf("(%f %f) (%f %f) bid%d bidratio %f bidvol %f ",gp->bid.s.vol,baseratio,gp->bid.s.vol * gp->bid.s.price,relratio,j,gp->bid.ratio,bidvol);
+            printf("(%f %f) (%f %f) bid%d bidratio %f bidvol %f ",gp->bid.s.vol,baseratio,gp->bid.s.vol * gp->bid.s.price,relratio,j,gp->bid.ratio,bidvol);
             baseratio = prices777_volratio(relvols,baseids,gp->ask.source->baseid,gp->ask.s.vol);
             relratio = prices777_volratio(relvols,baseids,gp->ask.source->relid,gp->ask.s.vol * gp->ask.s.price);
             gp->ask.ratio = (baseratio < relratio) ? baseratio : relratio;
@@ -967,7 +977,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp->ask.s.timestamp = OB.timestamp, gp->ask.s.price = ask, gp->ask.s.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
             gp->ask.source = prices, gp->ask.wt = prices->groupwts[j];
         }
-        //printf("%s %s slot.%d (%.8f %.6f %.8f %.6f) (%d %d)\n",prices->exchange,prices->contract,slot,gp->bid.s.price,gp->bid.s.vol,gp->ask.s.price,gp->ask.s.vol,OB.numbids,OB.numasks);
+        printf("%s %s slot.%d (%.8f %.6f %.8f %.6f) (%d %d)\n",prices->exchange,prices->contract,slot,gp->bid.s.price,gp->bid.s.vol,gp->ask.s.price,gp->ask.s.vol,OB.numbids,OB.numasks);
     }
     //fprintf(stderr,"%s basket.%s slot.%d numbids.%d numasks.%d %f %f\n",prices->exchange,prices->contract,slot,prices->O.numbids,prices->O.numasks,prices->O.book[MAX_GROUPS][0].bid.s.price,prices->O.book[MAX_GROUPS][0].ask.s.price);
     if ( slot > 0 )

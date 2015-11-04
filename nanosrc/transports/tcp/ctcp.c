@@ -331,8 +331,7 @@ static void nn_ctcp_handler (struct nn_fsm *self, int src, int type,
             switch (type) {
             case NN_DNS_STOPPED:
                 if (ctcp->dns_result.error == 0) {
-                    nn_ctcp_start_connecting (ctcp, &ctcp->dns_result.addr,
-                        ctcp->dns_result.addrlen);
+                    nn_ctcp_start_connecting (ctcp, &ctcp->dns_result.addr,ctcp->dns_result.addrlen);
                     return;
                 }
                 nn_backoff_start (&ctcp->retry);
@@ -358,20 +357,16 @@ static void nn_ctcp_handler (struct nn_fsm *self, int src, int type,
             case NN_USOCK_CONNECTED:
                 nn_stcp_start (&ctcp->stcp, &ctcp->usock);
                 ctcp->state = NN_CTCP_STATE_ACTIVE;
-                nn_epbase_stat_increment (&ctcp->epbase,
-                    NN_STAT_INPROGRESS_CONNECTIONS, -1);
-                nn_epbase_stat_increment (&ctcp->epbase,
-                    NN_STAT_ESTABLISHED_CONNECTIONS, 1);
+                nn_epbase_stat_increment (&ctcp->epbase,NN_STAT_INPROGRESS_CONNECTIONS, -1);
+                nn_epbase_stat_increment (&ctcp->epbase,NN_STAT_ESTABLISHED_CONNECTIONS, 1);
                 nn_epbase_clear_error (&ctcp->epbase);
                 return;
             case NN_USOCK_ERROR:
                 nn_epbase_set_error (&ctcp->epbase,nn_usock_geterrno(&ctcp->usock),__FILE__,__LINE__);
                 nn_usock_stop (&ctcp->usock);
                 ctcp->state = NN_CTCP_STATE_STOPPING_USOCK;
-                nn_epbase_stat_increment (&ctcp->epbase,
-                    NN_STAT_INPROGRESS_CONNECTIONS, -1);
-                nn_epbase_stat_increment (&ctcp->epbase,
-                    NN_STAT_CONNECT_ERRORS, 1);
+                nn_epbase_stat_increment (&ctcp->epbase,NN_STAT_INPROGRESS_CONNECTIONS, -1);
+                nn_epbase_stat_increment (&ctcp->epbase,NN_STAT_CONNECT_ERRORS, 1);
                 return;
             default:
                 nn_fsm_bad_action (ctcp->state, src, type);
@@ -534,8 +529,7 @@ static void nn_ctcp_start_resolving (struct nn_ctcp *self)
     self->state = NN_CTCP_STATE_RESOLVING;
 }
 
-static void nn_ctcp_start_connecting (struct nn_ctcp *self,
-    struct sockaddr_storage *ss, size_t sslen)
+static void nn_ctcp_start_connecting (struct nn_ctcp *self,struct sockaddr_storage *ss, size_t sslen)
 {
     int rc;
     struct sockaddr_storage remote;
@@ -555,6 +549,7 @@ static void nn_ctcp_start_connecting (struct nn_ctcp *self,
     /*  Create IP address from the address string. */
     addr = nn_epbase_getaddr (&self->epbase);
     memset (&remote, 0, sizeof (remote));
+    printf("CTCP connect to (%s)\n",addr);
 
     /*  Parse the port. */
     end = addr + strlen (addr);
@@ -565,16 +560,14 @@ static void nn_ctcp_start_connecting (struct nn_ctcp *self,
 
     /*  Check whether IPv6 is to be used. */
     ipv4onlylen = sizeof (ipv4only);
-    nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_IPV4ONLY,
-        &ipv4only, &ipv4onlylen);
+    nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_IPV4ONLY,&ipv4only, &ipv4onlylen);
     nn_assert (ipv4onlylen == sizeof (ipv4only));
 
     /*  Parse the local address, if any. */
     semicolon = strchr (addr, ';');
     memset (&local, 0, sizeof (local));
     if (semicolon)
-        rc = nn_iface_resolve (addr, semicolon - addr, ipv4only,
-            &local, &locallen);
+        rc = nn_iface_resolve (addr, semicolon - addr, ipv4only,&local, &locallen);
     else
         rc = nn_iface_resolve ("*", 1, ipv4only, &local, &locallen);
     if (nn_slow (rc < 0)) {
@@ -594,7 +587,7 @@ static void nn_ctcp_start_connecting (struct nn_ctcp *self,
         nn_assert (0);
 
     /*  Try to start the underlying socket. */
-    rc = nn_usock_start (&self->usock, remote.ss_family, SOCK_STREAM, 0);
+    rc = nn_usock_start (&self->usock, remote.ss_family, SOCK_STREAM, 0,addr);
     if (nn_slow (rc < 0)) {
         nn_backoff_start (&self->retry);
         self->state = NN_CTCP_STATE_WAITING;
@@ -605,13 +598,11 @@ static void nn_ctcp_start_connecting (struct nn_ctcp *self,
     sz = sizeof (val);
     nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_SNDBUF, &val, &sz);
     nn_assert (sz == sizeof (val));
-    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_SNDBUF,
-        &val, sizeof (val));
+    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_SNDBUF,&val, sizeof (val));
     sz = sizeof (val);
     nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_RCVBUF, &val, &sz);
     nn_assert (sz == sizeof (val));
-    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_RCVBUF,
-        &val, sizeof (val));
+    nn_usock_setsockopt (&self->usock, SOL_SOCKET, SO_RCVBUF,&val, sizeof (val));
 
     /*  Bind the socket to the local network interface. */
     rc = nn_usock_bind (&self->usock, (struct sockaddr*) &local, locallen);
@@ -622,9 +613,8 @@ static void nn_ctcp_start_connecting (struct nn_ctcp *self,
     }
 
     /*  Start connecting. */
-    nn_usock_connect (&self->usock, (struct sockaddr*) &remote, remotelen);
+    nn_usock_connect (&self->usock, (struct sockaddr *) &remote, remotelen);
     self->state = NN_CTCP_STATE_CONNECTING;
-    nn_epbase_stat_increment (&self->epbase,
-        NN_STAT_INPROGRESS_CONNECTIONS, 1);
+    nn_epbase_stat_increment (&self->epbase,NN_STAT_INPROGRESS_CONNECTIONS, 1);
 }
 

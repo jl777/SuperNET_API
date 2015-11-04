@@ -46,7 +46,7 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
 int32_t get_pubkey(struct destbuf *pubkey,char *coinstr,char *serverport,char *userpass,char *coinaddr);
 cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass);
 char *get_rawtransaction(char *coinstr,char *serverport,char *userpass,char *txidstr);
-int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params);
+int32_t generate_multisigaddr(char *multisigaddr,struct destbuf *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params);
 int32_t gen_msigaddr(char *multisigaddr,char *redeemScript,char *name,char *pubkeys[],int32_t m,int32_t n);
 
 #endif
@@ -722,7 +722,7 @@ uint32_t _get_RTheight(double *lastmillip,char *coinstr,char *serverport,char *u
     char *retstr;
     cJSON *json;
     uint32_t height = 0;
-    if ( milliseconds() > (*lastmillip + 1000) )
+    if ( milliseconds() > (*lastmillip + 15000) )
     {
         //printf("RTheight.(%s) (%s)\n",ram->name,ram->serverport);
         retstr = bitcoind_passthru(coinstr,serverport,userpass,"getinfo","");
@@ -1150,7 +1150,7 @@ cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)
     return(json);
 }
 
-int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params)
+int32_t generate_multisigaddr(char *multisigaddr,struct destbuf *redeemScript,char *coinstr,char *serverport,char *userpass,int32_t addmultisig,char *params)
 {
     char addr[1024],*retstr; struct destbuf tmp; cJSON *json,*redeemobj,*msigobj; int32_t flag = 0;
     if ( addmultisig != 0 )
@@ -1168,7 +1168,7 @@ int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinst
                 {
                     if ( (redeemobj= cJSON_GetObjectItem(json,"hex")) != 0 )
                     {
-                        copy_cJSON(&tmp,redeemobj); strcpy(redeemScript,tmp.buf);
+                        copy_cJSON(redeemScript,redeemobj);
                         flag = 1;
                     } else printf("missing redeemScript in (%s)\n",retstr);
                     free_json(json);
@@ -1190,7 +1190,7 @@ int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinst
                     if ( (redeemobj= cJSON_GetObjectItem(json,"redeemScript")) != 0 )
                     {
                         copy_cJSON(&tmp,msigobj); strcpy(multisigaddr,tmp.buf);
-                        copy_cJSON(&tmp,redeemobj); strcpy(redeemScript,tmp.buf);
+                        copy_cJSON(redeemScript,redeemobj);
                         flag = 1;
                     } else printf("missing redeemScript in (%s)\n",retstr);
                 } else printf("multisig missing address in (%s) params.(%s)\n",retstr,params);
@@ -1204,7 +1204,7 @@ int32_t generate_multisigaddr(char *multisigaddr,char *redeemScript,char *coinst
 
 int32_t gen_msigaddr(char *multisigaddr,char *redeemScript,char *name,char *pubkeys[],int32_t m,int32_t n)
 {
-    char *params; int32_t i,retval = -1; cJSON *array,*keys; struct coin777 *coin; char scriptPubKey[1024],multisigaddr2[128],redeemScript2[8192];
+    char *params; int32_t i,retval = -1; cJSON *array,*keys; struct coin777 *coin; char scriptPubKey[1024],multisigaddr2[128]; struct destbuf redeemScript2;
     multisigaddr[0] = redeemScript[0] = 0;
     if ( (coin= coin777_find(name,0)) != 0 )
     {
@@ -1216,8 +1216,8 @@ int32_t gen_msigaddr(char *multisigaddr,char *redeemScript,char *name,char *pubk
         jaddi(array,keys);
         params = jprint(array,1);
         create_MofN(coin->p2shtype,redeemScript,scriptPubKey,multisigaddr,pubkeys,m,n);
-        retval = generate_multisigaddr(multisigaddr2,redeemScript2,coin->name,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,params);
-        printf("params.(%s) retval.%d scriptPubKey.(%s) multisigaddr.(%s) redeemScript.(%s) vs (%s) (%s)\n",params,retval,scriptPubKey,multisigaddr,redeemScript,multisigaddr2,redeemScript2);
+        retval = generate_multisigaddr(multisigaddr2,&redeemScript2,coin->name,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,params);
+        printf("params.(%s) retval.%d scriptPubKey.(%s) multisigaddr.(%s) redeemScript.(%s) vs (%s) (%s)\n",params,retval,scriptPubKey,multisigaddr,redeemScript,multisigaddr2,redeemScript2.buf);
         free(params);
     }
     return(retval);

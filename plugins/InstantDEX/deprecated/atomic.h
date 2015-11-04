@@ -623,7 +623,7 @@ char *makeoffer3(char *NXTaddr,char *NXTACCTSECRET,double price,double volume,in
     }
     else if ( strcmp(exchange,"nxtae") == 0 )
     {
-        retstr = fill_nxtae(offer->nxt64bits,-dir,price,offer->volume,offer->baseid,offer->relid);
+        retstr = fill_nxtae(1,offer->nxt64bits,-dir,price,offer->volume,offer->baseid,offer->relid);
         free(offer);
         return(retstr);
     }

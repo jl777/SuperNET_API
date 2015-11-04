@@ -8,7 +8,7 @@ TARGETP = ccoin
 
 DEPS =
 
-CFLAGS = -Wall -Os -Wno-unused-but-set-variable -Wno-deprecated -fno-strict-aliasing -DNN_HAVE_POLL=1 -DNN_HAVE_SEMAPHORE=1 -DNN_HAVE_PIPE=1 -DNN_USE_POLL=1 -DNN_DISABLE_GETADDRINFO_A=1 -DNN_USE_LITERAL_IFADDR=1 -DNN_HAVE_STDINT=1 -DNN_HAVE_MSG_CONTROL=1 -DNN_USE_MYMSG=1
+CFLAGS = -Wall -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -DNN_HAVE_POLL=1 -DNN_HAVE_SEMAPHORE=1 -DNN_HAVE_PIPE=1 -DNN_USE_POLL=1 -DNN_DISABLE_GETADDRINFO_A=1 -DNN_USE_LITERAL_IFADDR=1 -DNN_HAVE_STDINT=1 -DNN_HAVE_MSG_CONTROL=1 -DNN_USE_MYMSG=1
 
 NONPORTABLE=   plugins/nonportable/$(OS)/random.c  plugins/nonportable/$(OS)/files.c
 
@@ -77,6 +77,6 @@ PSOURCES = picocoin/base58.c picocoin/key.c picocoin/bignum.c picocoin/file_seq.
 
 CSOURCES = plugins/utils/ramcoder.c plugins/utils/curve25519.c plugins/utils/crypt_argchk.c plugins/utils/tom_md5.c plugins/utils/sha256.c plugins/utils/rmd160.c plugins/utils/hmac_sha512.c plugins/utils/sha512.c plugins/utils/huffstream.c plugins/utils/libgfshare.c plugins/utils/SaM.c plugins/utils/bits777.c
 
-LSOURCES = libjl777.c plugins/coins/coins777_main.c plugins/coins/coins777.c plugins/coins/gen1.c plugins/coins/cointx.c plugins/KV/kv777.c  plugins/KV/kv777_main.c plugins/utils/transport777.c  plugins/agents/_dcnet/dcnet777.c plugins/utils/NXT777.c plugins/common/console777.c plugins/common/busdata777.c plugins/common/relays777.c plugins/common/system777.c
+LSOURCES = libjl777.c plugins/coins/coins777_main.c plugins/coins/coins777.c plugins/coins/gen1.c plugins/coins/cointx.c plugins/KV/kv777.c  plugins/KV/kv777_main.c plugins/utils/transport777.c  plugins/agents/_dcnet/dcnet777.c plugins/utils/NXT777.c plugins/common/console777.c plugins/common/busdata777.c plugins/common/relays777.c plugins/common/system777.c plugins/common/cashier777.c plugins/ramchain/ramchain.c plugins/ramchain/ramchain_main.c plugins/mgw/MGW_main.c plugins/mgw/old/sophia.c plugins/mgw/old/db777.c
 
 GSOURCES =   plugins/common/hostnet777.c plugins/games/tourney777.c plugins/games/cards777.c  plugins/games/pangea/pangea777.c plugins/games/pangea/poker.c

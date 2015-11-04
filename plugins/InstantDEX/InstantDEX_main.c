@@ -65,6 +65,7 @@ cJSON *InstantDEX_lottostats();
 #include "trades.h"
 #include "quotes.h"
 #include "subatomic.h"
+#include "tradebots.h"
 
 // {"plugin":"InstantDEX","method":"orderbook","baseid":"8688289798928624137","rel":"USD","exchange":"active","allfields":1}
 
@@ -268,7 +269,7 @@ cJSON *InstantDEX_lottostats()
     cJSON *json,*array,*txobj; int32_t i,n,totaltickets = 0; uint64_t amount,senderbits; uint32_t timestamp = 0;
     if ( timestamp == 0 )
         timestamp = 38785003;
-    sprintf(cmdstr,"requestType=getAccountTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,timestamp);
+    sprintf(cmdstr,"requestType=getBlockchainTransactions&account=%s&timestamp=%u&type=0&subtype=0",INSTANTDEX_ACCT,timestamp);
     //printf("cmd.(%s)\n",cmdstr);
     if ( (jsonstr= issue_NXTPOST(cmdstr)) != 0 )
     {
@@ -321,6 +322,11 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
     methodstr = jstr(json,"method");
     if ( methodstr != 0 && (strcmp(methodstr,"placeask") == 0 || strcmp(methodstr,"ask") == 0) )
         iQ->s.isask = 1;
+    if ( iQ->s.vol < 0. )
+    {
+        iQ->s.vol = -iQ->s.vol;
+        iQ->s.isask ^= 1;
+    }
     if ( methodstr != 0 && strcmp(exchangestr->buf,"wallet") == 0 && (iQ->s.baseid == NXT_ASSETID || strcmp(base->buf,"NXT") == 0) )
     {
         flag = 1;
@@ -528,7 +534,7 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
                     if ( exchange->balancejson != 0 )
                         free_json(exchange->balancejson), exchange->balancejson = 0;
                     exchange->lastbalancetime = (uint32_t)time(NULL);
-                    if ( (exchange->balancejson= (*exchange->issue.balances)(exchange)) != 0 )
+                    if ( (exchange->balancejson= (*exchange->issue.balances)(&exchange->cHandle,exchange)) != 0 )
                     {
                         if ( (coinstr= jstr(json,"base")) != 0 )
                             retstr = (*exchange->issue.parsebalance)(exchange,&balance,coinstr);
@@ -547,7 +553,19 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
         else if ( strcmp(method.buf,"tradesequence") == 0 )
         {
             //printf("call tradesequence.(%s)\n",jsonstr);
-            retstr = InstantDEX_tradesequence(activenxt,secret,json);
+            int32_t dotrade,numtrades; struct prices777_order trades[256]; struct pending_trade *pend;
+            dotrade = juint(json,"dotrade");
+            retstr = InstantDEX_tradesequence(0,0,0,&numtrades,trades,(int32_t)(sizeof(trades)/sizeof(*trades)),dotrade,activenxt,secret,json);
+            if ( dotrade != 0 )
+            {
+                pend = calloc(1,sizeof(*pend));
+                pend->dir = iQ.s.isask == 0 ? 1 : -1, pend->price = iQ.s.price, pend->volume = iQ.s.vol, pend->orderid = iQ.s.quoteid;
+                pend->tradesjson = json;
+                pend->type = 'S';
+                pend->timestamp = (uint32_t)time(NULL);
+                //InstantDEX_history(0,pend,0);
+                queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+            }
         }
         else if ( strcmp(method.buf,"makebasket") == 0 )
         {
@@ -621,6 +639,8 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
                 if ( retstr != 0 )
                     retstr = clonestr(retstr);
             }
+            else if ( strcmp(method.buf,"tradebot") == 0 )
+                retstr = InstantDEX_tradebot(prices,json,&iQ,invert);
         }
         //if ( Debuglevel > 2 )
             printf("(%s) %p exchange.(%s) base.(%s) %llu rel.(%s) %llu | name.(%s) %llu\n",retstr!=0?retstr:"",prices,exchangestr.buf,base.buf,(long long)iQ.s.baseid,rel.buf,(long long)iQ.s.relid,name.buf,(long long)assetbits);
@@ -703,12 +723,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
         //init_InstantDEX(json);
-        if ( 0 )
+        /*if ( 0 )
         {
             INSTANTDEX.history = txinds777_init(SUPERNET.DBPATH,"InstantDEX");
             INSTANTDEX.numhist = (int32_t)INSTANTDEX.history->curitem;
             InstantDEX_inithistory(0,INSTANTDEX.numhist);
-        }
+        }*/
         //update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
         printf("INIT INSTANTDEX readyflag.%p\n",&INSTANTDEX.readyflag);
@@ -733,7 +753,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-#ifdef INSIDE_MGW
+//#ifdef INSIDE_MGW
         else if ( strcmp(methodstr,"msigaddr") == 0 )
         {
             char *devMGW_command(char *jsonstr,cJSON *json);
@@ -745,7 +765,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 }
             } //else retstr = nn_loadbalanced((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
         }
-#endif
+//#endif
         else if ( strcmp(methodstr,"LSUM") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);

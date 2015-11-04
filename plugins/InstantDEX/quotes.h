@@ -300,7 +300,7 @@ char *InstantDEX_cancelorder(cJSON *argjson,char *activenxt,char *secret,uint64_
     {
         if ( exchange->issue.cancelorder != 0 )
         {
-            if ( (retstr= (*exchange->issue.cancelorder)(exchange,argjson,quoteid)) == 0 )
+            if ( (retstr= (*exchange->issue.cancelorder)(&exchange->cHandle,exchange,argjson,quoteid)) == 0 )
                 retstr = clonestr("{\"result\":\"nothing returned from exchange\"}");
             return(retstr);
         }
@@ -339,7 +339,7 @@ char *InstantDEX_orderstatus(cJSON *argjson,uint64_t orderid,uint64_t quoteid)
     {
         if ( exchange->issue.orderstatus != 0 )
         {
-            if ( (str= (*exchange->issue.orderstatus)(exchange,argjson,quoteid)) == 0 )
+            if ( (str= (*exchange->issue.orderstatus)(&exchange->cHandle,exchange,argjson,quoteid)) == 0 )
                 str = clonestr("{\"result\":\"nothing returned from exchange\"}");
             return(str);
         }
@@ -358,7 +358,7 @@ char *InstantDEX_openorders(cJSON *argjson,char *NXTaddr,int32_t allorders)
     {
         if ( exchange->issue.openorders != 0 )
         {
-            if ( (str= (*exchange->issue.openorders)(exchange,argjson)) == 0 )
+            if ( (str= (*exchange->issue.openorders)(&exchange->cHandle,exchange,argjson)) == 0 )
                 str = clonestr("{\"result\":\"nothing returned from exchange\"}");
             return(str);
         }
@@ -639,7 +639,7 @@ return(0);
                 price = 1. / bestiQ->s.price;
                 printf("price inverted (%f %f) -> (%f %f)\n",bestiQ->s.price,bestiQ->s.vol,price,volume);
             } else price = bestiQ->s.price, volume = bestiQ->s.vol;
-            retstr = prices777_trade(0,NXTaddr,NXTACCTSECRET,prices,dir,price,volume,bestiQ,0,bestiQ->s.quoteid,0);
+            retstr = prices777_trade(0,0,0,0,1,0,NXTaddr,NXTACCTSECRET,prices,dir,price,volume,bestiQ,0,bestiQ->s.quoteid,0);
         }
     }
     return(retstr);
@@ -668,13 +668,13 @@ return(0);
     }
     //printf("n.%d\n",n);
     if ( bestorder.source != 0 )
-        retstr = prices777_trade(0,NXTaddr,NXTACCTSECRET,bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol,0,&bestorder,bestorder.s.quoteid,0);
+        retstr = prices777_trade(0,0,0,0,1,0,NXTaddr,NXTACCTSECRET,bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol,0,&bestorder,bestorder.s.quoteid,0);
     return(retstr);
 }
 
 void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
 {
-    int32_t iter,dir; struct pending_trade *pend; double price,volume; uint32_t now; char *retstr = 0;
+    int32_t dir; double price,volume; uint32_t now; char *retstr = 0;
     int32_t inverted; struct InstantDEX_quote *iQ,*tmp; struct prices777 *prices; uint64_t nxt64bits = calc_nxt64bits(NXTaddr);
     now = (uint32_t)time(NULL);
     HASH_ITER(hh,AllQuotes,iQ,tmp)
@@ -703,32 +703,8 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
             }
         }
     }
-    for (iter=0; iter<2; iter++)
-    {
-        while ( (pend= queue_dequeue(&Pending_offersQ.pingpong[iter],0)) != 0 )
-        {
-           if ( (retstr= offer_statemachine(pend)) != 0 )
-           {
-               printf("offer_statemachine %llu/%llu %d %f %f (%s)\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,retstr);
-               InstantDEX_history(1,pend,retstr);
-               free(retstr);
-               free_pending(pend);
-           }
-           else
-           {
-               if ( time(NULL) > iQ->s.timestamp+60 )
-               {
-                   printf("expire pending offer %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
-                   free(pend);
-               }
-               else
-               {
-                   printf("InstantDEX_update requeue %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
-                   queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
-               }
-           }
-        }
-    }
+    void trades_update();
+    trades_update();
 }
 
 int32_t is_specialexchange(char *exchangestr)
@@ -787,7 +763,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         if ( remoteaddr == 0 )
         {
             if ( is_specialexchange(exchangestr) == 0 )
-                return(prices777_trade(0,activenxt,secret,prices,dir,price,volume,iQ,0,iQ->s.quoteid,extra));
+                return(prices777_trade(0,0,0,0,1,0,activenxt,secret,prices,dir,price,volume,iQ,0,iQ->s.quoteid,extra));
             //printf("check automatch\n");
             if ( strcmp(exchangestr,"wallet") != 0 && strcmp(exchangestr,"jumblr") != 0 && strcmp(exchangestr,"pangea") != 0 && iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,activenxt,secret)) != 0 )
                 return(retstr);

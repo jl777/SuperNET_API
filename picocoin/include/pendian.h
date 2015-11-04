@@ -34,7 +34,12 @@
 
 #else
 
+#ifdef __PNACL
+#include <glibc-compat/endian.h>
+#else
 #include <endian.h>
+#endif
+
 #include "byteswap.h"
 
 #ifndef htole16

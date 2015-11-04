@@ -408,8 +408,7 @@ int nn_freemsg (void *msg)
     return 0;
 }
 
-struct nn_cmsghdr *nn_cmsg_nxthdr_ (const struct nn_msghdr *mhdr,
-    const struct nn_cmsghdr *cmsg)
+struct nn_cmsghdr *nn_cmsg_nxthdr_ (const struct nn_msghdr *mhdr,const struct nn_cmsghdr *cmsg)
 {
     char *data;
     size_t sz;
@@ -503,7 +502,6 @@ int nn_socket(int domain,int protocol)
         return -1;
     }
     nn_glock_unlock();
-    //PostMessage("did nn_global_init\n");
     return rc;
 }
 
@@ -579,6 +577,7 @@ int nn_getsockopt (int s, int level, int option, void *optval,size_t *optvallen)
 int nn_bind (int s, const char *addr)
 {
     int rc;
+    printf("nn_bind(%d) <- (%s)\n",s,addr);
 
     NN_BASIC_CHECKS;
 
@@ -596,6 +595,7 @@ int nn_bind (int s, const char *addr)
 int nn_connect (int s, const char *addr)
 {
     int rc;
+    printf("nn_connect(%d) <- (%s)\n",s,addr);
     NN_BASIC_CHECKS;
     nn_glock_lock();
     rc = nn_global_create_ep(s, addr, 0);

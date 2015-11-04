@@ -74,4 +74,5 @@ struct nn_usock {
     struct nn_usock *asock;
     // Errno remembered in NN_USOCK_ERROR state
     int errnum;
+    char addr[64];
 };
