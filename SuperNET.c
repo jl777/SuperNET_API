@@ -60,6 +60,63 @@ char *SuperNET_install(char *plugin,char *jsonstr,cJSON *json)
     return(retstr);
 }
 
+int32_t SuperNET_saveconf(char *jsonstr)
+{
+    FILE *fp;
+    if ( (fp= fopen(os_compatible_path("SuperNET.conf"),"w")) != 0 )
+    {
+        fprintf(fp,"%s\n",jsonstr);
+        fclose(fp);
+        PostMessage("SuperNET_saveconf (%s)\n",jsonstr);
+        return(0);
+    }
+    return(-1);
+}
+
+char *SuperNET_setconf(char *field,int32_t val)
+{
+    char *confstr; uint64_t allocsize; cJSON *json;
+    printf("save.(\"%s\":%d)\n",field,val);
+    if ( (confstr= loadfile(&allocsize,os_compatible_path("SuperNET.conf"))) == 0 )
+        json = cJSON_CreateObject();
+    else
+    {
+        json = cJSON_Parse(confstr);
+        free(confstr);
+    }
+    if ( json == 0 )
+        json = cJSON_CreateObject();
+    if ( jobj(json,field) != 0 )
+        cJSON_DeleteItemFromObject(json,field);
+    jaddnum(json,field,val);
+    confstr = jprint(json,1);
+    if ( confstr != 0 )
+        SuperNET_saveconf(confstr);
+    return(confstr);
+}
+
+char *SuperNET_setconfstr(char *field,char *valstr)
+{
+    char *confstr; uint64_t allocsize; cJSON *json;
+    printf("save.(\"%s\":\"%s\")\n",field,valstr);
+    if ( (confstr= loadfile(&allocsize,os_compatible_path("SuperNET.conf"))) == 0 )
+        json = cJSON_CreateObject();
+    else
+    {
+        json = cJSON_Parse(confstr);
+        free(confstr);
+    }
+    if ( json == 0 )
+        json = cJSON_CreateObject();
+    if ( jobj(json,field) != 0 )
+        cJSON_DeleteItemFromObject(json,field);
+    jaddstr(json,field,valstr);
+    confstr = jprint(json,1);
+    if ( confstr != 0 )
+        SuperNET_saveconf(confstr);
+    return(confstr);
+}
+
 int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_newpeer.(%s)\n",ip_port); return(0); }
 
 void *issue_cgicall(void *_ptr)
@@ -223,6 +280,12 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
             free_json(json);
             return(retstr);
         }
+        else if ( strcmp(request.buf,"setconf") == 0  )
+        {
+            if ( SuperNET_saveconf(jsonstr) == 0 )
+                return(clonestr("{\"success\":\"SuperNET.conf saved\"}"));
+            else return(clonestr("{\"error\":\"couldnt save SuperNET.conf\"}"));
+        } //else printf("request.(%s)\n",request.buf);
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
         daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"instanceid"));
@@ -243,7 +306,7 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
             //    sprintf(buf + strlen(buf)-1,",\"rand\":\"%d\"}",rand());
             return(process_nn_message(-1,buf));
         } else printf("jsonstr too big %d vs %d\n",(int32_t)strlen(jsonstr),bufsize);
-    }
+    } else PostMessage("parse error\n");
     sprintf(buf,"{\"error\":\"couldnt parse JSON\",\"args\":[\"%s\"]}",jsonstr);
     return(clonestr(buf));
 }
@@ -643,63 +706,6 @@ void nanotests(int32_t numiters)
     printf("finished nanotests\n");
 }
 
-int32_t SuperNET_saveconf(char *jsonstr)
-{
-    FILE *fp;
-    if ( (fp= fopen(os_compatible_path("SuperNET.conf"),"w")) != 0 )
-    {
-        fprintf(fp,"%s\n",jsonstr);
-        fclose(fp);
-        PostMessage("SuperNET_saveconf (%s)\n",jsonstr);
-        return(0);
-    }
-    return(-1);
-}
-
-char *SuperNET_setconf(char *field,int32_t val)
-{
-    char *confstr; uint64_t allocsize; cJSON *json;
-    printf("save.(\"%s\":%d)\n",field,val);
-    if ( (confstr= loadfile(&allocsize,os_compatible_path("SuperNET.conf"))) == 0 )
-        json = cJSON_CreateObject();
-    else
-    {
-        json = cJSON_Parse(confstr);
-        free(confstr);
-    }
-    if ( json == 0 )
-        json = cJSON_CreateObject();
-    if ( jobj(json,field) != 0 )
-        cJSON_DeleteItemFromObject(json,field);
-    jaddnum(json,field,val);
-    confstr = jprint(json,1);
-    if ( confstr != 0 )
-        SuperNET_saveconf(confstr);
-    return(confstr);
-}
-
-char *SuperNET_setconfstr(char *field,char *valstr)
-{
-    char *confstr; uint64_t allocsize; cJSON *json;
-    printf("save.(\"%s\":\"%s\")\n",field,valstr);
-    if ( (confstr= loadfile(&allocsize,os_compatible_path("SuperNET.conf"))) == 0 )
-        json = cJSON_CreateObject();
-    else
-    {
-        json = cJSON_Parse(confstr);
-        free(confstr);
-    }
-    if ( json == 0 )
-        json = cJSON_CreateObject();
-    if ( jobj(json,field) != 0 )
-        cJSON_DeleteItemFromObject(json,field);
-    jaddstr(json,field,valstr);
-    confstr = jprint(json,1);
-    if ( confstr != 0 )
-        SuperNET_saveconf(confstr);
-    return(confstr);
-}
-
 int32_t SuperNET_isactivated(char *agent)
 {
     cJSON *array; int32_t n;
@@ -720,9 +726,9 @@ int SuperNET_start(char *fname,char *myip)
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     printf("%p myip.(%s) rand.%llx fname.(%s)\n",myip,myip,(long long)i,fname);
-#ifdef __PNACL
-    SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
-#endif
+//#ifdef __PNACL
+//    SuperNET_saveconf(DEFAULT_SUPERNET_CONF);
+//#endif
     if ( (jsonargs= loadfile(&allocsize,os_compatible_path(fname))) == 0 )
     {
         printf("ERROR >>>>>>>>>>> (%s) SuperNET.conf file doesnt exist\n",fname);
@@ -761,7 +767,7 @@ int SuperNET_start(char *fname,char *myip)
             if ( SuperNET_isactivated("teleport") != 0 )
                 strs[n++] = SuperNET_launch_agent("teleport",jsonargs,&TELEPORT.readyflag);
             if ( SuperNET_isactivated("cashier") != 0 )
-                strs[n++] = SuperNET_launch_agent("cashier",jsonargs,&CASHIER.readyflag);
+                strs[n++] = SuperNET_launch_agent("cashier",jsonargs,0);
             if ( SuperNET_isactivated("InstantDEX") != 0 )
             {
                 strs[n++] = SuperNET_launch_agent("InstantDEX",jsonargs,&INSTANTDEX.readyflag);

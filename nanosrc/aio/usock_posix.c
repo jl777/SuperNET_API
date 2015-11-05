@@ -81,8 +81,7 @@ static void nn_usock_shutdown (struct nn_fsm *self, int src, int type,
 void nn_usock_init (struct nn_usock *self, int src, struct nn_fsm *owner)
 {
     /*  Initalise the state machine. */
-    nn_fsm_init (&self->fsm, nn_usock_handler, nn_usock_shutdown,
-        src, self, owner);
+    nn_fsm_init (&self->fsm, nn_usock_handler, nn_usock_shutdown,src, self, owner);
     self->state = NN_USOCK_STATE_IDLE;
 
     /*  Choose a worker thread to handle this socket. */
@@ -163,7 +162,7 @@ int nn_usock_start (struct nn_usock *self, int domain, int type, int protocol,co
     s = socket (domain, type, protocol);
     if (nn_slow (s < 0))
        return -errno;
-    PostMessage("got socket s.%d for (%s) type.%d protocol.%d\n",s,addr,type,protocol);
+    PostMessage("got socket self.%p s.%d for (%s) type.%d protocol.%d\n",self,s,addr,type,protocol);
     nn_usock_init_from_fd (self, s);
     /*  Start the state machine. */
     nn_fsm_start (&self->fsm);
@@ -184,6 +183,7 @@ static void nn_usock_init_from_fd(struct nn_usock *self,int s)
     // Store the file descriptor
     nn_assert (self->s == -1);
     self->s = s;
+    PostMessage("set s.%p <- %d for (%s)\n",self,s,self->addr);
     /* Setting FD_CLOEXEC option immediately after socket creation is the
         second best option after using SOCK_CLOEXEC. There is a race condition
         here (if process is forked between socket creation and setting
@@ -271,7 +271,9 @@ int nn_usock_bind (struct nn_usock *self,const struct sockaddr *addr,size_t addr
     rc = bind(self->s,addr,(socklen_t)addrlen);
     PostMessage("usock.%d  %x -> bind rc.%d errno.%d (%s) \n",self->s,*(int32_t *)addr,rc,errno,self->addr);
     if ( nn_slow (rc != 0) )
+    {
         return -errno;
+    }
     return 0;
 }
 
@@ -306,7 +308,7 @@ void nn_usock_accept(struct nn_usock *self, struct nn_usock *listener)
 #else
     s = accept (listener->s, NULL, NULL);
 #endif
-    PostMessage("usock.%d -> accept errno.%d s.%d %s\n",self->s,errno,s,self->addr);
+    PostMessage("self.%p usock.%d -> accept errno.%d s.%d %s\n",self,self->s,errno,s,self->addr);
 
     /*  Immediate success. */
     if (nn_fast (s >= 0)) {

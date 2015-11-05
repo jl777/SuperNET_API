@@ -47,6 +47,7 @@
 #define NN_HAVE_MSG_CONTROL 1
 //#define STANDALONE 1
 //#define FD_CLOEXEC 1
+//#define NN_USE_IFADDRS 1
 
 #ifdef __PNACL
 

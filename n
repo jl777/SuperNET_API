@@ -1,5 +1,5 @@
 cp pnacl/Release/SuperNET_API.pexe pnacl/Release/SuperNET_API.nmf ../SuperNET/pnacl/Release
-cp index.html *.js ../SuperNET
+cp chrome.localhost index.html *.js ../SuperNET
 cp js/* ../SuperNET/js
 cp css/* ../SuperNET/css
-
+cp tools/httpd.py ../SuperNET/tools

@@ -233,8 +233,7 @@ static void nn_ctcp_destroy (struct nn_epbase *self)
     nn_free (ctcp);
 }
 
-static void nn_ctcp_shutdown (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_ctcp_shutdown (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     struct nn_ctcp *ctcp;
 
@@ -270,8 +269,7 @@ static void nn_ctcp_shutdown (struct nn_fsm *self, int src, int type,
     nn_fsm_bad_state (ctcp->state, src, type);
 }
 
-static void nn_ctcp_handler (struct nn_fsm *self, int src, int type,
-    NN_UNUSED void *srcptr)
+static void nn_ctcp_handler (struct nn_fsm *self, int src, int type,NN_UNUSED void *srcptr)
 {
     struct nn_ctcp *ctcp;
 
@@ -519,8 +517,7 @@ static void nn_ctcp_start_resolving (struct nn_ctcp *self)
 
     /*  Check whether IPv6 is to be used. */
     ipv4onlylen = sizeof (ipv4only);
-    nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_IPV4ONLY,
-        &ipv4only, &ipv4onlylen);
+    nn_epbase_getopt (&self->epbase, NN_SOL_SOCKET, NN_IPV4ONLY,&ipv4only, &ipv4onlylen);
     nn_assert (ipv4onlylen == sizeof (ipv4only));
 
     /*  TODO: Get the actual value of IPV4ONLY option. */
@@ -606,9 +603,18 @@ static void nn_ctcp_start_connecting (struct nn_ctcp *self,struct sockaddr_stora
 
     /*  Bind the socket to the local network interface. */
     rc = nn_usock_bind (&self->usock, (struct sockaddr*) &local, locallen);
-    if (nn_slow (rc != 0)) {
-        nn_backoff_start (&self->retry);
-        self->state = NN_CTCP_STATE_WAITING;
+    if (nn_slow (rc != 0))
+    {
+        if ( errno == EACCESS )
+        {
+            nn_usock_stop (&self->usock);
+            self->state = NN_CTCP_STATE_STOPPING_USOCK;
+        }
+        else
+        {
+            nn_backoff_start (&self->retry);
+            self->state = NN_CTCP_STATE_WAITING;
+        }
         return;
     }
 

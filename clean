@@ -1,0 +1,5 @@
+make clean
+cd src; make -f Makefile.unix clean; cd ..
+make -f makefile.libs clean
+make -f makefile.unix clean
+

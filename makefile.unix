@@ -6,7 +6,11 @@ LIBS = -lcurl -lssl -lcrypto -lpthread -lz -lm
 
 CC = gcc
 OS := $(shell uname -s)
-CFLAGS += -Ipicocoin/include  -Wno-unused-but-set-variable -O2
+ifeq ($(OSNAME),Linux)
+CFLAGS += -Wno-unused-but-set-variable
+endif
+
+CFLAGS += -Ipicocoin/include  -O2
 
 ALLSOURCES =  plugins/InstantDEX/InstantDEX_main.c plugins/common/prices777.c plugins/peggy/quotes777.c plugins/peggy/peggy777.c plugins/common/opreturn777.c  plugins/common/txind777.c plugins/common/teleport777.c  plugins/KV/ramkv777.c plugins/agents/shuffle777.c $(SOURCES) $(ASOURCES) $(CSOURCES) $(GSOURCES) $(LSOURCES) $(PSOURCES)
 

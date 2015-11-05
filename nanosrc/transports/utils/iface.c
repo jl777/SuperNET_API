@@ -168,11 +168,11 @@ int nn_iface_resolve (const char *addr, size_t addrlen, int ipv4only,
     }
 
     /*  Open the helper socket. */
-//#ifdef SOCK_CLOEXEC
-//    s = socket (AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-//#else
+#ifdef SOCK_CLOEXEC
+    s = socket (AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+#else
     s = socket (AF_INET, SOCK_DGRAM, 0);
-//#endif
+#endif
     errno_assert (s != -1);
 
     /*  Create the interface name resolution request. */

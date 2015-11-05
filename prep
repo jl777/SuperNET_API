@@ -1,9 +1,6 @@
-make
 make clean
 rm SuperNET.o SuperNET SNapi libs/libjl777.a
-cd src; make -f makefile.unix clean; cd ..
-make -f makefile.unix clean
-make -f makefile.libs clean
+./clean
 mv toolchain ..
 ./n
 

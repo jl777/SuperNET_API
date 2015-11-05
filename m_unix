@@ -1,8 +1,12 @@
 
-rm SuperNET 
 pkill -15 SuperNET
 ./BitcoinDarkd stop
+sleep 2
+rm SuperNET 
+rm BitcoinDarkd 
 git pull
+make -f makefile.libs
+make
 make -f makefile.unix
 make -f makefile.unix btcd
 

@@ -1,12 +1,24 @@
 # Copyright (c) 2009-2010 Satoshi Nakamoto
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
+CXX=c++
+CC=c++
+OS := $(shell uname -s)
+
 USE_UPNP:=0
-LINK:=$(CXX)
+LINK:= $(CXX)
 ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
 LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
+
+ifeq ($(OS),Darwin)
+EXTRAFLAGS =  -I/usr/local/opt/berkeley-db4/include
+EXTRA=  ../libs/libleveldb.a  ../libs/libsnappy.a ../libs/libdb_cxx.a  ../libs/libboost_filesystem.a ../libs/libboost_thread.a ../libs/libboost_system.a ../libs/libboost_program_options.a
+
+LDFLAGS +=  -L/usr/local/opt/berkeley-db4/lib
+endif
+
 LMODE = static
 ifdef STATIC
 	LMODE = static
@@ -15,8 +27,9 @@ ifdef STATIC
 	endif
 endif
 # for boost 1.37, add -mt to the boost libraries
+##,-B$(LMODE) \
 LIBS += \
- -Wl,-B$(LMODE) \
+ -Wl \
    -l boost_system$(BOOST_LIB_SUFFIX) \
    -l boost_filesystem$(BOOST_LIB_SUFFIX) \
    -l boost_program_options$(BOOST_LIB_SUFFIX) \
@@ -32,8 +45,10 @@ ifneq (${USE_UPNP}, -)
 	DEFS += -DUSE_UPNP=$(USE_UPNP)
 endif
 LMODE2=dynamic
+
+##,-B$(LMODE2) \
 LIBS+= \
--Wl,-B$(LMODE2) \
+-Wl \
   -l z \
   -l pthread \
   -l dl
@@ -71,7 +86,7 @@ ifeq (${ARCH}, i686)
 endif
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter \
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wno-deprecated \
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
 # adds some defaults in front. Unfortunately, LDFLAGS=... $(LDFLAGS) does not work.
@@ -115,12 +130,8 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o
 all: BitcoinDarkd
-# LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a libjl777.a libuv.a libnacl.a -lcurl -lm -ldl
-#LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -ljl777 ../libjl777/libs/libuv.a ../libjl777/libs/randombytes.o -lm
-#LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a $(CURDIR)/../libjl777/libs/libjl777.a $(CURDIR)/../libjl777/libs/libuv.a $(CURDIR)/../libjl777/libs/libdb.a $(CURDIR)/../libjl777/libs/libwebsockets.a -lcurl -lm
-#LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o system777.o cJSON.o bitcoind_RPC.o utils777.o ../libjl777/libs/libnanomsg.a  -lcurl -lm -lanl
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a   ../libs/libjl777.a  ../libs/libjl777.a -lcurl -lz -lssl -lcrypto -lm
-DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a   ../libs/libjl777.a $(EXTRA) -lcurl -lz -lssl -lcrypto -lm
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include) $(EXTRAFLAGS)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers) -I../libjl777/nanomsg/src/utils
 OBJS += obj/txdb-leveldb.o
 leveldb/libleveldb.a:

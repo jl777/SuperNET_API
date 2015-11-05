@@ -17,12 +17,12 @@
         "name": "My Sockets app",
         "sockets": {
             "tcp": { "connect": "" },
-            "tcpServer": { "listen": ":*" }
+            "tcpServer": { "listen": "127.0.0.1:*" }
         },
     "permissions": [
                     "unlimitedStorage",
-                    "nativeMessaging",
+                    "nativeMessaging","networking.config",
                     "dns", "browser", "filesystem", "storage",
-                    "system.storage", "system.display", "system.network"
+                    "system.storage", "system.display", "system.network","system.cpu"
                 ]
 }

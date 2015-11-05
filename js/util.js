@@ -159,7 +159,7 @@ function readBlob(opt_startByte, opt_stopByte) {
 		
 		  var confString = e.target.result;
 		  
-		  postCall("SuperNET", '{setConf: ' + confString + '}', function(result){
+		  postCall("SuperNET",confString, function(result){
 			console.log(result);
 		  });
 		

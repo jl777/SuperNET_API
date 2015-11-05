@@ -24,3 +24,27 @@ randvals.7
 randvals.5
 
 randvals.8
+
+libs/libboost_filesystem.a
+
+libs/libboost_program_options.a
+
+libs/libboost_system.a
+
+libs/libboost_system.a
+
+libs/libboost_thread.a
+
+libs/libdb_cxx.a
+
+libs/libjl777.a
+
+libs/libjl777.a
+
+libs/libleveldb.a
+
+libs/libdb.a
+
+libs/libsnappy.a
+
+src/obj/scrypt-arm.d

@@ -140,9 +140,9 @@ class LocalHTTPServer(object):
 
     Args:
       rel_url: A URL fragment to convert to a full URL. For example,
-          GetURL('foobar.baz') -> 'http://localhost:1234/foobar.baz'
+          GetURL('foobar.baz') -> 'http://127.0.0.1:1234/foobar.baz'
     """
-    return 'http://localhost:%d/%s' % (self.port, rel_url)
+    return 'http://127.0.0.1:%d/%s' % (self.port, rel_url)
 
 
 def _HTTPServerProcess(conn, dirname, port, server_kwargs):
@@ -156,7 +156,7 @@ def _HTTPServerProcess(conn, dirname, port, server_kwargs):
         stop serving. It also sends a "result" back to the parent -- this can
         be used to allow a client-side test to notify the server of results.
     dirname: The directory to serve. All files are accessible through
-       http://localhost:<port>/path/to/filename.
+       http://127.0.0.1:<port>/path/to/filename.
     port: The port to serve on. If 0, an ephemeral port will be chosen.
     server_kwargs: A dict that will be passed as kwargs to the server.
   """
