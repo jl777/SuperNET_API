@@ -260,7 +260,6 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *Globals,cJSO
    //ensure_directory(SUPERNET.SOPHIA_DIR);
     //Globals->Gatewayid = -1, Globals->Numgateways = 3;
     //expand_nxt64bits(Globals->NXT_ASSETIDSTR,NXT_ASSETID);
-    //init_InstantDEX(calc_nxt64bits(Global_mp->myNXTADDR),1);
     //SaM_PrepareIndices();
     printf("SuperNET init %s size.%d SUPERNET_SIZE.%d \n",plugin->name,(int32_t)sizeof(struct SuperNET_info),(int32_t)sizeof(SUPERNET));
     return(disableflags); // set bits corresponding to array position in _methods[]

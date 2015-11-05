@@ -11,7 +11,7 @@
 #include <ccoin/serialize.h>
 #include <ccoin/util.h>
 #include <ccoin/compat.h>
-#include <ccoin/endian.h>
+#include <ccoin/pendian.h>
 
 void ser_bytes(cstring *s, const void *p, size_t len)
 {

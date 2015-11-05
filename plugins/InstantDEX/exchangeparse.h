@@ -144,7 +144,7 @@ cJSON *exchanges_json()
         cJSON_AddItemToObject(item,"name",cJSON_CreateString(exchange->name));
         memset(api,0,sizeof(api));
         n = 0;
-        if ( exchange->trade != 0 )
+        if ( exchange->issue.trade != 0 )
         {
             //printf("%s.(%s/%s/%s).%p\n",exchange->name,exchange->apikey,exchange->apisecret,exchange->userid,exchange);
             if ( exchange->apikey[0] != 0 )
@@ -226,6 +226,39 @@ struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr)
     return(exchange);
 }
 
+int32_t baserel_polarity(char *pairs[][2],int32_t n,char *_base,char *_rel)
+{
+    int32_t i; char base[16],rel[16];
+    strcpy(base,_base), tolowercase(base);
+    strcpy(rel,_rel), tolowercase(rel);
+    for (i=0; i<n; i++)
+    {
+        if ( strcmp(pairs[i][0],base) == 0 && strcmp(pairs[i][1],rel) == 0 )
+            return(1);
+        else if ( strcmp(pairs[i][0],rel) == 0 && strcmp(pairs[i][1],base) == 0 )
+            return(-1);
+    }
+    printf("cant find.(%s/%s) [%s/%s].%d\n",base,rel,pairs[0][0],pairs[0][1],n);
+    return(0);
+}
+
+double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth,char *field)
+{
+    char *jsonstr; cJSON *json; double hbla = 0.;
+    if ( (jsonstr= issue_curl(url)) != 0 )
+    {
+        if ( strcmp(exchangestr,"btc38") == 0 )
+            printf("(%s) -> (%s)\n",url,jsonstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            hbla = prices777_json_orderbook(exchangestr,prices,maxdepth,json,field,"bids","asks",price,volume);
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(hbla);
+}
+
 int32_t InstantDEX_supports(char *base,char *rel) { return(1); }
 
 int32_t NXT_supports(char *base,char *rel)
@@ -237,7 +270,8 @@ int32_t NXT_supports(char *base,char *rel)
     else return(0);
 }
 
-char *bittrex_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+#ifdef notnow
+char *bittrex_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     int32_t i,n; char *str,*itemstr = 0; cJSON *item,*array,*obj; double total,pending;
     *balancep = 0.;
@@ -282,7 +316,6 @@ int32_t bittrex_supports(char *base,char *rel)
     else if ( strcmp(base,"BTC") == 0 )
         return(-1);
     else return(0);
-    //return(add_exchange_assetids(assetids,n,BTC_ASSETID,baseid,relid,exchangeid,0,0));
 }
 
 double prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD"
@@ -356,24 +389,7 @@ double prices777_bter(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }*/
 
-double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth,char *field)
-{
-    char *jsonstr; cJSON *json; double hbla = 0.;
-    if ( (jsonstr= issue_curl(url)) != 0 )
-    {
-        //if ( strcmp(exchangestr,"btc38") == 0 )
-        //    printf("(%s) -> (%s)\n",url,jsonstr);
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
-        {
-            hbla = prices777_json_orderbook(exchangestr,prices,maxdepth,json,field,"bids","asks",price,volume);
-            free_json(json);
-        }
-        free(jsonstr);
-    }
-    return(hbla);
-}
-
-char *poloniex_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *poloniex_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     char *itemstr = 0; cJSON *item,*obj; double onorders,btcvalue;
     *balancep = 0.;
@@ -474,7 +490,7 @@ double prices777_kraken(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }
 
-char *bitfinex_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *bitfinex_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //[[{"type":"deposit","currency":"btc","amount":"0.0","available":"0.0"},{"type":"deposit","currency":"usd","amount":"0.0","available":"0.0"},{"type":"exchange","currency":"btc","amount":"0.01065851","available":"0.01065851"},{"type":"exchange","currency":"usd","amount":"23386.37278962","available":"0.00378962"},{"type":"trading","currency":"btc","amount":"0.0","available":"0.0"},{"type":"trading","currency":"usd","amount":"0.0","available":"0.0"}]]
     int32_t i,n,ind; char field[64],*str,*typestr,*itemstr = 0; cJSON *item,*obj,*array; double amounts[3],avail[3],val0,val1;
@@ -530,13 +546,8 @@ char *bitfinex_coinbalance(struct exchange_info *exchange,double *balancep,char 
 
 int32_t bitfinex_supports(char *base,char *rel)
 {
-    if ( strlen(base) > 5 || strlen(rel) > 5 )
-        return(0);
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"BTC") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"BTC") == 0) )
-        return(-1);
-    else return(0);
+    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"}, {"ltc","btc"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_bitfinex(struct prices777 *prices,int32_t maxdepth)
@@ -546,7 +557,7 @@ double prices777_bitfinex(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("bitfinex",prices->url,prices,"price","amount",maxdepth,0));
 }
 
-char *btce_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *btce_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //btce.({"success":1,"return":{"funds":{"usd":73.02571846,"btc":0,"ltc":0,"nmc":0,"rur":0,"eur":0,"nvc":0.0000322,"trc":0,"ppc":0.00000002,"ftc":0,"xpm":2.28605349,"cnh":0,"gbp":0},"rights":{"info":1,"trade":1,"withdraw":0},"transaction_count":0,"open_orders":3,"server_time":1441918649}})
     char field[128],*itemstr = 0; cJSON *obj,*item;
@@ -569,13 +580,8 @@ char *btce_coinbalance(struct exchange_info *exchange,double *balancep,char *coi
 
 int32_t btce_supports(char *base,char *rel)
 {
-    if ( strlen(base) > 5 || strlen(rel) > 5 )
-        return(0);
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"BTC") == 0 && strcmp(rel,"RUR") == 0) || (strcmp(base,"PPC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"PPC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"RUR") == 0) || (strcmp(base,"NMC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"NMC") == 0 && strcmp(rel,"USD") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"BTC") == 0) || (strcmp(rel,"BTC") == 0 && strcmp(base,"RUR") == 0) || (strcmp(rel,"PPC") == 0 && strcmp(base,"BTC") == 0) || (strcmp(rel,"PPC") == 0 && strcmp(base,"USD") == 0 ) || (strcmp(rel,"LTC") == 0 && strcmp(base,"RUR") == 0) || (strcmp(rel,"NMC") == 0 && strcmp(base,"BTC") == 0 ) || (strcmp(rel,"NMC") == 0 && strcmp(base,"USD") == 0) )
-        return(-1);
-    else return(0);
+    char *baserels[][2] = { {"btc","usd"}, {"btc","rur"}, {"btc","eur"}, {"ltc","btc"}, {"ltc","usd"}, {"ltc","rur"}, {"ltc","eur"}, {"nmc","btc"}, {"nmc","usd"}, {"nvc","btc"}, {"nvc","usd"}, {"eur","usd"}, {"eur","rur"}, {"ppc","btc"}, {"ppc","usd"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_btce(struct prices777 *prices,int32_t maxdepth)
@@ -587,7 +593,7 @@ double prices777_btce(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("btce",prices->url,prices,0,0,maxdepth,field));
 }
 
-char *bitstamp_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *bitstamp_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     char field[128],*itemstr = 0; cJSON *obj,*item;
     *balancep = 0.;
@@ -623,7 +629,7 @@ double prices777_bitstamp(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("bitstamp",prices->url,prices,0,0,maxdepth,0));
 }
 
-char *okcoin_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *okcoin_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //okcoin.({"info":{"funds":{"asset":{"net":"0","total":"0"},"free":{"btc":"0","ltc":"0","usd":"0"},"freezed":{"btc":"0","ltc":"0","usd":"0"}}},"result":true})
     char field[128],*itemstr = 0; cJSON *obj,*item,*avail,*locked; double lockval = 0;
@@ -650,11 +656,8 @@ char *okcoin_coinbalance(struct exchange_info *exchange,double *balancep,char *c
 
 int32_t okcoin_supports(char *base,char *rel)
 {
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) )
-        return(-1);
-    else return(0);
+    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
@@ -671,7 +674,7 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("okcoin",prices->url,prices,0,0,maxdepth,0));
 }
 
-char *huobi_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *huobi_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     char field[128],*itemstr = 0; cJSON *obj,*item;
     *balancep = 0.;
@@ -693,13 +696,8 @@ char *huobi_coinbalance(struct exchange_info *exchange,double *balancep,char *co
 
 int32_t huobi_supports(char *base,char *rel)
 {
-    //printf("huobi test.(%s/%s)\n",base,rel);
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"CNY") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"CNY") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"CNY") == 0) )
-        return(-1);
-    //printf("invalid.(%s/%s)\n",base,rel);
-    return(0);
+    char *baserels[][2] = { {"btc","cny"}, {"ltc","cny"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_huobi(struct prices777 *prices,int32_t maxdepth)
@@ -711,11 +709,8 @@ double prices777_huobi(struct prices777 *prices,int32_t maxdepth)
 
 int32_t bityes_supports(char *base,char *rel)
 {
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) )
-        return(-1);
-    else return(0);
+    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_bityes(struct prices777 *prices,int32_t maxdepth)
@@ -725,7 +720,7 @@ double prices777_bityes(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("bityes",prices->url,prices,0,0,maxdepth,0));
 }
 
-char *coinbase_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *coinbase_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     char field[128],*itemstr = 0; cJSON *obj,*item;
     *balancep = 0.;
@@ -761,7 +756,7 @@ double prices777_coinbase(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("coinbase",prices->url,prices,0,0,maxdepth,0));
 }
 
-char *lakebtc_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *lakebtc_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     //lakebtc.({"balance":{"BTC":0.1},"locked":{"BTC":0.0},"profile":{"email":"jameslee777@yahoo.com","id":"U137561934","btc_deposit_addres":"1RyKrNJjezeFfvYaicnJEozHfhWfYzbuh"}})
     char field[128],*str,*itemstr = 0; cJSON *obj=0,*item=0,*prof=0; double locked = 0;
@@ -787,11 +782,8 @@ char *lakebtc_coinbalance(struct exchange_info *exchange,double *balancep,char *
 
 int32_t lakebtc_supports(char *base,char *rel)
 {
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"BTC") == 0 && strcmp(base,"CNY") == 0) )
-        return(-1);
-    else return(0);
+    char *baserels[][2] = { {"btc","usd"}, {"btc","cny"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_lakebtc(struct prices777 *prices,int32_t maxdepth)
@@ -827,7 +819,7 @@ double prices777_exmo(struct prices777 *prices,int32_t maxdepth)
 
 // "gatecoin", "quoine", "jubi", "hitbtc"
 
-char *btc38_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *btc38_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
     char field[128],*str,*itemstr = 0; cJSON *obj; double lockbalance,imma;
     *balancep = 0.;
@@ -904,7 +896,7 @@ double prices777_btc38(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("btc38",prices->url,prices,0,0,maxdepth,0));
 }
 
-char *quadriga_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
+char *quadriga_parsebalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
 //[{"btc_available":"0.00000000","btc_reserved":"0.00000000","btc_balance":"0.00000000","cad_available":"0.00","cad_reserved":"0.00","cad_balance":"0.00","usd_available":"0.00","usd_reserved":"0.00","usd_balance":"0.00","xau_available":"0.000000","xau_reserved":"0.000000","xau_balance":"0.000000","fee":"0.5000"}]
     char field[128],*str,*itemstr = 0; cJSON *obj; double reserv,total;
@@ -932,11 +924,8 @@ char *quadriga_coinbalance(struct exchange_info *exchange,double *balancep,char 
 
 int32_t quadriga_supports(char *base,char *rel)
 {
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CAD") == 0) || (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) )
-        return(1);
-    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"CAD") == 0) || (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) )
-        return(-1);
-    else return(0);
+    char *baserels[][2] = { {"btc","usd"}, {"btc","cad"} };
+    return(baserel_polarity(baserels,(int32_t)(sizeof(baserels)/sizeof(*baserels)),base,rel));
 }
 
 double prices777_quadriga(struct prices777 *prices,int32_t maxdepth)
@@ -960,6 +949,7 @@ double prices777_quadriga(struct prices777 *prices,int32_t maxdepth)
  sprintf(prices->url,"https://www.itbit.com/%s%s",prices->base,prices->rel);
  prices777_standard("itbit",prices->url,prices,0,0,maxdepth);
  }*/
+#endif
 
 uint64_t prices777_truefx(uint64_t *millistamps,double *bids,double *asks,double *opens,double *highs,double *lows,char *username,char *password,uint64_t idnum)
 {
@@ -1031,7 +1021,7 @@ uint64_t prices777_truefx(uint64_t *millistamps,double *bids,double *asks,double
                         char name[64];
                         strcpy(name,base), strcat(name,rel);
                         if ( BUNDLE.truefx[c] == 0 )
-                            BUNDLE.truefx[c] = prices777_initpair(0,0,"truefx",base,rel,0,name,stringbits(base),stringbits(rel),0);
+                            BUNDLE.truefx[c] = prices777_initpair(0,"truefx",base,rel,0,name,stringbits(base),stringbits(rel),0);
                         millistamps[c] = millistamp,opens[c] = open, highs[c] = high, lows[c] = low, bids[c] = bid, asks[c] = ask;
                         if ( Debuglevel > 2 )
                         {
@@ -1140,7 +1130,7 @@ double prices777_fxcm(double lhlogmatrix[8][8],double logmatrix[8][8],double bid
                             if ( BUNDLE.fxcm[c] == 0 )
                             {
                                 //printf("max.%ld FXCM: not initialized.(%s) %d\n",sizeof(CONTRACTS)/sizeof(*CONTRACTS),name,c);
-                                BUNDLE.fxcm[c] = prices777_initpair(0,0,"fxcm",name,0,0,name,peggy_basebits(name),peggy_relbits(name),0);
+                                BUNDLE.fxcm[c] = prices777_initpair(0,"fxcm",name,0,0,name,peggy_basebits(name),peggy_relbits(name),0);
                             }
                         } else printf("cant find.%s\n",name);//, getchar();
                     }
@@ -1181,7 +1171,7 @@ double prices777_instaforex(double logmatrix[8][8],uint32_t timestamps[NUM_COMBI
                     if ( Debuglevel > 2 )
                         printf("%s.(%.6f %.6f) ",str,bids[c],asks[c]);
                     if ( BUNDLE.instaforex[c] == 0 )
-                        BUNDLE.instaforex[c] = prices777_initpair(0,0,"instaforex",str,0,0,str,peggy_basebits(str),peggy_relbits(str),0);
+                        BUNDLE.instaforex[c] = prices777_initpair(0,"instaforex",str,0,0,str,peggy_basebits(str),peggy_relbits(str),0);
                 }
             }
             free_json(json);

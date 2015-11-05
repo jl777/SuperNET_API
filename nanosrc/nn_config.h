@@ -32,8 +32,8 @@
 
 // need one of following 3, listed in order of precedence, used by efd*
 //#define NN_HAVE_EVENTFD 1
-#define NN_HAVE_PIPE 1
-//#define NN_HAVE_SOCKETPAIR 1
+//#define NN_HAVE_PIPE 1
+#define NN_HAVE_SOCKETPAIR 1
 
 // need one of following 3, listed in order of precedence, used by poller*
 #define NN_USE_POLL 1
@@ -45,7 +45,7 @@
 #define NN_HAVE_STDINT 1
 
 #define NN_HAVE_MSG_CONTROL 1
-#define STANDALONE 1
+//#define STANDALONE 1
 
 #ifdef __PNACL
 //#define FD_CLOEXEC 1
@@ -54,6 +54,7 @@ void PostMessage(const char* format, ...);
 #include <glibc-compat/sys/uio.h>
 #include <glibc-compat/sys/un.h>
 #else
+//#define NN_ENABLE_EXTRA 1
 #define PostMessage printf
 #include <sys/uio.h>
 #include <sys/un.h>

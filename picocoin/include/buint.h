@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <openssl/bn.h>
-#include "endian.h"
+#include "pendian.h"
 
 enum {
 	BU160_WORDS	= (160 / 32),

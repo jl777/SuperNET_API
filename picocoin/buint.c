@@ -8,7 +8,7 @@
 #include <openssl/bn.h>
 #include <ccoin/buint.h>
 #include <ccoin/hexcode.h>
-#include <ccoin/endian.h>
+#include <ccoin/pendian.h>
 
 void bu256_bn(BIGNUM *vo, const bu256_t *vi)
 {

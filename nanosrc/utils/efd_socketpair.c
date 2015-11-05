@@ -36,23 +36,23 @@ int nn_efd_init (struct nn_efd *self)
     int flags;
     int sp [2];
 
-#if defined SOCK_CLOEXEC
-    rc = socketpair (AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sp);
-#else
+//#if defined SOCK_CLOEXEC
+//    rc = socketpair (AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sp);
+//#else
     rc = socketpair (AF_UNIX, SOCK_STREAM, 0, sp);
-#endif
+//#endif
     if (rc != 0 && (errno == EMFILE || errno == ENFILE))
         return -EMFILE;
     errno_assert (rc == 0);
     self->r = sp [0];
     self->w = sp [1];
 
-#if !defined SOCK_CLOEXEC && defined FD_CLOEXEC
-    rc = fcntl (self->r, F_SETFD, FD_CLOEXEC);
-    errno_assert (rc != -1);
-    rc = fcntl (self->w, F_SETFD, FD_CLOEXEC);
-    errno_assert (rc != -1);
-#endif
+//#if !defined SOCK_CLOEXEC && defined FD_CLOEXEC
+//    rc = fcntl (self->r, F_SETFD, FD_CLOEXEC);
+//    errno_assert (rc != -1);
+//    rc = fcntl (self->w, F_SETFD, FD_CLOEXEC);
+//    errno_assert (rc != -1);
+//#endif
 
     flags = fcntl (self->r, F_GETFL, 0);
     if (flags == -1)

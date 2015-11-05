@@ -113,6 +113,7 @@ const char *nn_err_strerror(int32_t errnum)
 #endif
             PostMessage("nanomsg: errno.%d\n",errnum);
             PostMessage("nanomsg: errno.%d (%s)\n",errnum,strerror(errnum));
+            getchar();
         return strerror (errnum);
 #if defined _MSC_VER
 #pragma warning (pop)

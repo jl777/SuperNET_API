@@ -261,7 +261,7 @@ clean:
 	$(RM) -rf $(OUTDIR)
 	$(RM) -rf user-data-dir
 	mkdir pnacl; mkdir pnacl/Release
-	cp Release/* nacl_io.stamp pnacl/Release
+	cp Release/* nacl_io.stamp pnacl/Release; 
 
 
 #

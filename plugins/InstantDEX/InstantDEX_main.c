@@ -42,8 +42,8 @@
 #undef DEFINES_ONLY
 
 char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "jumblr", "pangea", "peggy", // peggy MUST be last of special exchanges
-    "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga",
-    "kraken", "gatecoin", "quoine", "jubi", "hitbtc"  // no trading for these exchanges yet
+    "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "lakebtc", "quadriga",
+    //"bityes", "kraken", "gatecoin", "quoine", "jubi", "hitbtc"  // no trading for these exchanges yet
 }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges",
@@ -463,9 +463,8 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 {
     char *prices777_allorderbooks();
-    char *InstantDEX_openorders();
-    char *InstantDEX_tradehistory(int32_t firsti,int32_t endi);
-    char *InstantDEX_cancelorder(char *activenxt,char *secret,uint64_t sequenceid,uint64_t quoteid);
+    char *InstantDEX_tradehistory(cJSON *json,int32_t firsti,int32_t endi);
+    char *InstantDEX_cancelorder(cJSON *json,char *activenxt,char *secret,uint64_t sequenceid,uint64_t quoteid);
     struct destbuf exchangestr,method,gui,name,base,rel; double balance;
     char *retstr = 0,key[512],retbuf[1024],*activenxt,*secret,*coinstr; struct InstantDEX_quote iQ; struct exchange_info *exchange;
     cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices = 0;
@@ -504,45 +503,47 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
             secret = SUPERNET.NXTACCTSECRET;
             activenxt = SUPERNET.NXTADDR;
         }
-        if ( strcmp(method.buf,"allorderbooks") == 0 )
-            retstr = prices777_allorderbooks();
-        else if ( strcmp(method.buf,"openorders") == 0 )
-            retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
-        else if ( strcmp(method.buf,"allexchanges") == 0 )
-            retstr = jprint(exchanges_json(),1);
+        if ( strcmp(method.buf,"exit") == 0 )
+        {
+            printf("getchar and then exit\n");
+            getchar();
+            exit(0);
+        }
+        if ( strcmp(method.buf,"orderstatus") == 0 )
+            retstr = InstantDEX_orderstatus(json,sequenceid,iQ.s.quoteid);
         else if ( strcmp(method.buf,"cancelorder") == 0 )
-            retstr = InstantDEX_cancelorder(jstr(json,"activenxt"),jstr(json,"secret"),sequenceid,iQ.s.quoteid);
-        else if ( strcmp(method.buf,"orderstatus") == 0 )
-            retstr = InstantDEX_orderstatus(sequenceid,iQ.s.quoteid);
+            retstr = InstantDEX_cancelorder(json,jstr(json,"activenxt"),jstr(json,"secret"),sequenceid,iQ.s.quoteid);
+        else if ( strcmp(method.buf,"openorders") == 0 )
+            retstr = InstantDEX_openorders(json,SUPERNET.NXTADDR,juint(json,"allorders"));
         else if ( strcmp(method.buf,"tradehistory") == 0 )
-            retstr = InstantDEX_tradehistory(juint(json,"firsti"),juint(json,"endi"));
-        else if ( strcmp(method.buf,"lottostats") == 0 )
-            retstr = jprint(InstantDEX_lottostats(),1);
+            retstr = InstantDEX_tradehistory(json,juint(json,"firsti"),juint(json,"endi"));
+        else if ( strcmp(method.buf,"withdraw") == 0 )
+            retstr = InstantDEX_withdraw(json);
         else if ( strcmp(method.buf,"balance") == 0 )
         {
-            if ( exchange != 0 && exchange->trade != 0 )
+            if ( exchange != 0 && exchange->issue.trade != 0 )
             {
-                if ( (coinstr= jstr(json,"base")) != 0 )
+                if ( exchange->issue.balances != 0 )
                 {
-                    if ( exchange->coinbalance != 0 )
+                    if ( exchange->balancejson != 0 )
+                        free_json(exchange->balancejson), exchange->balancejson = 0;
+                    exchange->lastbalancetime = (uint32_t)time(NULL);
+                    if ( (exchange->balancejson= (*exchange->issue.balances)(exchange)) != 0 )
                     {
-                        if ( exchange->balancejson == 0 )
-                        {
-                            (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
-                            if ( retstr != 0 )
-                            {
-                                exchange->balancejson = cJSON_Parse(retstr);
-                                free(retstr);
-                            }
-                        }
-                        return((*exchange->coinbalance)(exchange,&balance,coinstr));
-                    }
-                    else retstr = clonestr("{\"error\":\"coinbalance missing\"}");
-                }
-                else (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
-            } else retstr = clonestr("{\"error\":\"cant find exchange\"}");
-            printf("%s ptr.%p trade.%p\n",exchangestr.buf,exchange,exchange!=0?exchange->trade:0);
+                        if ( (coinstr= jstr(json,"base")) != 0 )
+                            retstr = (*exchange->issue.parsebalance)(exchange,&balance,coinstr);
+                        else retstr = jprint(exchange->balancejson,0);
+                    } else retstr = clonestr("{\"error\":\"balances null return\"}");
+                } else retstr = clonestr("{\"error\":\"no balances function\"}");
+            } else retstr = clonestr("{\"error\":\"cant find exchange trade or balances function\"}");
+            printf("%s ptr.%p trade.%p\n",exchangestr.buf,exchange,exchange!=0?exchange->issue.trade:0);
         }
+        else if ( strcmp(method.buf,"allorderbooks") == 0 )
+            retstr = prices777_allorderbooks();
+        else if ( strcmp(method.buf,"allexchanges") == 0 )
+            retstr = jprint(exchanges_json(),1);
+        else if ( strcmp(method.buf,"lottostats") == 0 )
+            retstr = jprint(InstantDEX_lottostats(),1);
         else if ( strcmp(method.buf,"tradesequence") == 0 )
         {
             //printf("call tradesequence.(%s)\n",jsonstr);
@@ -651,7 +652,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 void init_exchanges(cJSON *json)
 {
-    cJSON *array; int32_t i,n;
+    int32_t i; //cJSON *array; int32_t i,n;
     for (FIRST_EXTERNAL=0; FIRST_EXTERNAL<sizeof(Supported_exchanges)/sizeof(*Supported_exchanges); FIRST_EXTERNAL++)
     {
         find_exchange(0,Supported_exchanges[FIRST_EXTERNAL]);
@@ -663,12 +664,12 @@ void init_exchanges(cJSON *json)
     }
     for (i=FIRST_EXTERNAL; i<sizeof(Supported_exchanges)/sizeof(*Supported_exchanges); i++)
         find_exchange(0,Supported_exchanges[i]);
-    prices777_initpair(-1,0,0,0,0,0.,0,0,0,0);
-    if ( json != 0 && (array= jarray(&n,json,"baskets")) != 0 )
+    prices777_initpair(-1,0,0,0,0.,0,0,0,0);
+    /*if ( json != 0 && (array= jarray(&n,json,"baskets")) != 0 )
     {
         for (i=0; i<n; i++)
             prices777_makebasket(0,jitem(array,i),1,"basket",0,0);
-    }
+    }*/
     void prices777_basketsloop(void *ptr);
     portable_thread_create((void *)prices777_basketsloop,0);
     //prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"bittrex\"},{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
@@ -680,6 +681,9 @@ void init_InstantDEX(cJSON *json)
     init_pingpong_queue(&Pending_offersQ,"pending_offers",0,0,0);
     Pending_offersQ.offset = 0;
     init_exchanges(json);
+    find_exchange(&a,INSTANTDEX_NXTAENAME), find_exchange(&b,INSTANTDEX_NAME);
+    if ( a != INSTANTDEX_NXTAEID || b != INSTANTDEX_EXCHANGEID )
+        printf("invalid exchangeid %d, %d\n",a,b);
     find_exchange(&a,INSTANTDEX_NXTAENAME), find_exchange(&b,INSTANTDEX_NAME);
     if ( a != INSTANTDEX_NXTAEID || b != INSTANTDEX_EXCHANGEID )
         printf("invalid exchangeid %d, %d\n",a,b);
@@ -698,7 +702,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         // configure settings
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
-        init_InstantDEX(json);
+        //init_InstantDEX(json);
         if ( 0 )
         {
             INSTANTDEX.history = txinds777_init(SUPERNET.DBPATH,"InstantDEX");

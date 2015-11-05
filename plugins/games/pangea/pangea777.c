@@ -794,7 +794,7 @@ int32_t pangea_encoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs[pangea_ind(dp->table,hn->client->H.slot)],dp->M,(void *)data,dp->numcards,dp->N);
     //int32_t i; for (i=0; i<dp->numcards*dp->N; i++)
     //    PostMessage("%llx ",(long long)priv->outcards[i].txid);
-    PostMessage("player.%d ind.%d encodes into %p %llx -> %llx next.%d dp->N %d\n",hn->client->H.slot,pangea_ind(sp,hn->client->H.slot),priv->outcards,*(uint64_t *)data,(long long)priv->outcards[0].txid,pangea_nextnode(sp),dp->N);
+    PostMessage("player.%d ind.%d encodes into %p %llx -> %llx next.%d dp->N %d\n",hn->client->H.slot,pangea_ind(sp,hn->client->H.slot),priv->outcards,(long long)*(uint64_t *)data,(long long)priv->outcards[0].txid,pangea_nextnode(sp),dp->N);
     if ( pangea_ind(sp,hn->client->H.slot) > 0 && (hex= malloc(65536)) != 0 )
     {
         if ( pangea_ind(sp,hn->client->H.slot) < sp->numactive-1 )

@@ -825,7 +825,7 @@ uint64_t peggy_dailyrates()
         for (i=0; i<=100; i++)
             printf("%d, ",dailyrates[i]);
         printf("dailyrates in 0.1%% incr\n");
-        printf("root.%lld resolution.%lld squared.%llu maxPval.%llu maxunits.%d\n",(long long)PRICE_RESOLUTION_ROOT,(long long)PRICE_RESOLUTION,(long long)PRICE_RESOLUTION2,PRICE_RESOLUTION_MAXPVAL,PRICE_RESOLUTION_MAXUNITS);
+        printf("root.%lld resolution.%lld squared.%llu maxPval.%llu maxunits.%d\n",(long long)PRICE_RESOLUTION_ROOT,(long long)PRICE_RESOLUTION,(long long)PRICE_RESOLUTION2,(long long)PRICE_RESOLUTION_MAXPVAL,PRICE_RESOLUTION_MAXUNITS);
     }
     return(errsum);
 }

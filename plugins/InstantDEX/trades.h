@@ -367,9 +367,37 @@ cJSON *InstantDEX_tradeitem(struct pending_trade *pend)
     return(json);
 }
 
-char *InstantDEX_tradehistory(int32_t firsti,int32_t endi)
+
+char *InstantDEX_withdraw(cJSON *argjson)
 {
-    cJSON *json,*array,*item,*tmp; int32_t i,action; uint8_t txbuf[32768]; char *str; struct pending_trade *pend;
+    char *exchangestr,*str; struct exchange_info *exchange; int32_t exchangeid;
+    if ( (exchangestr= jstr(argjson,"exchange")) != 0 && (exchange= find_exchange(&exchangeid,exchangestr)) != 0 )
+    {
+        if ( exchange->issue.withdraw != 0 )
+        {
+            if ( (str= (*exchange->issue.withdraw)(exchange,argjson)) == 0 )
+                str = clonestr("{\"result\":\"nothing returned from exchange\"}");
+            return(str);
+        }
+        else return(clonestr("{\"error\":\"no withdraw function\"}"));
+    }
+    return(clonestr("{\"error\":\"withdraw is not yet\"}"));
+}
+
+char *InstantDEX_tradehistory(cJSON *argjson,int32_t firsti,int32_t endi)
+{
+    cJSON *json,*array,*item,*tmp; int32_t exchangeid,i,action; uint8_t txbuf[32768];
+    char *str,*exchangestr; struct pending_trade *pend; struct exchange_info *exchange;
+    if ( (exchangestr= jstr(argjson,"exchange")) != 0 && (exchange= find_exchange(&exchangeid,exchangestr)) != 0 )
+    {
+        if ( exchange->issue.tradehistory != 0 )
+        {
+            if ( (str= (*exchange->issue.tradehistory)(exchange,argjson)) == 0 )
+                str = clonestr("{\"result\":\"nothing returned from exchange\"}");
+            return(str);
+        }
+        else return(clonestr("{\"error\":\"no tradehistory function\"}"));
+    }
     json = cJSON_CreateObject();
     array = cJSON_CreateArray();
     if ( endi == 0 )
@@ -611,7 +639,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
 {
     struct InstantDEX_quote _iQ; char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce;
     char swapbuf[8192],triggertx[4096],txbytes[4096],buf[1024]; uint64_t txid,sendasset,recvasset; int32_t deadline;
-    if ( (exchange= find_exchange(0,prices->exchange)) == 0 && exchange->trade != 0 )
+    if ( (exchange= find_exchange(0,prices->exchange)) == 0 && exchange->issue.trade != 0 )
     {
         printf("prices777_trade: need to have supported exchange\n");
         return(clonestr("{\"error\":\"need to have supported exchange\"}\n"));
@@ -769,11 +797,11 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
     }
     else if ( exchange != 0 )
     {
-        if ( exchange->trade != 0 )
+        if ( exchange->issue.trade != 0 )
         {
             printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,prices->base,prices->rel,price,volume,prices->exchange);
             retstr = extra;
-            if ( (txid= (*exchange->trade)(&retstr,exchange,prices->base,prices->rel,dir,price,volume)) != 0 )
+            if ( (txid= (*exchange->issue.trade)(&retstr,exchange,prices->base,prices->rel,dir,price,volume)) != 0 )
                 InstantDEX_history(0,pend,retstr);
             else printf("no txid from trade\n");
             pend->txid = txid;
@@ -1414,7 +1442,7 @@ char *InstantDEX_tradesequence(char *activenxt,char *secret,cJSON *json)
                 else if ( strcmp(tradestr,"swap") == 0 )
                     dir = 0;
                 else return(clonestr("{\"error\":\"invalid trade direction\"}"));
-                if ( (prices= prices777_initpair(1,0,exchangestr,base.buf,rel.buf,0.,name.buf,baseid,relid,0)) != 0 )
+                if ( (prices= prices777_initpair(1,exchangestr,base.buf,rel.buf,0.,name.buf,baseid,relid,0)) != 0 )
                 {
                     order->source = prices;
                     order->s.offerNXT = j64bits(item,"offerNXT");

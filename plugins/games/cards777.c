@@ -487,7 +487,8 @@ void cards777_test()
     FILE *fp;
     if ( (fp= fopen("/persistent/test","rb")) != 0 )
     {
-        fread(buf,6,1,fp);
+        if ( fread(buf,6,1,fp) <= 0 )
+            printf("read error for /persistent/test\n");
         buf[6] = 0;
         printf("test exists (%s)\n",buf);
         fclose(fp);

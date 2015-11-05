@@ -302,6 +302,12 @@ int32_t poll_daemons()
     return(processed);
 }
 
+int32_t external_agent(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs)
+{
+    printf("external_agent.(%s)\n",dp->name);
+    return(0);
+}
+
 int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs)
 {
     char *args[8],cmdstr[1024],daemonstr[64],portstr[8192],flagstr[3],pidstr[16];
@@ -421,7 +427,7 @@ void *daemon_loop2(void *args) // launch permanent plugin process
     return(_daemon_loop(dp,1));
 }
 
-char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,char *cmd,char *arg,int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs))
+char *launch_daemon(int32_t externalflag,char *plugin,char *ipaddr,uint16_t port,int32_t websocket,char *cmd,char *arg,int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs))
 {
     struct daemon_info *dp; cJSON *argjson; char retbuf[1024],*str; int32_t i,delim,offset=0;
     //printf("launch daemon.(%s)\n",plugin);
@@ -468,7 +474,7 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
         free_daemon_info(dp);
         return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
     }
-    sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\",\"agent\":\"%s\"}\n",(long long)dp->daemonid,plugin);
+    sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\",\"agent\":\"%s\",\"external\":%d}\n",(long long)dp->daemonid,plugin,externalflag);
     return(clonestr(retbuf));
  }
 
@@ -485,7 +491,7 @@ char *language_func(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,in
     }
     printf("found file.(%s)\n",cmd);
     if ( launchflag != 0 || websocket != 0 )
-     return(launch_daemon(plugin,ipaddr,port,websocket,cmd,jsonargs,daemonfunc));
+        return(launch_daemon(0,plugin,ipaddr,port,websocket,cmd,jsonargs,daemonfunc));
     saved_stdout = dup(STDOUT_FILENO);
     if( pipe(out_pipe) != 0 )
         return(clonestr("{\"error\":\"pipe creation error\"}"));
@@ -500,14 +506,20 @@ char *language_func(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,in
     return(clonestr(buffer));
 }
 
-char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *methodsjson,cJSON *pubmethods,cJSON *authmethods)
+char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *methodsjson,cJSON *pubmethods,cJSON *authmethods,char *origargstr)
 {
     struct daemon_info *dp;
     char retbuf[8192],*methodstr,*authmethodstr,*pubmethodstr;
     int32_t ind;
     printf("register.(%s)\n",plugin);
     update_Daemoninfos();
-    if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) != 0 )
+    if ( (dp= find_daemoninfo(&ind,plugin,daemonid,instanceid)) == 0 )
+    {
+        launch_daemon(0,plugin,"127.0.0.1",0,0,plugin,origargstr,external_agent);
+        dp = find_daemoninfo(&ind,plugin,daemonid,instanceid);
+
+    }
+    if ( dp != 0 )
     {
         if ( plugin[0] == 0 || strcmp(dp->name,plugin) == 0 )
         {
