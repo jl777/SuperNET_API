@@ -294,6 +294,7 @@ function close(e) {
 var funcToCallback = {};
 
 function postCall(func) {
+
   var callback = arguments[arguments.length - 1];
   funcToCallback[func] = callback;
 

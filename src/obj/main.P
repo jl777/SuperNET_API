@@ -1,0 +1,28 @@
+obj/main.o: main.cpp alert.h uint256.h util.h netbase.h serialize.h \
+ allocators.h version.h clientversion.h compat.h pubaddr.h checkpoints.h \
+ net.h mruset.h protocol.h addrman.h sync.h db.h main.h bignum.h script.h \
+ keystore.h crypter.h key.h scrypt.h txdb.h txdb-leveldb.h \
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/db.h \
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/iterator.h \
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/slice.h \
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/status.h \
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/options.h \
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/write_batch.h \
+ init.h wallet.h ui_interface.h walletdb.h base58.h bitcoinrpc.h \
+ json/json_spirit_reader_template.h json/json_spirit_value.h \
+ json/json_spirit_error_position.h json/json_spirit_writer_template.h \
+ json/json_spirit_utils.h kernel.h
+main.cpp alert.h uint256.h util.h netbase.h serialize.h :
+ allocators.h version.h clientversion.h compat.h pubaddr.h checkpoints.h :
+ net.h mruset.h protocol.h addrman.h sync.h db.h main.h bignum.h script.h :
+ keystore.h crypter.h key.h scrypt.h txdb.h txdb-leveldb.h :
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/db.h :
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/iterator.h :
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/slice.h :
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/status.h :
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/options.h :
+ /home/alex/Downloads/nacl_sdk/pepper_44/examples/demo/nacl_io_demo/src/leveldb/include/leveldb/write_batch.h :
+ init.h wallet.h ui_interface.h walletdb.h base58.h bitcoinrpc.h :
+ json/json_spirit_reader_template.h json/json_spirit_value.h :
+ json/json_spirit_error_position.h json/json_spirit_writer_template.h :
+ json/json_spirit_utils.h kernel.h :

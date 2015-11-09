@@ -1,0 +1,113 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/common/prices777.o: plugins/common/prices777.c \
+  plugins/common/../includes/portable777.h \
+  plugins/common/../includes/../../nanosrc/utils/mutex.h \
+  plugins/common/../includes/../../nanosrc/nn.h \
+  plugins/common/../includes/../../nanosrc/nn_config.h \
+  plugins/common/../includes/../../nanosrc/pubsub.h \
+  plugins/common/../includes/../../nanosrc/pipeline.h \
+  plugins/common/../includes/../../nanosrc/survey.h \
+  plugins/common/../includes/../../nanosrc/reqrep.h \
+  plugins/common/../includes/../../nanosrc/bus.h \
+  plugins/common/../includes/../../nanosrc/pair.h \
+  plugins/common/../includes/sha256.h plugins/common/../includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/common/../includes/uthash.h \
+  plugins/common/../includes/curve25519.h \
+  plugins/common/../includes/InstantDEX_quote.h \
+  plugins/common/../utils/NXT777.c \
+  plugins/common/../utils/../utils/bits777.c \
+  plugins/common/../utils/../utils/utils777.c \
+  plugins/common/../utils/bits777.c \
+  plugins/common/../utils/../common/system777.c \
+  plugins/common/../utils/utils777.c plugins/common/../utils/inet.c \
+  plugins/common/../utils/../includes/nonportable.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/common/../includes/utlist.h \
+  plugins/common/../utils/../coins/coins777.c \
+  plugins/common/../utils/../coins/../utils/huffstream.c \
+  plugins/common/../utils/../coins/../common/system777.c \
+  plugins/common/../utils/../coins/../KV/kv777.c \
+  plugins/common/../utils/../coins/../KV/../utils/NXT777.c \
+  plugins/common/../utils/../coins/../KV/../utils/files777.c \
+  plugins/common/../utils/../coins/../KV/../common/system777.c \
+  plugins/common/../utils/../coins/../utils/files777.c \
+  plugins/common/../utils/../coins/../utils/utils777.c \
+  plugins/common/../utils/../coins/../utils/bits777.c \
+  plugins/common/../utils/../coins/gen1.c \
+  plugins/common/../utils/../coins/cointx.c \
+  plugins/common/../utils/../includes/tweetnacl.h \
+  plugins/common/../agents/plugin777.c \
+  plugins/common/../InstantDEX/orderbooks.h \
+  plugins/common/../InstantDEX/exchangeparse.h \
+  plugins/common/../InstantDEX/exchange_trades.h \
+  plugins/common/../../exchanges/poloniex.c \
+  plugins/common/../../exchanges/bittrex.c \
+  plugins/common/../../exchanges/btce.c \
+  plugins/common/../../exchanges/bitfinex.c \
+  plugins/common/../../exchanges/btc38.c \
+  plugins/common/../../exchanges/huobi.c \
+  plugins/common/../../exchanges/lakebtc.c \
+  plugins/common/../../exchanges/quadriga.c \
+  plugins/common/../../exchanges/okcoin.c \
+  plugins/common/../../exchanges/coinbase.c \
+  plugins/common/../../exchanges/bitstamp.c
+plugins/common/prices777.c:
+plugins/common/../includes/portable777.h:
+plugins/common/../includes/../../nanosrc/utils/mutex.h:
+plugins/common/../includes/../../nanosrc/nn.h:
+plugins/common/../includes/../../nanosrc/nn_config.h:
+plugins/common/../includes/../../nanosrc/pubsub.h:
+plugins/common/../includes/../../nanosrc/pipeline.h:
+plugins/common/../includes/../../nanosrc/survey.h:
+plugins/common/../includes/../../nanosrc/reqrep.h:
+plugins/common/../includes/../../nanosrc/bus.h:
+plugins/common/../includes/../../nanosrc/pair.h:
+plugins/common/../includes/sha256.h:
+plugins/common/../includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/common/../includes/uthash.h:
+plugins/common/../includes/curve25519.h:
+plugins/common/../includes/InstantDEX_quote.h:
+plugins/common/../utils/NXT777.c:
+plugins/common/../utils/../utils/bits777.c:
+plugins/common/../utils/../utils/utils777.c:
+plugins/common/../utils/bits777.c:
+plugins/common/../utils/../common/system777.c:
+plugins/common/../utils/utils777.c:
+plugins/common/../utils/inet.c:
+plugins/common/../utils/../includes/nonportable.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/common/../includes/utlist.h:
+plugins/common/../utils/../coins/coins777.c:
+plugins/common/../utils/../coins/../utils/huffstream.c:
+plugins/common/../utils/../coins/../common/system777.c:
+plugins/common/../utils/../coins/../KV/kv777.c:
+plugins/common/../utils/../coins/../KV/../utils/NXT777.c:
+plugins/common/../utils/../coins/../KV/../utils/files777.c:
+plugins/common/../utils/../coins/../KV/../common/system777.c:
+plugins/common/../utils/../coins/../utils/files777.c:
+plugins/common/../utils/../coins/../utils/utils777.c:
+plugins/common/../utils/../coins/../utils/bits777.c:
+plugins/common/../utils/../coins/gen1.c:
+plugins/common/../utils/../coins/cointx.c:
+plugins/common/../utils/../includes/tweetnacl.h:
+plugins/common/../agents/plugin777.c:
+plugins/common/../InstantDEX/orderbooks.h:
+plugins/common/../InstantDEX/exchangeparse.h:
+plugins/common/../InstantDEX/exchange_trades.h:
+plugins/common/../../exchanges/poloniex.c:
+plugins/common/../../exchanges/bittrex.c:
+plugins/common/../../exchanges/btce.c:
+plugins/common/../../exchanges/bitfinex.c:
+plugins/common/../../exchanges/btc38.c:
+plugins/common/../../exchanges/huobi.c:
+plugins/common/../../exchanges/lakebtc.c:
+plugins/common/../../exchanges/quadriga.c:
+plugins/common/../../exchanges/okcoin.c:
+plugins/common/../../exchanges/coinbase.c:
+plugins/common/../../exchanges/bitstamp.c:

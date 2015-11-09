@@ -1,0 +1,35 @@
+# Updated by fix_deps.py
+pnacl/Debug/handlers.o: handlers.c handlers.h include/ppapi/c/pp_var.h \
+  include/ppapi/c/pp_bool.h include/ppapi/c/pp_macros.h \
+  include/ppapi/c/pp_stdint.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/netdb.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/netinet/in.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/netinet6/in6.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/socket.h \
+  include/nacl_io/osdirent.h include/nacl_io/osinttypes.h nacl_io_demo.h \
+  include/ppapi/c/pp_instance.h include/ppapi/c/ppb_var.h \
+  include/ppapi/c/pp_module.h include/ppapi/c/pp_resource.h \
+  include/ppapi/c/ppb_var_array.h include/ppapi/c/ppb_var_dictionary.h \
+  include/sdk_util/macros.h
+handlers.c:
+handlers.h:
+include/ppapi/c/pp_var.h:
+include/ppapi/c/pp_bool.h:
+include/ppapi/c/pp_macros.h:
+include/ppapi/c/pp_stdint.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/netdb.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/netinet/in.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/netinet6/in6.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/socket.h:
+include/nacl_io/osdirent.h:
+include/nacl_io/osinttypes.h:
+nacl_io_demo.h:
+include/ppapi/c/pp_instance.h:
+include/ppapi/c/ppb_var.h:
+include/ppapi/c/pp_module.h:
+include/ppapi/c/pp_resource.h:
+include/ppapi/c/ppb_var_array.h:
+include/ppapi/c/ppb_var_dictionary.h:
+include/sdk_util/macros.h:

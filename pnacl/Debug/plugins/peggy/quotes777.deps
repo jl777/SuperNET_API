@@ -1,0 +1,72 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/peggy/quotes777.o: plugins/peggy/quotes777.c \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  plugins/peggy/serdes777.c plugins/peggy/../includes/portable777.h \
+  plugins/peggy/../includes/../../nanosrc/utils/mutex.h \
+  plugins/peggy/../includes/../../nanosrc/nn.h \
+  plugins/peggy/../includes/../../nanosrc/nn_config.h \
+  plugins/peggy/../includes/../../nanosrc/pubsub.h \
+  plugins/peggy/../includes/../../nanosrc/pipeline.h \
+  plugins/peggy/../includes/../../nanosrc/survey.h \
+  plugins/peggy/../includes/../../nanosrc/reqrep.h \
+  plugins/peggy/../includes/../../nanosrc/bus.h \
+  plugins/peggy/../includes/../../nanosrc/pair.h \
+  plugins/peggy/../includes/sha256.h plugins/peggy/../includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/peggy/../includes/uthash.h \
+  plugins/peggy/../includes/curve25519.h \
+  plugins/peggy/../includes/InstantDEX_quote.h \
+  plugins/peggy/../utils/huffstream.c plugins/peggy/../utils/bits777.c \
+  plugins/peggy/peggy777.c plugins/peggy/../KV/ramkv777.c \
+  plugins/peggy/../KV/../utils/bits777.c \
+  plugins/peggy/../common/txind777.c \
+  plugins/peggy/../common/../utils/bits777.c \
+  plugins/peggy/../common/opreturn777.c \
+  plugins/peggy/../common/../utils/huffstream.c plugins/peggy/accts777.c \
+  plugins/peggy/../utils/files777.c \
+  plugins/peggy/../utils/../common/system777.c \
+  plugins/peggy/../common/../utils/utils777.c \
+  plugins/peggy/../common/../utils/inet.c \
+  plugins/peggy/../utils/../includes/nonportable.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/peggy/../common/../includes/utlist.h \
+  plugins/peggy/../utils/utils777.c
+plugins/peggy/quotes777.c:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+plugins/peggy/serdes777.c:
+plugins/peggy/../includes/portable777.h:
+plugins/peggy/../includes/../../nanosrc/utils/mutex.h:
+plugins/peggy/../includes/../../nanosrc/nn.h:
+plugins/peggy/../includes/../../nanosrc/nn_config.h:
+plugins/peggy/../includes/../../nanosrc/pubsub.h:
+plugins/peggy/../includes/../../nanosrc/pipeline.h:
+plugins/peggy/../includes/../../nanosrc/survey.h:
+plugins/peggy/../includes/../../nanosrc/reqrep.h:
+plugins/peggy/../includes/../../nanosrc/bus.h:
+plugins/peggy/../includes/../../nanosrc/pair.h:
+plugins/peggy/../includes/sha256.h:
+plugins/peggy/../includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/peggy/../includes/uthash.h:
+plugins/peggy/../includes/curve25519.h:
+plugins/peggy/../includes/InstantDEX_quote.h:
+plugins/peggy/../utils/huffstream.c:
+plugins/peggy/../utils/bits777.c:
+plugins/peggy/peggy777.c:
+plugins/peggy/../KV/ramkv777.c:
+plugins/peggy/../KV/../utils/bits777.c:
+plugins/peggy/../common/txind777.c:
+plugins/peggy/../common/../utils/bits777.c:
+plugins/peggy/../common/opreturn777.c:
+plugins/peggy/../common/../utils/huffstream.c:
+plugins/peggy/accts777.c:
+plugins/peggy/../utils/files777.c:
+plugins/peggy/../utils/../common/system777.c:
+plugins/peggy/../common/../utils/utils777.c:
+plugins/peggy/../common/../utils/inet.c:
+plugins/peggy/../utils/../includes/nonportable.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/peggy/../common/../includes/utlist.h:
+plugins/peggy/../utils/utils777.c:
