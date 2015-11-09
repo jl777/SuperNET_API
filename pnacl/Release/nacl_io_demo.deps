@@ -1,0 +1,52 @@
+# Updated by fix_deps.py
+pnacl/Release/nacl_io_demo.o: nacl_io_demo.c nacl_io_demo.h \
+  include/ppapi/c/pp_instance.h include/ppapi/c/pp_macros.h \
+  include/ppapi/c/pp_stdint.h include/ppapi/c/pp_var.h \
+  include/ppapi/c/pp_bool.h include/ppapi/c/ppb_var.h \
+  include/ppapi/c/pp_module.h include/ppapi/c/pp_resource.h \
+  include/ppapi/c/ppb_var_array.h include/ppapi/c/ppb_var_dictionary.h \
+  include/sdk_util/macros.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/ioctl.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/mount.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  include/ppapi/c/pp_errors.h include/ppapi/c/ppb.h \
+  include/ppapi/c/ppb_instance.h include/ppapi/c/ppb_messaging.h \
+  include/ppapi/c/ppp_message_handler.h include/ppapi/c/ppp.h \
+  include/ppapi/c/ppp_instance.h include/ppapi/c/pp_point.h \
+  include/ppapi/c/pp_rect.h include/ppapi/c/pp_size.h \
+  include/ppapi/c/ppp_messaging.h include/nacl_io/ioctl.h \
+  include/nacl_io/nacl_io.h include/nacl_io/ostypes.h handlers.h queue.h
+nacl_io_demo.c:
+nacl_io_demo.h:
+include/ppapi/c/pp_instance.h:
+include/ppapi/c/pp_macros.h:
+include/ppapi/c/pp_stdint.h:
+include/ppapi/c/pp_var.h:
+include/ppapi/c/pp_bool.h:
+include/ppapi/c/ppb_var.h:
+include/ppapi/c/pp_module.h:
+include/ppapi/c/pp_resource.h:
+include/ppapi/c/ppb_var_array.h:
+include/ppapi/c/ppb_var_dictionary.h:
+include/sdk_util/macros.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/ioctl.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/mount.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+include/ppapi/c/pp_errors.h:
+include/ppapi/c/ppb.h:
+include/ppapi/c/ppb_instance.h:
+include/ppapi/c/ppb_messaging.h:
+include/ppapi/c/ppp_message_handler.h:
+include/ppapi/c/ppp.h:
+include/ppapi/c/ppp_instance.h:
+include/ppapi/c/pp_point.h:
+include/ppapi/c/pp_rect.h:
+include/ppapi/c/pp_size.h:
+include/ppapi/c/ppp_messaging.h:
+include/nacl_io/ioctl.h:
+include/nacl_io/nacl_io.h:
+include/nacl_io/ostypes.h:
+handlers.h:
+queue.h:

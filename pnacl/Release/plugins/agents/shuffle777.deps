@@ -1,0 +1,84 @@
+# Updated by fix_deps.py
+pnacl/Release/plugins/agents/shuffle777.o: plugins/agents/shuffle777.c \
+  plugins/agents/../includes/portable777.h \
+  plugins/agents/../includes/../../nanosrc/utils/mutex.h \
+  plugins/agents/../includes/../../nanosrc/nn.h \
+  plugins/agents/../includes/../../nanosrc/nn_config.h \
+  plugins/agents/../includes/../../nanosrc/pubsub.h \
+  plugins/agents/../includes/../../nanosrc/pipeline.h \
+  plugins/agents/../includes/../../nanosrc/survey.h \
+  plugins/agents/../includes/../../nanosrc/reqrep.h \
+  plugins/agents/../includes/../../nanosrc/bus.h \
+  plugins/agents/../includes/../../nanosrc/pair.h \
+  plugins/agents/../includes/sha256.h plugins/agents/../includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/agents/../includes/uthash.h \
+  plugins/agents/../includes/curve25519.h \
+  plugins/agents/../includes/InstantDEX_quote.h \
+  plugins/agents/../coins/coins777.c \
+  plugins/agents/../coins/../utils/huffstream.c \
+  plugins/agents/../coins/../common/system777.c \
+  plugins/agents/../coins/../common/../utils/utils777.c \
+  plugins/agents/../coins/../utils/bits777.c \
+  plugins/agents/../coins/../utils/../common/system777.c \
+  plugins/agents/../coins/../common/../utils/inet.c \
+  plugins/agents/../coins/../utils/../includes/nonportable.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/agents/../coins/../common/../includes/utlist.h \
+  plugins/agents/../coins/../KV/kv777.c \
+  plugins/agents/../coins/../KV/../utils/NXT777.c \
+  plugins/agents/../coins/../utils/../utils/bits777.c \
+  plugins/agents/../coins/../utils/../utils/utils777.c \
+  plugins/agents/../coins/../utils/../coins/coins777.c \
+  plugins/agents/../coins/../utils/../includes/tweetnacl.h \
+  plugins/agents/../coins/../KV/../utils/files777.c \
+  plugins/agents/../coins/../utils/utils777.c \
+  plugins/agents/../coins/../KV/../common/system777.c \
+  plugins/agents/../coins/../utils/files777.c \
+  plugins/agents/../coins/gen1.c plugins/agents/../coins/cointx.c \
+  plugins/agents/../utils/ramcoder.c plugins/agents/plugin777.c
+plugins/agents/shuffle777.c:
+plugins/agents/../includes/portable777.h:
+plugins/agents/../includes/../../nanosrc/utils/mutex.h:
+plugins/agents/../includes/../../nanosrc/nn.h:
+plugins/agents/../includes/../../nanosrc/nn_config.h:
+plugins/agents/../includes/../../nanosrc/pubsub.h:
+plugins/agents/../includes/../../nanosrc/pipeline.h:
+plugins/agents/../includes/../../nanosrc/survey.h:
+plugins/agents/../includes/../../nanosrc/reqrep.h:
+plugins/agents/../includes/../../nanosrc/bus.h:
+plugins/agents/../includes/../../nanosrc/pair.h:
+plugins/agents/../includes/sha256.h:
+plugins/agents/../includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/agents/../includes/uthash.h:
+plugins/agents/../includes/curve25519.h:
+plugins/agents/../includes/InstantDEX_quote.h:
+plugins/agents/../coins/coins777.c:
+plugins/agents/../coins/../utils/huffstream.c:
+plugins/agents/../coins/../common/system777.c:
+plugins/agents/../coins/../common/../utils/utils777.c:
+plugins/agents/../coins/../utils/bits777.c:
+plugins/agents/../coins/../utils/../common/system777.c:
+plugins/agents/../coins/../common/../utils/inet.c:
+plugins/agents/../coins/../utils/../includes/nonportable.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/agents/../coins/../common/../includes/utlist.h:
+plugins/agents/../coins/../KV/kv777.c:
+plugins/agents/../coins/../KV/../utils/NXT777.c:
+plugins/agents/../coins/../utils/../utils/bits777.c:
+plugins/agents/../coins/../utils/../utils/utils777.c:
+plugins/agents/../coins/../utils/../coins/coins777.c:
+plugins/agents/../coins/../utils/../includes/tweetnacl.h:
+plugins/agents/../coins/../KV/../utils/files777.c:
+plugins/agents/../coins/../utils/utils777.c:
+plugins/agents/../coins/../KV/../common/system777.c:
+plugins/agents/../coins/../utils/files777.c:
+plugins/agents/../coins/gen1.c:
+plugins/agents/../coins/cointx.c:
+plugins/agents/../utils/ramcoder.c:
+plugins/agents/plugin777.c:

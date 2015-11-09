@@ -9,7 +9,7 @@
 
 VALID_TOOLCHAINS := pnacl newlib glibc clang-newlib mac 
 
-NACL_SDK_ROOT ?= $(abspath $(CURDIR))
+NACL_SDK_ROOT ?= /home/alex/Downloads/nacl_sdk/pepper_44
 
 TARGET = SuperNET_API
 
@@ -22,6 +22,8 @@ CHROME_ARGS += --allow-nacl-socket-api=localhost
 DEPS = nacl_io
 LIBS = jl777 pangea nanomsg crypto777 ccoin curl ssl crypto z pthread ppapi nacl_io
 PLIBS = nanoagent curl pthread ppapi nacl_io
+PNACL_LDFLAGS := -L./lib/pnacl/Release
+
 
 CFLAGS = -Wall -D__PNACL -fno-strict-aliasing -Ipicocoin/include
 

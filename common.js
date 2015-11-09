@@ -330,21 +330,24 @@ var common = (function() {
               
               function retmsg(msg, cb)
               {
-              postCall(cb, msg, undefined);
-              console.log("sent: "+msg);
+                console.log(cb);
+              postCall("js", msg, cb, function() {
+                // nothing
+              });
+              console.log("sent: "+msg+" "+cb);
               }
 
   function handleMessage(message_event)
               {
               if(isJson(message_event.data))
               {
-              console.log("AAAA");
               var request = JSON.parse(message_event.data);
-              var cb = request.callback;
+              var cb = request.pointer;
               console.log(request);
               if(request.method == "NxtAPI")
               {
               console.log(request.requestType);
+              if(request.params == undefined) request.params = "{}";
               Jay.request(request.requestType, JSON.parse(request.params), function(ans) {
                           retmsg(ans, cb);
                           })
@@ -372,12 +375,12 @@ var common = (function() {
               var out = parseToken(request.token, request.data);
               retmsg(JSON.stringify(out), cb);
               }
-              console.log(request);
-              }
               else
               {
                 retmsg('{"error":"method not found"}', cb);
               }
+              }
+              
               
     if (typeof message_event.data === 'string') {
       for (var type in defaultMessageTypes) {

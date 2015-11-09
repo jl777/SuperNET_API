@@ -1,0 +1,85 @@
+# Updated by fix_deps.py
+pnacl/Release/plugins/common/teleport777.o: plugins/common/teleport777.c \
+  plugins/common/../coins/coins777.c \
+  plugins/common/../coins/../includes/uthash.h \
+  plugins/common/../coins/../includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/common/../coins/../utils/huffstream.c \
+  plugins/common/../coins/../common/system777.c \
+  plugins/common/../utils/utils777.c \
+  plugins/common/../coins/../utils/bits777.c \
+  plugins/common/../coins/../utils/../includes/portable777.h \
+  plugins/common/../coins/../includes/../../nanosrc/utils/mutex.h \
+  plugins/common/../coins/../includes/../../nanosrc/nn.h \
+  plugins/common/../coins/../includes/../../nanosrc/nn_config.h \
+  plugins/common/../coins/../includes/../../nanosrc/pubsub.h \
+  plugins/common/../coins/../includes/../../nanosrc/pipeline.h \
+  plugins/common/../coins/../includes/../../nanosrc/survey.h \
+  plugins/common/../coins/../includes/../../nanosrc/reqrep.h \
+  plugins/common/../coins/../includes/../../nanosrc/bus.h \
+  plugins/common/../coins/../includes/../../nanosrc/pair.h \
+  plugins/common/../coins/../includes/sha256.h \
+  plugins/common/../coins/../includes/curve25519.h \
+  plugins/common/../coins/../includes/InstantDEX_quote.h \
+  plugins/common/../coins/../utils/../common/system777.c \
+  plugins/common/../utils/inet.c \
+  plugins/common/../coins/../utils/../includes/nonportable.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/common/../includes/utlist.h \
+  plugins/common/../coins/../KV/kv777.c \
+  plugins/common/../coins/../KV/../utils/NXT777.c \
+  plugins/common/../coins/../utils/../utils/bits777.c \
+  plugins/common/../coins/../utils/../utils/utils777.c \
+  plugins/common/../coins/../utils/../coins/coins777.c \
+  plugins/common/../coins/../utils/../includes/tweetnacl.h \
+  plugins/common/../coins/../KV/../utils/files777.c \
+  plugins/common/../coins/../utils/utils777.c \
+  plugins/common/../coins/../KV/../common/system777.c \
+  plugins/common/../coins/../utils/files777.c \
+  plugins/common/../coins/gen1.c plugins/common/../coins/cointx.c \
+  plugins/common/../agents/plugin777.c plugins/common/../utils/bits777.c
+plugins/common/teleport777.c:
+plugins/common/../coins/coins777.c:
+plugins/common/../coins/../includes/uthash.h:
+plugins/common/../coins/../includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/common/../coins/../utils/huffstream.c:
+plugins/common/../coins/../common/system777.c:
+plugins/common/../utils/utils777.c:
+plugins/common/../coins/../utils/bits777.c:
+plugins/common/../coins/../utils/../includes/portable777.h:
+plugins/common/../coins/../includes/../../nanosrc/utils/mutex.h:
+plugins/common/../coins/../includes/../../nanosrc/nn.h:
+plugins/common/../coins/../includes/../../nanosrc/nn_config.h:
+plugins/common/../coins/../includes/../../nanosrc/pubsub.h:
+plugins/common/../coins/../includes/../../nanosrc/pipeline.h:
+plugins/common/../coins/../includes/../../nanosrc/survey.h:
+plugins/common/../coins/../includes/../../nanosrc/reqrep.h:
+plugins/common/../coins/../includes/../../nanosrc/bus.h:
+plugins/common/../coins/../includes/../../nanosrc/pair.h:
+plugins/common/../coins/../includes/sha256.h:
+plugins/common/../coins/../includes/curve25519.h:
+plugins/common/../coins/../includes/InstantDEX_quote.h:
+plugins/common/../coins/../utils/../common/system777.c:
+plugins/common/../utils/inet.c:
+plugins/common/../coins/../utils/../includes/nonportable.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/common/../includes/utlist.h:
+plugins/common/../coins/../KV/kv777.c:
+plugins/common/../coins/../KV/../utils/NXT777.c:
+plugins/common/../coins/../utils/../utils/bits777.c:
+plugins/common/../coins/../utils/../utils/utils777.c:
+plugins/common/../coins/../utils/../coins/coins777.c:
+plugins/common/../coins/../utils/../includes/tweetnacl.h:
+plugins/common/../coins/../KV/../utils/files777.c:
+plugins/common/../coins/../utils/utils777.c:
+plugins/common/../coins/../KV/../common/system777.c:
+plugins/common/../coins/../utils/files777.c:
+plugins/common/../coins/gen1.c:
+plugins/common/../coins/cointx.c:
+plugins/common/../agents/plugin777.c:
+plugins/common/../utils/bits777.c:

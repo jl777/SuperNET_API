@@ -1,0 +1,87 @@
+# Updated by fix_deps.py
+pnacl/Debug/SuperNET.o: SuperNET.c plugins/includes/portable777.h \
+  plugins/includes/../../nanosrc/utils/mutex.h \
+  plugins/includes/../../nanosrc/nn.h \
+  plugins/includes/../../nanosrc/nn_config.h \
+  plugins/includes/../../nanosrc/pubsub.h \
+  plugins/includes/../../nanosrc/pipeline.h \
+  plugins/includes/../../nanosrc/survey.h \
+  plugins/includes/../../nanosrc/reqrep.h \
+  plugins/includes/../../nanosrc/bus.h \
+  plugins/includes/../../nanosrc/pair.h plugins/includes/sha256.h \
+  plugins/includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/includes/uthash.h plugins/includes/curve25519.h \
+  plugins/includes/InstantDEX_quote.h plugins/utils/utils777.c \
+  plugins/utils/bits777.c plugins/utils/../common/system777.c \
+  plugins/utils/../common/../utils/utils777.c \
+  plugins/utils/../common/../utils/inet.c \
+  plugins/utils/../includes/nonportable.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/utils/../common/../includes/utlist.h plugins/utils/files777.c \
+  plugins/KV/kv777.c plugins/KV/../utils/NXT777.c \
+  plugins/utils/../utils/bits777.c plugins/utils/../utils/utils777.c \
+  plugins/utils/../coins/coins777.c \
+  plugins/utils/../coins/../utils/huffstream.c \
+  plugins/utils/../coins/../common/system777.c \
+  plugins/utils/../coins/../KV/kv777.c \
+  plugins/utils/../coins/../utils/files777.c \
+  plugins/utils/../coins/../utils/utils777.c \
+  plugins/utils/../coins/../utils/bits777.c \
+  plugins/utils/../coins/gen1.c plugins/utils/../coins/cointx.c \
+  plugins/utils/../includes/tweetnacl.h plugins/KV/../utils/files777.c \
+  plugins/KV/../common/system777.c plugins/common/system777.c \
+  plugins/agents/plugins.h \
+  plugins/agents/../nonportable/Linux/nonportable.h \
+  plugins/agents/transport.h plugins/agents/../common/system777.c
+SuperNET.c:
+plugins/includes/portable777.h:
+plugins/includes/../../nanosrc/utils/mutex.h:
+plugins/includes/../../nanosrc/nn.h:
+plugins/includes/../../nanosrc/nn_config.h:
+plugins/includes/../../nanosrc/pubsub.h:
+plugins/includes/../../nanosrc/pipeline.h:
+plugins/includes/../../nanosrc/survey.h:
+plugins/includes/../../nanosrc/reqrep.h:
+plugins/includes/../../nanosrc/bus.h:
+plugins/includes/../../nanosrc/pair.h:
+plugins/includes/sha256.h:
+plugins/includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/includes/uthash.h:
+plugins/includes/curve25519.h:
+plugins/includes/InstantDEX_quote.h:
+plugins/utils/utils777.c:
+plugins/utils/bits777.c:
+plugins/utils/../common/system777.c:
+plugins/utils/../common/../utils/utils777.c:
+plugins/utils/../common/../utils/inet.c:
+plugins/utils/../includes/nonportable.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/utils/../common/../includes/utlist.h:
+plugins/utils/files777.c:
+plugins/KV/kv777.c:
+plugins/KV/../utils/NXT777.c:
+plugins/utils/../utils/bits777.c:
+plugins/utils/../utils/utils777.c:
+plugins/utils/../coins/coins777.c:
+plugins/utils/../coins/../utils/huffstream.c:
+plugins/utils/../coins/../common/system777.c:
+plugins/utils/../coins/../KV/kv777.c:
+plugins/utils/../coins/../utils/files777.c:
+plugins/utils/../coins/../utils/utils777.c:
+plugins/utils/../coins/../utils/bits777.c:
+plugins/utils/../coins/gen1.c:
+plugins/utils/../coins/cointx.c:
+plugins/utils/../includes/tweetnacl.h:
+plugins/KV/../utils/files777.c:
+plugins/KV/../common/system777.c:
+plugins/common/system777.c:
+plugins/agents/plugins.h:
+plugins/agents/../nonportable/Linux/nonportable.h:
+plugins/agents/transport.h:
+plugins/agents/../common/system777.c:

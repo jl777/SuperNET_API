@@ -1,0 +1,37 @@
+# Updated by fix_deps.py
+pnacl/Debug/plugins/KV/ramkv777.o: plugins/KV/ramkv777.c \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  plugins/KV/../includes/portable777.h \
+  plugins/KV/../includes/../../nanosrc/utils/mutex.h \
+  plugins/KV/../includes/../../nanosrc/nn.h \
+  plugins/KV/../includes/../../nanosrc/nn_config.h \
+  plugins/KV/../includes/../../nanosrc/pubsub.h \
+  plugins/KV/../includes/../../nanosrc/pipeline.h \
+  plugins/KV/../includes/../../nanosrc/survey.h \
+  plugins/KV/../includes/../../nanosrc/reqrep.h \
+  plugins/KV/../includes/../../nanosrc/bus.h \
+  plugins/KV/../includes/../../nanosrc/pair.h \
+  plugins/KV/../includes/sha256.h plugins/KV/../includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/KV/../includes/uthash.h plugins/KV/../includes/curve25519.h \
+  plugins/KV/../includes/InstantDEX_quote.h \
+  plugins/KV/../utils/bits777.c
+plugins/KV/ramkv777.c:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+plugins/KV/../includes/portable777.h:
+plugins/KV/../includes/../../nanosrc/utils/mutex.h:
+plugins/KV/../includes/../../nanosrc/nn.h:
+plugins/KV/../includes/../../nanosrc/nn_config.h:
+plugins/KV/../includes/../../nanosrc/pubsub.h:
+plugins/KV/../includes/../../nanosrc/pipeline.h:
+plugins/KV/../includes/../../nanosrc/survey.h:
+plugins/KV/../includes/../../nanosrc/reqrep.h:
+plugins/KV/../includes/../../nanosrc/bus.h:
+plugins/KV/../includes/../../nanosrc/pair.h:
+plugins/KV/../includes/sha256.h:
+plugins/KV/../includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/KV/../includes/uthash.h:
+plugins/KV/../includes/curve25519.h:
+plugins/KV/../includes/InstantDEX_quote.h:
+plugins/KV/../utils/bits777.c:

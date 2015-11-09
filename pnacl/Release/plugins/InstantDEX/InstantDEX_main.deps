@@ -1,0 +1,100 @@
+# Updated by fix_deps.py
+pnacl/Release/plugins/InstantDEX/InstantDEX_main.o: \
+  plugins/InstantDEX/InstantDEX_main.c \
+  plugins/InstantDEX/../includes/portable777.h \
+  plugins/InstantDEX/../includes/../../nanosrc/utils/mutex.h \
+  plugins/InstantDEX/../includes/../../nanosrc/nn.h \
+  plugins/InstantDEX/../includes/../../nanosrc/nn_config.h \
+  plugins/InstantDEX/../includes/../../nanosrc/pubsub.h \
+  plugins/InstantDEX/../includes/../../nanosrc/pipeline.h \
+  plugins/InstantDEX/../includes/../../nanosrc/survey.h \
+  plugins/InstantDEX/../includes/../../nanosrc/reqrep.h \
+  plugins/InstantDEX/../includes/../../nanosrc/bus.h \
+  plugins/InstantDEX/../includes/../../nanosrc/pair.h \
+  plugins/InstantDEX/../includes/sha256.h \
+  plugins/InstantDEX/../includes/cJSON.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h \
+  plugins/InstantDEX/../includes/uthash.h \
+  plugins/InstantDEX/../includes/curve25519.h \
+  plugins/InstantDEX/../includes/InstantDEX_quote.h \
+  plugins/InstantDEX/../agents/plugin777.c \
+  plugins/InstantDEX/../utils/NXT777.c \
+  plugins/InstantDEX/../utils/../utils/bits777.c \
+  plugins/InstantDEX/../utils/../utils/utils777.c \
+  plugins/InstantDEX/../utils/bits777.c \
+  plugins/InstantDEX/../utils/../common/system777.c \
+  plugins/InstantDEX/../utils/../common/../utils/utils777.c \
+  plugins/InstantDEX/../utils/../common/../utils/inet.c \
+  plugins/InstantDEX/../utils/../includes/nonportable.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h \
+  /home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h \
+  plugins/InstantDEX/../utils/../common/../includes/utlist.h \
+  plugins/InstantDEX/../utils/../coins/coins777.c \
+  plugins/InstantDEX/../utils/../coins/../utils/huffstream.c \
+  plugins/InstantDEX/../utils/../coins/../common/system777.c \
+  plugins/InstantDEX/../utils/../coins/../KV/kv777.c \
+  plugins/InstantDEX/../utils/../coins/../KV/../utils/NXT777.c \
+  plugins/InstantDEX/../utils/../coins/../KV/../utils/files777.c \
+  plugins/InstantDEX/../utils/utils777.c \
+  plugins/InstantDEX/../utils/../coins/../KV/../common/system777.c \
+  plugins/InstantDEX/../utils/../coins/../utils/files777.c \
+  plugins/InstantDEX/../utils/../coins/../utils/utils777.c \
+  plugins/InstantDEX/../utils/../coins/../utils/bits777.c \
+  plugins/InstantDEX/../utils/../coins/gen1.c \
+  plugins/InstantDEX/../utils/../coins/cointx.c \
+  plugins/InstantDEX/../utils/../includes/tweetnacl.h \
+  plugins/InstantDEX/../common/txind777.c \
+  plugins/InstantDEX/../utils/../common/../utils/bits777.c \
+  plugins/InstantDEX/trades.h plugins/InstantDEX/quotes.h \
+  plugins/InstantDEX/subatomic.h
+:
+plugins/InstantDEX/InstantDEX_main.c:
+plugins/InstantDEX/../includes/portable777.h:
+plugins/InstantDEX/../includes/../../nanosrc/utils/mutex.h:
+plugins/InstantDEX/../includes/../../nanosrc/nn.h:
+plugins/InstantDEX/../includes/../../nanosrc/nn_config.h:
+plugins/InstantDEX/../includes/../../nanosrc/pubsub.h:
+plugins/InstantDEX/../includes/../../nanosrc/pipeline.h:
+plugins/InstantDEX/../includes/../../nanosrc/survey.h:
+plugins/InstantDEX/../includes/../../nanosrc/reqrep.h:
+plugins/InstantDEX/../includes/../../nanosrc/bus.h:
+plugins/InstantDEX/../includes/../../nanosrc/pair.h:
+plugins/InstantDEX/../includes/sha256.h:
+plugins/InstantDEX/../includes/cJSON.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/memory.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/time.h:
+plugins/InstantDEX/../includes/uthash.h:
+plugins/InstantDEX/../includes/curve25519.h:
+plugins/InstantDEX/../includes/InstantDEX_quote.h:
+plugins/InstantDEX/../agents/plugin777.c:
+plugins/InstantDEX/../utils/NXT777.c:
+plugins/InstantDEX/../utils/../utils/bits777.c:
+plugins/InstantDEX/../utils/../utils/utils777.c:
+plugins/InstantDEX/../utils/bits777.c:
+plugins/InstantDEX/../utils/../common/system777.c:
+plugins/InstantDEX/../utils/../common/../utils/utils777.c:
+plugins/InstantDEX/../utils/../common/../utils/inet.c:
+plugins/InstantDEX/../utils/../includes/nonportable.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/sys/select.h:
+/home/alex/Downloads/nacl_sdk/pepper_44/include/pnacl/arpa/inet.h:
+plugins/InstantDEX/../utils/../common/../includes/utlist.h:
+plugins/InstantDEX/../utils/../coins/coins777.c:
+plugins/InstantDEX/../utils/../coins/../utils/huffstream.c:
+plugins/InstantDEX/../utils/../coins/../common/system777.c:
+plugins/InstantDEX/../utils/../coins/../KV/kv777.c:
+plugins/InstantDEX/../utils/../coins/../KV/../utils/NXT777.c:
+plugins/InstantDEX/../utils/../coins/../KV/../utils/files777.c:
+plugins/InstantDEX/../utils/utils777.c:
+plugins/InstantDEX/../utils/../coins/../KV/../common/system777.c:
+plugins/InstantDEX/../utils/../coins/../utils/files777.c:
+plugins/InstantDEX/../utils/../coins/../utils/utils777.c:
+plugins/InstantDEX/../utils/../coins/../utils/bits777.c:
+plugins/InstantDEX/../utils/../coins/gen1.c:
+plugins/InstantDEX/../utils/../coins/cointx.c:
+plugins/InstantDEX/../utils/../includes/tweetnacl.h:
+plugins/InstantDEX/../common/txind777.c:
+plugins/InstantDEX/../utils/../common/../utils/bits777.c:
+plugins/InstantDEX/trades.h:
+plugins/InstantDEX/quotes.h:
+plugins/InstantDEX/subatomic.h:
