@@ -92,6 +92,7 @@ static FuncNameMapping g_function_map[] = {
     {"send", HandleSend},
     {"recv", HandleRecv},
     {"close", HandleClose},
+    {"js", HandleJS},
     {NULL, NULL},
 };
 
@@ -683,6 +684,18 @@ void msleep(uint32_t milliseconds);
 void *SuperNET(void *threads)
 {
     static const char *argv[2] = { "127.0.0.1" }; // int32_t sock2;
+
+
+    // the code to reqeust from js...
+    /*char * dest=malloc(100);
+    strcpy(dest, "\0");
+    PostMessage("{\"pointer\":\"%u\",\"method\":\"NxtAPI\",\"requestType\":\"getTime\",\"param\":\"{}\"}",dest);
+    while(dest[0] == '\0')
+    {
+        msleep(100);
+    }
+    PostMessage("Response: %s", dest);*/
+    
     SuperNET_init(1,argv);
     while ( 1 )
     {
