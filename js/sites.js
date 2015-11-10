@@ -65,6 +65,7 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
         $(".json_submit_url").html("");
         $(".api_formfill").html("");
         $(".api-panel-title").html("Panel Title");
+        SPNAPI.page = page;
 
         $('.navigation[data-page=' + page + ']').addClass('active');
 
