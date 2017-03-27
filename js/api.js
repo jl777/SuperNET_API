@@ -31,12 +31,6 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
     else SPNAPI.submitRequest();
     });
 
-        $(".submit_api_request").on("click", function () {
-
-            SPNAPI.submitRequest();
-
-        });
-
         $(".clear-response").on("click", function () {
 
             $(".hljs").html("JSON response");

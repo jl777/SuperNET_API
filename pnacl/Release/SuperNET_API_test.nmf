@@ -2,10 +2,10 @@
   "program": {
     "portable": {
       "pnacl-translate": {
-        "url": "SuperNET_API.pexe"
+        "url": "temp/nacl_io_demo.pexe"
       },
       "pnacl-debug": {
-        "url": "SuperNET_API_unstripped.bc"
+        "url": "temp/nacl_io_demo_unstripped.bc"
       }
     }
   }

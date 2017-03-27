@@ -13,8 +13,6 @@
       "scripts": ["background.js"]
     }
   },
-    {
-        "name": "My Sockets app",
         "sockets": {
             "tcp": { "connect": "" },
             "tcpServer": { "listen": "127.0.0.1:*" }
