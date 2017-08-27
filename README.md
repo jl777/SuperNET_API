@@ -32,8 +32,8 @@ There are five ways of accessing the SuperNET_API:
 * using ./BitcoinDarkd SuperNET '{\<json request\>}'
 * via C code that is linked into the SuperNET_API itself
 
-On unix systems, you can use ./m_unix to build a standalone SuperNET, SNapi and BitcoinDarkd. It shares the same codebase, but on most unix (or mac osx) systems it will be 64bit code vs the 32bit bytecodes and of course an entirely different toolchain, so there could be subtle differences in behavior other than the ~2x performance the native code will get.
+On unix systems, you can use `./m_unix` to build a standalone SuperNET, SNapi and BitcoinDarkd. It shares the same codebase, but on most unix (or mac osx) systems it will be 64bit code vs the 32bit bytecodes and of course an entirely different toolchain, so there could be subtle differences in behavior other than the ~2x performance the native code will get.
 
-The nanomsg comms between the native and pnacl should be compatible as long as control messages are not used and the transports are limited to inproc, ipc and tcp.
+The nanomsg comms between the native and PNaCl should be compatible as long as control messages are not used and the transports are limited to inproc, ipc and tcp.
 
 James
