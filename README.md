@@ -1,6 +1,6 @@
 # SuperNET_API
 
-Make sure you have Google Chrome, Chromium has different [instructions](http://askubuntu.com/questions/510056/how-to-install-google-chrome).
+Make sure you have Google Chrome, Chromium has different [instructions](https://askubuntu.com/questions/510056/how-to-install-google-chrome).
 
 Launch Chrome with  `--allow-nacl-socket-api=localhost` command line arg.
 
