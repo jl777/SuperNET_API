@@ -51,7 +51,9 @@ int8_t portable_spawn(char *os, char *cmd, char *arg) //TODO: extend for other O
         strcat(cmdArgs, arg);
 	    pid_t pid = 0;
 	    pid = fork();
-	    if (pid==0)//child process
+	    if (pid == -1)
+		status = 1;
+	    else if (pid==0)//child process
 	    {
             if ( system(cmd) != 0 )
                 status = 1;
