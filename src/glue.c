@@ -32,7 +32,9 @@ int8_t portable_spawn(char *os, char *cmd, char *arg) //TODO: extend for other O
 #ifndef _WIN32
         pid_t pid = 0;
         pid = fork();
-        if ( pid == 0 ) //child process
+	if (pid == -1)
+		status = 1;
+	else if ( pid == 0 ) //child process
         {
             if ( execl(cmd, arg, NULL) )
 		        status = 1;
