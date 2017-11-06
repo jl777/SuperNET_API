@@ -46,6 +46,9 @@ int8_t portable_spawn(char *os, char *cmd, char *arg) //TODO: extend for other O
     {
 #ifndef _WIN32
         char *cmdArgs = (char*)malloc(strlen(cmd)+strlen(arg)+16);
+        if (!cmdArgs)
+	    return 1;		// Direct error return, we're toast
+
         strcpy(cmdArgs, cmd);
         strcat(cmdArgs, " ");
         strcat(cmdArgs, arg);
