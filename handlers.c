@@ -1214,3 +1214,20 @@ int HandleSuperNET(struct PP_Var params,struct PP_Var *output,const char **out_e
     RESPONSE_STRING(retstr);
     return 0;
 }
+
+int HandleJS(struct PP_Var params, struct PP_Var* output, const char** out_error) {
+  PostMessage("JS?"); 
+  CHECK_PARAM_COUNT(js, 2);
+  PARAM_STRING(0, jsonstr);
+  PARAM_STRING(1, ptr);
+
+  int64_t nptr = strtoll(ptr, NULL, 10);
+
+  char * addr = (char *)nptr;
+
+  strcpy(addr, jsonstr);
+
+  CREATE_RESPONSE(js);
+  RESPONSE_STRING(ptr);
+  return 0;
+}

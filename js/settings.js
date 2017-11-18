@@ -225,5 +225,3 @@ var SPNAPI = (function(SPNAPI, $, undefined) {
 
     return SPNAPI;
 }(SPNAPI || {}, jQuery));
-
-

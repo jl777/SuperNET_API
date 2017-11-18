@@ -328,51 +328,59 @@ var common = (function() {
               return true;
               }
               
-              function retmsg(msg)
+              function retmsg(msg, cb)
               {
-              common.naclModule.postMessage(msg);
-              console.log("sent: "+msg);
+                console.log(cb);
+              postCall("js", msg, cb, function() {
+                // nothing
+              });
+              console.log("sent: "+msg+" "+cb);
               }
 
   function handleMessage(message_event)
               {
               if(isJson(message_event.data))
               {
-              console.log("AAAA");
               var request = JSON.parse(message_event.data);
+              var cb = request.pointer;
               console.log(request);
               if(request.method == "NxtAPI")
               {
               console.log(request.requestType);
+              if(request.params == undefined) request.params = "{}";
               Jay.request(request.requestType, JSON.parse(request.params), function(ans) {
-                          retmsg(ans);
+                          retmsg(ans, cb);
                           })
               }
               else if(request.method == "status")
               {
-              retmsg("{'status':'doing alright'}");
+              retmsg("{'status':'doing alright'}", cb);
               }
               else if(request.method == "signBytes")
               {
               var out = converters.byteArrayToHexString(signBytes(converters.hexStringToByteArray(request.bytes), request.secretPhrase));
               var ret = {};
               ret.signature = out;
-              retmsg(JSON.stringify(ret));
+              retmsg(JSON.stringify(ret), cb);
               }
               else if(request.method == "createToken")
               {
               var out = createToken(request.data, request.secretPhrase);
               var ret = {};
               ret.token = out;
-              retmsg(JSON.stringify(ret));
+              retmsg(JSON.stringify(ret), cb);
               }
               else if(request.method == "parseToken")
               {
               var out = parseToken(request.token, request.data);
-              retmsg(JSON.stringify(out));
+              retmsg(JSON.stringify(out), cb);
               }
-              console.log(request);
+              else
+              {
+                retmsg('{"error":"method not found"}', cb);
               }
+              }
+              
               
     if (typeof message_event.data === 'string') {
       for (var type in defaultMessageTypes) {
@@ -464,6 +472,8 @@ var common = (function() {
     hideModule: hideModule,
     removeModule: removeModule,
     logMessage: logMessage,
+    postMessage: postMessage,
+    handleMessage: handleMessage,
     updateStatus: updateStatus
   };
 
