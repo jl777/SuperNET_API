@@ -582,7 +582,7 @@ void SuperNET_initconf(cJSON *json)
     printf("ensure.(%s)\n",SUPERNET.DBPATH);
     os_compatible_path(SUPERNET.DBPATH), ensure_directory(SUPERNET.DBPATH);
 //#ifdef INSIDE_MGW
-    char buf[512];
+    char buf[sizeof(MGW.PATH)+8];
     copy_cJSON2(RAMCHAINS.pullnode,sizeof(RAMCHAINS.pullnode),cJSON_GetObjectItem(json,"pullnode"));
     copy_cJSON2(SOPHIA.PATH,sizeof(SOPHIA.PATH),cJSON_GetObjectItem(json,"SOPHIA"));
     copy_cJSON2(SOPHIA.RAMDISK,sizeof(SOPHIA.RAMDISK),cJSON_GetObjectItem(json,"RAMDISK"));
